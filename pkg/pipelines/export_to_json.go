@@ -27,11 +27,27 @@ func Export2JSON[IN core.Job, OUT any, OR core.Output[IN, OUT]](args ...string) 
 	}
 }
 
+func (p *export2JSON[IN, OUT, OR]) SetOpenHook(open OpenHook) *export2JSON[IN, OUT, OR] {
+	p.onOpenHook = open
+	return p
+}
+
+func (p *export2JSON[IN, OUT, OR]) SetCloseHook(close CloseHook) *export2JSON[IN, OUT, OR] {
+	p.onCloseHook = close
+	return p
+}
+
 func (p *export2JSON[IN, OUT, OR]) Open(ctx context.Context) error {
+	if p.onOpenHook == nil {
+		return nil
+	}
 	return p.onOpenHook(ctx)
 }
 
 func (p *export2JSON[IN, OUT, OR]) Close() {
+	if p.onCloseHook == nil {
+		return
+	}
 	p.onCloseHook()
 }
 

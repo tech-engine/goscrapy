@@ -14,8 +14,8 @@ import (
 
 type export2CSV[IN core.Job, OUT any, OR core.Output[IN, OUT]] struct {
 	filename    string
-	onOpenHook  func(context.Context) error
-	onCloseHook func()
+	onOpenHook  OpenHook
+	onCloseHook CloseHook
 }
 
 func Export2CSV[IN core.Job, OUT any](args ...string) *export2CSV[IN, OUT, core.Output[IN, OUT]] {
@@ -28,11 +28,27 @@ func Export2CSV[IN core.Job, OUT any](args ...string) *export2CSV[IN, OUT, core.
 	}
 }
 
+func (p *export2CSV[IN, OUT, OR]) SetOpenHook(open OpenHook) *export2CSV[IN, OUT, OR] {
+	p.onOpenHook = open
+	return p
+}
+
+func (p *export2CSV[IN, OUT, OR]) SetCloseHook(close CloseHook) *export2CSV[IN, OUT, OR] {
+	p.onCloseHook = close
+	return p
+}
+
 func (p *export2CSV[IN, OUT, OR]) Open(ctx context.Context) error {
+	if p.onOpenHook == nil {
+		return nil
+	}
 	return p.onOpenHook(ctx)
 }
 
 func (p *export2CSV[IN, OUT, OR]) Close() {
+	if p.onCloseHook == nil {
+		return
+	}
 	p.onCloseHook()
 }
 
