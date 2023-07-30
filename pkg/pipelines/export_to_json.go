@@ -62,7 +62,7 @@ func (p *export2JSON[IN, OUT, OR]) ProcessItem(input any, original OR, metadata 
 		p.filename = metadata.Get("JOB_ID").(string) + "_" + strconv.FormatInt(time.Now().UnixMicro(), 10) + "_" + metadata.Get("JOB_NAME").(string) + ".json"
 	}
 
-	file, err := os.OpenFile(p.filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0660)
+	file, err := os.OpenFile(p.filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0640)
 
 	if err != nil {
 		return nil, err
