@@ -34,6 +34,7 @@ type Output[IN Job, OUT any] interface {
 	Records() OUT
 	Error() error
 	UpdatedJob() IN
+	IsEmpty() bool
 }
 
 type Job interface {

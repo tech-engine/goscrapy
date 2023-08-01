@@ -94,13 +94,15 @@ func (m *manager[IN, OUT]) ProcessOutput() {
 			if data.Error() != nil {
 				// if error we signal job termination
 				managerJob.cancel()
-				continue
 			}
 
-			m.Pipelines.do(data, metadata.MetaData{
-				"JOB_NAME": managerJob.name,
-				"JOB_ID":   data.UpdatedJob().GetId(),
-			})
+			// if we have data we push to pipelines
+			if !data.IsEmpty() {
+				m.Pipelines.do(data, metadata.MetaData{
+					"JOB_NAME": managerJob.name,
+					"JOB_ID":   data.UpdatedJob().GetId(),
+				})
+			}
 		}
 	}
 }
