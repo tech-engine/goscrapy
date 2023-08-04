@@ -11,7 +11,7 @@ import (
 
 type manager[IN Job, OUT any] struct {
 	wg           sync.WaitGroup
-	scraper      Scraper[IN, OUT]
+	spider       Spider[IN, OUT]
 	Pipelines    *PipelineManager[IN, any, OUT, Output[IN, OUT]]
 	ctx          context.Context
 	requestPool  *rp.Pooler[Request]

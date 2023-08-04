@@ -9,11 +9,11 @@ import (
 	restyadapter "github.com/tech-engine/goscrapy/pkg/executer_adapters/http/resty"
 )
 
-func New[IN Job, OUT any](ctx context.Context, scraper Scraper[IN, OUT]) *manager[IN, OUT] {
+func New[IN Job, OUT any](ctx context.Context, spider Spider[IN, OUT]) *manager[IN, OUT] {
 
 	manager := &manager[IN, OUT]{
 		ctx:          ctx,
-		scraper:      scraper,
+		spider:       spider,
 		executer:     executer.NewExecuter(restyadapter.NewRestyHTTPClientAdapter()),
 		requestPool:  rp.NewPooler[Request](rp.WithSize[Request](1e6)),
 		responsePool: rp.NewPooler[Response](rp.WithSize[Response](1e6)),
@@ -21,7 +21,7 @@ func New[IN Job, OUT any](ctx context.Context, scraper Scraper[IN, OUT]) *manage
 		outputCh:     make(chan Output[IN, OUT]),
 	}
 
-	manager.scraper.SetDelegator(&ScraperDelegation[IN, OUT]{
+	manager.spider.SetDelegator(&SpiderDelegation[IN, OUT]{
 		m: manager,
 	})
 
@@ -51,7 +51,7 @@ func (m *manager[IN, OUT]) Run(job IN) {
 	m.wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		m.scraper.StartRequest(m.ctx, job)
+		m.spider.StartRequest(m.ctx, job)
 	}(&m.wg)
 }
 
@@ -64,7 +64,7 @@ func (m *manager[IN, OUT]) ProcessOutput() {
 			// execute pipelines' close hooks - blocking
 			m.Pipelines.stop()
 			// close spider's output channel
-			m.scraper.Close()
+			m.spider.Close()
 			return
 		case data := <-m.outputCh:
 
@@ -83,7 +83,7 @@ func (m *manager[IN, OUT]) ProcessOutput() {
 }
 
 func (m *manager[IN, OUT]) NewJob(id string) IN {
-	return m.scraper.NewJob(id)
+	return m.spider.NewJob(id)
 }
 
 func (m *manager[IN, OUT]) reqResCleanUp(req *Request, res *Response) {

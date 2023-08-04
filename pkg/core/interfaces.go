@@ -13,20 +13,19 @@ type Delegator[IN Job, OUT any] interface {
 	Yield(Output[IN, OUT])
 }
 
-type ScraperCore[IN Job, OUT any] interface {
+type SpiderCore[IN Job, OUT any] interface {
 	StartRequest(context.Context, IN)
 	Close()
-	// PullResult() Output[IN, OUT]
 	NewJob(string) IN
 }
 
-type ScraperCoreUtility[IN Job, OUT any] interface {
+type SpiderCoreUtility[IN Job, OUT any] interface {
 	StartRequest(context.Context, IN)
 }
 
-type Scraper[IN Job, OUT any] interface {
-	ScraperCore[IN, OUT]
-	ScraperCoreUtility[IN, OUT]
+type Spider[IN Job, OUT any] interface {
+	SpiderCore[IN, OUT]
+	SpiderCoreUtility[IN, OUT]
 	SetDelegator(Delegator[IN, OUT])
 }
 
