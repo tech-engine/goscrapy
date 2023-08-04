@@ -55,16 +55,21 @@ func (m *manager[IN, OUT]) Run(job IN) {
 	}(&m.wg)
 }
 
+func (m *manager[IN, OUT]) close() {
+	// execute pipelines' close hooks - blocking
+	m.Pipelines.stop()
+	// close spider's output channel
+	m.spider.Close()
+	close(m.outputCh)
+}
+
 // ProcessOutput runs continuously
 func (m *manager[IN, OUT]) ProcessOutput() {
 	defer m.wg.Done()
 	for {
 		select {
 		case <-m.ctx.Done():
-			// execute pipelines' close hooks - blocking
-			m.Pipelines.stop()
-			// close spider's output channel
-			m.spider.Close()
+			m.close()
 			return
 		case data := <-m.outputCh:
 
