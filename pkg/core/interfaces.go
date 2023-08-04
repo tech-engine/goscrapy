@@ -13,9 +13,8 @@ type Delegator interface {
 }
 
 type ScraperCore[IN Job, OUT any] interface {
-	Start(context.Context)
-	Stop()
-	PushJob(IN)
+	StartRequest(context.Context, IN)
+	Close()
 	PullResult() Output[IN, OUT]
 	NewJob(string) IN
 }

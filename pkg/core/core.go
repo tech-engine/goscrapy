@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"sync"
 
 	executer "github.com/tech-engine/goscrapy/internal/executer/http"
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
@@ -34,23 +35,35 @@ func (m *manager[IN, OUT]) Start(ctx context.Context) error {
 		return err
 	}
 
+	m.wg.Add(1)
 	go m.ProcessOutput()
-	go m.scraper.Start(ctx)
 
 	return nil
 }
 
+// wait for all goroutines to exit
+func (m *manager[IN, OUT]) Wait() {
+	m.wg.Wait()
+}
+
 func (m *manager[IN, OUT]) Run(job IN) {
-	m.scraper.PushJob(job)
+	m.wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		m.scraper.StartRequest(m.ctx, job)
+	}(&m.wg)
 }
 
 // ProcessOutput runs continuously
 func (m *manager[IN, OUT]) ProcessOutput() {
+	defer m.wg.Done()
 	for {
 		select {
 		case <-m.ctx.Done():
 			// execute pipelines' close hooks - blocking
 			m.Pipelines.stop()
+			// close spider's output channel
+			m.scraper.Close()
 			return
 		default:
 			data := m.scraper.PullResult()
@@ -59,8 +72,12 @@ func (m *manager[IN, OUT]) ProcessOutput() {
 				continue
 			}
 
+			m.wg.Add(1)
 			// if we have data we push to pipelines
-			go m.Pipelines.do(data, nil)
+			go func(wg *sync.WaitGroup) {
+				defer wg.Done()
+				m.Pipelines.do(data, nil)
+			}(&m.wg)
 		}
 	}
 }
@@ -89,7 +106,9 @@ func (m *manager[IN, OUT]) exRequest(ctx context.Context, req *Request, cb Respo
 		return
 	}
 
-	go func(_ctx context.Context, _cb ResponseCallback) {
+	m.wg.Add(1)
+	go func(wg *sync.WaitGroup, _ctx context.Context, _cb ResponseCallback) {
+		defer wg.Done()
 		res := m.responsePool.Acquire()
 
 		if res == nil {
@@ -109,5 +128,5 @@ func (m *manager[IN, OUT]) exRequest(ctx context.Context, req *Request, cb Respo
 			res,
 		)
 
-	}(ctx, cb)
+	}(&m.wg, ctx, cb)
 }
