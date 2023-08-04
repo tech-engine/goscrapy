@@ -17,6 +17,7 @@ type manager[IN Job, OUT any] struct {
 	requestPool  *rp.Pooler[Request]
 	responsePool *rp.Pooler[Response]
 	executer     *executer.Executer
+	outputCh     chan Output[IN, OUT]
 }
 
 type PipelineManager[J Job, IN any, OUT any, OR Output[J, OUT]] struct {

@@ -19,3 +19,7 @@ func (s *ScraperDelegation[IN, OUT]) NewRequest() *Request {
 	}
 	return req
 }
+
+func (s *ScraperDelegation[IN, OUT]) Yield(output Output[IN, OUT]) {
+	s.m.outputCh <- output
+}

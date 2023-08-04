@@ -18,6 +18,7 @@ func New[IN Job, OUT any](ctx context.Context, scraper Scraper[IN, OUT]) *manage
 		requestPool:  rp.NewPooler[Request](rp.WithSize[Request](1e6)),
 		responsePool: rp.NewPooler[Response](rp.WithSize[Response](1e6)),
 		Pipelines:    NewPipelineManager[IN, any, OUT, Output[IN, OUT]](),
+		outputCh:     make(chan Output[IN, OUT]),
 	}
 
 	manager.scraper.SetDelegator(&ScraperDelegation[IN, OUT]{
@@ -65,8 +66,7 @@ func (m *manager[IN, OUT]) ProcessOutput() {
 			// close spider's output channel
 			m.scraper.Close()
 			return
-		default:
-			data := m.scraper.PullResult()
+		case data := <-m.outputCh:
 
 			if data == nil {
 				continue

@@ -7,15 +7,16 @@ import (
 	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
 )
 
-type Delegator interface {
+type Delegator[IN Job, OUT any] interface {
 	ExRequest(ctx context.Context, req *Request, cb ResponseCallback)
 	NewRequest() *Request
+	Yield(Output[IN, OUT])
 }
 
 type ScraperCore[IN Job, OUT any] interface {
 	StartRequest(context.Context, IN)
 	Close()
-	PullResult() Output[IN, OUT]
+	// PullResult() Output[IN, OUT]
 	NewJob(string) IN
 }
 
@@ -26,7 +27,7 @@ type ScraperCoreUtility[IN Job, OUT any] interface {
 type Scraper[IN Job, OUT any] interface {
 	ScraperCore[IN, OUT]
 	ScraperCoreUtility[IN, OUT]
-	SetDelegator(Delegator)
+	SetDelegator(Delegator[IN, OUT])
 }
 
 type Output[IN Job, OUT any] interface {
