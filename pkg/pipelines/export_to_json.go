@@ -52,6 +52,11 @@ func (p *export2JSON[IN, OUT, OR]) Close() {
 }
 
 func (p *export2JSON[IN, OUT, OR]) ProcessItem(input any, original OR, metadata metadata.MetaData) (any, error) {
+
+	if original.IsEmpty() {
+		return nil, nil
+	}
+
 	byteData, err := json.Marshal(original.Records())
 
 	if err != nil {
@@ -59,7 +64,7 @@ func (p *export2JSON[IN, OUT, OR]) ProcessItem(input any, original OR, metadata 
 	}
 
 	if p.filename == "" {
-		p.filename = metadata.Get("JOB_ID").(string) + "_" + strconv.FormatInt(time.Now().UnixMicro(), 10) + "_" + metadata.Get("JOB_NAME").(string) + ".json"
+		p.filename = "JOB_" + original.Job().Id() + "_" + strconv.FormatInt(time.Now().UnixMicro(), 10) + ".json"
 	}
 
 	file, err := os.OpenFile(p.filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0640)

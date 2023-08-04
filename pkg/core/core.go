@@ -2,27 +2,20 @@ package core
 
 import (
 	"context"
-	"math/rand"
-	"sync"
-	"time"
 
 	executer "github.com/tech-engine/goscrapy/internal/executer/http"
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
-	"github.com/tech-engine/goscrapy/internal/utils"
 	restyadapter "github.com/tech-engine/goscrapy/pkg/executer_adapters/http/resty"
-	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
 )
 
 func New[IN Job, OUT any](ctx context.Context, scraper Scraper[IN, OUT]) *manager[IN, OUT] {
 
 	manager := &manager[IN, OUT]{
-		mu:           &sync.RWMutex{},
 		ctx:          ctx,
 		scraper:      scraper,
 		executer:     executer.NewExecuter(restyadapter.NewRestyHTTPClientAdapter()),
 		requestPool:  rp.NewPooler[Request](rp.WithSize[Request](1e6)),
 		responsePool: rp.NewPooler[Response](rp.WithSize[Response](1e6)),
-		Jobs:         make(map[string]ManagerJob[IN]),
 		Pipelines:    NewPipelineManager[IN, any, OUT, Output[IN, OUT]](),
 	}
 
@@ -30,43 +23,25 @@ func New[IN Job, OUT any](ctx context.Context, scraper Scraper[IN, OUT]) *manage
 		m: manager,
 	})
 
-	go manager.Start(ctx)
 	return manager
 }
 
-func (m *manager[IN, OUT]) Start(ctx context.Context) {
-	go m.Pipelines.start(ctx)
-	go m.scraper.Start(ctx)
-	m.ProcessOutput()
-	m.Pipelines.stop()
-}
+// start the core
+func (m *manager[IN, OUT]) Start(ctx context.Context) error {
 
-func (m *manager[IN, OUT]) AddJob(job ManagerJob[IN]) *manager[IN, OUT] {
-	// we store it
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.Jobs[job.ScraperJob.GetId()] = job
-	go m.Run(job)
-	return m
-}
-
-// run runs continuously in an infinite loop
-func (m *manager[IN, OUT]) Run(job ManagerJob[IN]) {
-	rand.Seed(time.Now().UTC().UnixNano())
-	ticker := utils.NewRandomTicker(2*time.Second, 6*time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-job.ctx.Done():
-			// remove job from map once we receive a terminal signal on our sigTerm channel
-			m.removeJob(job.ScraperJob)
-			return
-		case <-ticker.C:
-			m.scraper.PushJob(job.ScraperJob)
-		}
+	// first start the pipelines
+	if err := m.Pipelines.start(ctx); err != nil {
+		return err
 	}
+
+	go m.ProcessOutput()
+	go m.scraper.Start(ctx)
+
+	return nil
+}
+
+func (m *manager[IN, OUT]) Run(job IN) {
+	m.scraper.PushJob(job)
 }
 
 // ProcessOutput runs continuously
@@ -74,59 +49,24 @@ func (m *manager[IN, OUT]) ProcessOutput() {
 	for {
 		select {
 		case <-m.ctx.Done():
+			// execute pipelines' close hooks - blocking
+			m.Pipelines.stop()
 			return
 		default:
 			data := m.scraper.PullResult()
+
 			if data == nil {
-				// save the job and maybe try again
 				continue
-			}
-
-			m.mu.Lock()
-			managerJob, ok := m.Jobs[data.UpdatedJob().GetId()]
-			m.mu.Unlock()
-
-			// if we couldn't find our job in managerJobs map, we move on
-			if !ok {
-				continue
-			}
-
-			if data.Error() != nil {
-				// if error we signal job termination
-				managerJob.cancel()
 			}
 
 			// if we have data we push to pipelines
-			if !data.IsEmpty() {
-				m.Pipelines.do(data, metadata.MetaData{
-					"JOB_NAME": managerJob.name,
-					"JOB_ID":   data.UpdatedJob().GetId(),
-				})
-			}
+			go m.Pipelines.do(data, nil)
 		}
 	}
 }
 
-// removeJob will release the scraper job and also removes it for our map
-func (m *manager[IN, OUT]) removeJob(job Job) *manager[IN, OUT] {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	delete(m.Jobs, job.GetId())
-	return m
-}
-
-// removes all jobs
-func (m *manager[IN, OUT]) removeAllJobs() *manager[IN, OUT] {
-	for _, job := range m.Jobs {
-		m.removeJob(job.ScraperJob)
-	}
-	return m
-}
-
-func (m *manager[IN, OUT]) NewJob(ctx context.Context, name string) ManagerJob[IN] {
-	job := m.scraper.NewJob()
-	return newManagerJob(ctx, name, job)
+func (m *manager[IN, OUT]) NewJob(id string) IN {
+	return m.scraper.NewJob(id)
 }
 
 func (m *manager[IN, OUT]) reqResCleanUp(req *Request, res *Response) {

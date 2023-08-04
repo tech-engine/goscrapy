@@ -17,7 +17,7 @@ type ScraperCore[IN Job, OUT any] interface {
 	Stop()
 	PushJob(IN)
 	PullResult() Output[IN, OUT]
-	NewJob() IN
+	NewJob(string) IN
 }
 
 type ScraperCoreUtility[IN Job, OUT any] interface {
@@ -33,12 +33,12 @@ type Scraper[IN Job, OUT any] interface {
 type Output[IN Job, OUT any] interface {
 	Records() OUT
 	Error() error
-	UpdatedJob() IN
+	Job() IN
 	IsEmpty() bool
 }
 
 type Job interface {
-	GetId() string
+	Id() string
 }
 
 type Pipeline[J Job, IN any, OUT any, OR Output[J, OUT]] interface {

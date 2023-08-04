@@ -25,7 +25,6 @@ type ManagerJob[IN Job] struct {
 	id                string
 	name              string
 	startTime         time.Time
-	lastCursor        string
 	maxResultsAllowed uint64
 	status            string
 	ctx               context.Context
