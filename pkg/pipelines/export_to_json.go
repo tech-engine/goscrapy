@@ -17,12 +17,12 @@ type export2JSON[IN core.Job, OUT any, OR core.Output[IN, OUT]] struct {
 	onCloseHook func()
 }
 
-func Export2JSON[IN core.Job, OUT any, OR core.Output[IN, OUT]](args ...string) *export2JSON[IN, OUT, OR] {
+func Export2JSON[IN core.Job, OUT any](args ...string) *export2JSON[IN, OUT, core.Output[IN, OUT]] {
 	var filename string
 	if len(args) > 0 {
 		filename = args[0]
 	}
-	return &export2JSON[IN, OUT, OR]{
+	return &export2JSON[IN, OUT, core.Output[IN, OUT]]{
 		filename: filename,
 	}
 }
