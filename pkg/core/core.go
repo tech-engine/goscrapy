@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	executer "github.com/tech-engine/goscrapy/internal/executer/http"
@@ -48,7 +49,12 @@ func (m *manager[IN, OUT]) Wait() {
 }
 
 func (m *manager[IN, OUT]) Run(job IN) {
+	if strings.TrimSpace(job.Id()) == "" {
+		return
+	}
+
 	m.wg.Add(1)
+
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		m.spider.StartRequest(m.ctx, job)
