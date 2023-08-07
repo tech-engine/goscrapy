@@ -1,12 +1,14 @@
 package core
 
+import "strings"
+
 func (r *Request) SetUrl(url string) RequestWriter {
 	r.url = url
 	return r
 }
 
 func (r *Request) SetMethod(method string) RequestWriter {
-	r.method = method
+	r.method = strings.ToUpper(method)
 	return r
 }
 
