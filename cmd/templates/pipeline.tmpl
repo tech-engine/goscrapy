@@ -1,0 +1,68 @@
+package pipelines
+
+import (
+	"os"
+	"strconv"
+	"time"
+
+	"context"
+
+	"github.com/tech-engine/goscrapy/pkg/core"
+	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
+)
+
+type {{.}}[IN core.Job, OUT any, OR core.Output[IN, OUT]] struct {
+	filename    string
+	onOpenHook  OpenHook
+	onCloseHook CloseHook
+}
+
+func {{ toUpperChar .}}[IN core.Job, OUT any](args ...string) *{{.}}[IN, OUT, core.Output[IN, OUT]] {
+	var filename string
+	if len(args) > 0 {
+		filename = args[0]
+	}
+	return &{{.}}[IN, OUT, core.Output[IN, OUT]]{
+		filename: filename,
+	}
+}
+
+func (p *{{.}}[IN, OUT, OR]) SetOpenHook(open OpenHook) *{{.}}[IN, OUT, OR] {
+	p.onOpenHook = open
+	return p
+}
+
+func (p *{{.}}[IN, OUT, OR]) SetCloseHook(close CloseHook) *{{.}}[IN, OUT, OR] {
+	p.onCloseHook = close
+	return p
+}
+
+func (p *{{.}}[IN, OUT, OR]) Open(ctx context.Context) error {
+	if p.onOpenHook == nil {
+		return nil
+	}
+	return p.onOpenHook(ctx)
+}
+
+func (p *{{.}}[IN, OUT, OR]) Close() {
+	if p.onCloseHook == nil {
+		return
+	}
+	p.onCloseHook()
+}
+
+// you may only need to add ProcessItem
+
+func (p *{{.}}[IN, OUT, OR]) ProcessItem(input any, original OR, MetaData metadata.MetaData) (any, error) {
+
+    // original is the output yield from spider
+    // original.IsEmpty()   - check if data is empty
+    // original.Job()       - access Job
+    // original.Records()   - access []Record
+    
+	if original.IsEmpty() {
+		return nil, nil
+	}
+
+    return nil, nil
+}

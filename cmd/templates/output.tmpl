@@ -1,0 +1,28 @@
+package {{.}}
+
+// do not modify this file
+
+type Output struct {
+	records []Record
+	err     error
+	job     *Job
+}
+
+func (o *Output) Records() []Record {
+	return o.records
+}
+
+func (o *Output) Error() error {
+	return o.err
+}
+
+func (o *Output) Job() *Job {
+	return o.job
+}
+
+func (o *Output) IsEmpty() bool {
+	if o == nil || o.records == nil {
+		return true
+	}
+	return len(o.records) <= 0
+}
