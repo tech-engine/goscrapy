@@ -21,7 +21,7 @@ func (e *Executer) Execute(ctx context.Context, req RequestReader, res ResponseW
 	case "PATCH":
 		return e.Patch(ctx, req, res)
 	case "PUT":
-		return e.Patch(ctx, req, res)
+		return e.Put(ctx, req, res)
 	default:
 		return e.Get(ctx, req, res)
 	}
