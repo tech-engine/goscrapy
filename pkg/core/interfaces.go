@@ -31,6 +31,8 @@ type Spider[IN Job, OUT any] interface {
 
 type Output[IN Job, OUT any] interface {
 	Records() OUT
+	RecordKeys() []string
+	RecordsFlat() [][]any
 	Error() error
 	Job() IN
 	IsEmpty() bool
