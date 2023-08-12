@@ -3,8 +3,6 @@ package pipelines
 import (
 	"encoding/json"
 	"os"
-	"strconv"
-	"time"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
@@ -64,7 +62,7 @@ func (p *export2JSON[IN, OUT, OR]) ProcessItem(input any, original OR, metadata 
 	}
 
 	if p.filename == "" {
-		p.filename = "JOB_" + original.Job().Id() + "_" + strconv.FormatInt(time.Now().UnixMicro(), 10) + ".json"
+		p.filename = "JOB_" + original.Job().Id() + ".json"
 	}
 
 	file, err := os.OpenFile(p.filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0640)

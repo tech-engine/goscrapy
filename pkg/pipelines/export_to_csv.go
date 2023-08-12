@@ -2,8 +2,6 @@ package pipelines
 
 import (
 	"os"
-	"strconv"
-	"time"
 
 	"context"
 
@@ -59,7 +57,7 @@ func (p *export2CSV[IN, OUT, OR]) ProcessItem(input any, original OR, MetaData m
 	}
 
 	if p.filename == "" {
-		p.filename = "JOB_" + original.Job().Id() + "_" + strconv.FormatInt(time.Now().UnixMicro(), 10) + ".csv"
+		p.filename = "JOB_" + original.Job().Id() + ".csv"
 	}
 
 	file, err := os.OpenFile(p.filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0640)
