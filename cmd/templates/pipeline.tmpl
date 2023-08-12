@@ -1,38 +1,30 @@
 package pipelines
 
 import (
-	"os"
-	"strconv"
-	"time"
-
 	"context"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
+	"github.com/tech-engine/goscrapy/pkg/pipelines"
 )
 
 type {{.}}[IN core.Job, OUT any, OR core.Output[IN, OUT]] struct {
-	filename    string
-	onOpenHook  OpenHook
-	onCloseHook CloseHook
+	onOpenHook  pipelines.OpenHook
+	onCloseHook pipelines.CloseHook
+	// add your custom fields here
 }
 
 func {{ capitalizeFirstLetter .}}[IN core.Job, OUT any](args ...string) *{{.}}[IN, OUT, core.Output[IN, OUT]] {
-	var filename string
-	if len(args) > 0 {
-		filename = args[0]
-	}
-	return &{{.}}[IN, OUT, core.Output[IN, OUT]]{
-		filename: filename,
-	}
+	// your custom initialization code goes here
+	return &{{.}}[IN, OUT, core.Output[IN, OUT]]{}
 }
 
-func (p *{{.}}[IN, OUT, OR]) SetOpenHook(open OpenHook) *{{.}}[IN, OUT, OR] {
+func (p *{{.}}[IN, OUT, OR]) SetOpenHook(open pipelines.OpenHook) *{{.}}[IN, OUT, OR] {
 	p.onOpenHook = open
 	return p
 }
 
-func (p *{{.}}[IN, OUT, OR]) SetCloseHook(close CloseHook) *{{.}}[IN, OUT, OR] {
+func (p *{{.}}[IN, OUT, OR]) SetCloseHook(close pipelines.CloseHook) *{{.}}[IN, OUT, OR] {
 	p.onCloseHook = close
 	return p
 }
@@ -51,18 +43,19 @@ func (p *{{.}}[IN, OUT, OR]) Close() {
 	p.onCloseHook()
 }
 
-// you may only need to add ProcessItem
-
+// your custome pipeline processing code goes here
 func (p *{{.}}[IN, OUT, OR]) ProcessItem(input any, original OR, MetaData metadata.MetaData) (any, error) {
 
-    // original is the output yield from spider
-    // original.IsEmpty()   - check if data is empty
-    // original.Job()       - access Job
-    // original.Records()   - access []Record
-    
+	// original is the output yield from spider
+	// original.IsEmpty()   	- check if data is empty
+	// original.Job()       	- access Job
+	// original.Records()   	- access []Record
+	// original.RecordKeys()  	- access Record keys in a slice
+	// original.RecordsFlat()	- access []Record in [][]any format
+
 	if original.IsEmpty() {
 		return nil, nil
 	}
 
-    return nil, nil
+	return nil, nil
 }
