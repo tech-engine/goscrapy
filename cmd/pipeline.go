@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"go/format"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 	"unicode"
@@ -47,7 +48,7 @@ var pipelineCmd = &cobra.Command{
 
 		buffer := &bytes.Buffer{}
 
-		err = tmpl.Execute(buffer, pipelineName)
+		err = tmpl.Execute(buffer, removeSpecialChars(pipelineName))
 
 		if err != nil {
 			fmt.Printf("❌  Error executing template: '%s', %v", tmpl.Name(), err)
@@ -91,4 +92,14 @@ func capitalizeFirstLetter(s string) string {
 	r[0] = unicode.ToUpper(r[0])
 
 	return string(r)
+}
+
+func removeSpecialChars(input string) string {
+	// Define a regular expression to match non-alphanumeric characters
+	reg := regexp.MustCompile("[^a-zA-Z0-9]+")
+
+	// Replace matched characters with an empty string
+	result := reg.ReplaceAllString(input, "")
+
+	return result
 }
