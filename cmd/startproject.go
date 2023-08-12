@@ -10,10 +10,10 @@ import (
 	"go/format"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
-	"unicode"
 
 	"github.com/spf13/cobra"
 )
@@ -49,6 +49,14 @@ var startprojectCmd = &cobra.Command{
 
 		if err != nil {
 			fmt.Printf("❌ Error creating dir '%s', %v", projectName, err)
+			return
+		}
+
+		// create pipelines dir
+		err = createDirIfNotExist(path.Join(projectName, "pipelines"))
+
+		if err != nil {
+			fmt.Printf("❌ Error creating dir %s/pipelines, %v", projectName, err)
 			return
 		}
 
@@ -102,7 +110,7 @@ var startprojectCmd = &cobra.Command{
 			fmt.Printf("✔️  %s\n", sourceFilename)
 
 		}
-		fmt.Printf("\n✨ Congrates. %s created successfully.", projectName)
+		fmt.Printf("\n✨ Congrates, %s created successfully.", projectName)
 	},
 }
 
@@ -124,7 +132,7 @@ func writeToFile(filename string, data []byte) error {
 func createDirIfNotExist(dir string) error {
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		// Directory exists, prompt user for confirmation
-		fmt.Printf("Project directory '%s' already exists. Continue? (Y/N): ", dir)
+		fmt.Printf("Directory '%s' already exists. Continue? (Y/N): ", dir)
 		var input string
 		_, err := fmt.Scan(&input)
 
@@ -138,15 +146,4 @@ func createDirIfNotExist(dir string) error {
 	}
 
 	return os.MkdirAll(dir, os.ModePerm)
-}
-
-func capitalizeFirstLetter(s string) string {
-	if s == "" {
-		return s
-	}
-
-	r := []rune(s)
-	r[0] = unicode.ToUpper(r[0])
-
-	return string(r)
 }

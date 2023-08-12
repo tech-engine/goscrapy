@@ -17,7 +17,7 @@ type {{.}}[IN core.Job, OUT any, OR core.Output[IN, OUT]] struct {
 	onCloseHook CloseHook
 }
 
-func {{ toUpperChar .}}[IN core.Job, OUT any](args ...string) *{{.}}[IN, OUT, core.Output[IN, OUT]] {
+func {{ capitalizeFirstLetter .}}[IN core.Job, OUT any](args ...string) *{{.}}[IN, OUT, core.Output[IN, OUT]] {
 	var filename string
 	if len(args) > 0 {
 		filename = args[0]
