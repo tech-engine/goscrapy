@@ -16,14 +16,14 @@ type export2CSV[IN core.Job, OUT any, OR core.Output[IN, OUT]] struct {
 	onCloseHook CloseHook
 }
 
-func Export2CSV[IN core.Job, OUT any](args ...string) *export2CSV[IN, OUT, core.Output[IN, OUT]] {
+func Export2CSV[IN core.Job, OUT any](args ...string) (*export2CSV[IN, OUT, core.Output[IN, OUT]], error) {
 	var filename string
 	if len(args) > 0 {
 		filename = args[0]
 	}
 	return &export2CSV[IN, OUT, core.Output[IN, OUT]]{
 		filename: filename,
-	}
+	}, nil
 }
 
 func (p *export2CSV[IN, OUT, OR]) SetOpenHook(open OpenHook) *export2CSV[IN, OUT, OR] {

@@ -2,6 +2,8 @@ package pipelines
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
@@ -18,19 +20,23 @@ type export2GSHEET[IN core.Job, OUT any, OR core.Output[IN, OUT]] struct {
 	onCloseHook   CloseHook
 }
 
-func Export2GSHEET[IN core.Job, OUT any](keyFilePath, spreadSheetId string, sheetId int64) *export2GSHEET[IN, OUT, core.Output[IN, OUT]] {
+func Export2GSHEET[IN core.Job, OUT any](keyFilePath, spreadSheetId string, sheetId int64) (*export2GSHEET[IN, OUT, core.Output[IN, OUT]], error) {
 	ctx := context.Background()
 
 	service, err := sheets.NewService(ctx, option.WithCredentialsFile(keyFilePath))
 
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("Export2GSHEET: error creating a service using provided creds %w", err)
 	}
 
 	response, err := service.Spreadsheets.Get(spreadSheetId).Fields("sheets(properties(sheetId,title))").Do()
 
-	if err != nil || response.HTTPStatusCode != 200 {
-		return nil
+	if err != nil {
+		return nil, fmt.Errorf("Export2GSHEET: error getting spreadsheet by id %s %w", spreadSheetId, err)
+	}
+
+	if response.HTTPStatusCode != 200 {
+		return nil, errors.New(fmt.Sprintf("Export2GSHEET: %d status code received", response.HTTPStatusCode))
 	}
 
 	sheetName := ""
@@ -42,12 +48,16 @@ func Export2GSHEET[IN core.Job, OUT any](keyFilePath, spreadSheetId string, shee
 		}
 	}
 
+	if sheetName == "" {
+		return nil, errors.New("Export2GSHEET: empty sheetname")
+	}
+
 	return &export2GSHEET[IN, OUT, core.Output[IN, OUT]]{
 		service:       service,
 		sheetName:     sheetName,
 		spreadSheetId: spreadSheetId,
 		sheetId:       sheetId,
-	}
+	}, nil
 }
 
 func (p *export2GSHEET[IN, OUT, OR]) SetOpenHook(open OpenHook) *export2GSHEET[IN, OUT, OR] {
