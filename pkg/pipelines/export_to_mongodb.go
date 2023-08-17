@@ -28,16 +28,16 @@ func Export2MONGODB[IN core.Job, OUT any](_url string, dbName string, collName s
 	opts := options.Client().ApplyURI(_url).SetServerAPIOptions(serverAPI)
 
 	client, err := mongo.Connect(ctx, opts)
+
 	if err != nil {
 		return nil, fmt.Errorf("Export2MONGODB: error connecting to DB %w", err)
 	}
 
 	var result bson.M
-	if err := client.Database(dbName).RunCommand(context.TODO(), bson.D{{Key: "ping", Value: 1}}).Decode(&result); err != nil {
-		return nil, fmt.Errorf("Export2MONGODB: error connecting to DB")
-	}
 
-	fmt.Println("Export2MONGODB: successfully connected to DB")
+	if err := client.Database(dbName).RunCommand(ctx, bson.D{{Key: "ping", Value: 1}}).Decode(&result); err != nil {
+		return nil, fmt.Errorf("Export2MONGODB: error connecting to DB %w", err)
+	}
 
 	collection := client.Database(dbName).Collection(collName)
 
@@ -67,10 +67,8 @@ func (p *export2MONGODB[IN, OUT, OR]) Open(ctx context.Context) error {
 
 func (p *export2MONGODB[IN, OUT, OR]) Close() {
 
-	err := p.client.Disconnect(p.ctx)
-	if err != nil {
-		fmt.Print("Export2MONGODB: error disconnecting to DB %w", err)
-	}
+	_ = p.client.Disconnect(p.ctx)
+
 	if p.onCloseHook == nil {
 		return
 	}
