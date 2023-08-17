@@ -6,15 +6,17 @@ import (
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type export2MONGODB[IN core.Job, OUT any, OR core.Output[IN, OUT]] struct {
+	ctx         context.Context
+	client      *mongo.Client
 	collection  *mongo.Collection
 	onOpenHook  func(context.Context) error
-	ctx         context.Context
 	onCloseHook func()
 }
 
@@ -24,16 +26,25 @@ func Export2MONGODB[IN core.Job, OUT any](_url string, dbName string, collName s
 
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.Client().ApplyURI(_url).SetServerAPIOptions(serverAPI)
+
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
 		return nil, fmt.Errorf("Export2MONGODB: error connecting to DB %w", err)
 	}
 
+	var result bson.M
+	if err := client.Database(dbName).RunCommand(context.TODO(), bson.D{{Key: "ping", Value: 1}}).Decode(&result); err != nil {
+		return nil, fmt.Errorf("Export2MONGODB: error connecting to DB")
+	}
+
+	fmt.Println("Export2MONGODB: successfully connected to DB")
+
 	collection := client.Database(dbName).Collection(collName)
 
 	return &export2MONGODB[IN, OUT, core.Output[IN, OUT]]{
-		collection: collection,
 		ctx:        ctx,
+		client:     client,
+		collection: collection,
 	}, nil
 }
 
@@ -55,6 +66,11 @@ func (p *export2MONGODB[IN, OUT, OR]) Open(ctx context.Context) error {
 }
 
 func (p *export2MONGODB[IN, OUT, OR]) Close() {
+
+	err := p.client.Disconnect(p.ctx)
+	if err != nil {
+		fmt.Print("Export2MONGODB: error disconnecting to DB %w", err)
+	}
 	if p.onCloseHook == nil {
 		return
 	}
