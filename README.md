@@ -194,6 +194,7 @@ In the **GoScrapy** framework, pipelines play a pivotal role in managing, transf
 - **Export2CSV**
 - **Export2JSON**
 - **Export2GSHEET**
+- **Export2MONGODB**
 
 ### Incorporating Pipelines into Your Scraping Workflow
 To seamlessly integrate pipelines into your scraping workflow, you can utilize the **Pipelines.Add** method.
