@@ -224,3 +224,10 @@ PS D:\My-Projects\go\go-test-scrapy>scrapethissite> goscrapy pipeline export_2_D
 ### Note
 
 **GoScrapy** is in it's initial baby stage and under developement and lacks many features like html parsing, cookie management etc. So more work is under way. Thank your for your patience.
+
+## Roadmap
+
+- Cookie management
+- Builtin & Custom Middlewares support
+- HTML element selectors
+- Triggers
