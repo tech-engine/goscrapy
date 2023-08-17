@@ -3,7 +3,7 @@
   <img width="200" src="./logo.png">
 </p>
 
-**GoScrapy** aims to be a powerful open-source web scraping framework written in the Go programming language inspired by Python's Scrapy framework. It offers a user-friendly interface for extracting data from websites, making it an ideal tool for various data collection and analysis tasks.
+**GoScrapy** aims to be a powerful open-source web scraping framework written in the Go and inspired by Python's Scrapy framework. It offers a user-friendly interface for extracting data from websites, making it an ideal tool for various data collection and analysis tasks.
 
 ## Getting Started
 Follow these steps to start using **GoScrapy**:
@@ -26,21 +26,21 @@ After initialization, install the **GoScrapy** CLI Tool using this command:
 ```sh
 go install github.com/tech-engine/goscrapy@latest
 ```
-Note: This command will install the **GoScrapy** CLI tool on your computer, eliminating the need to run it again for future project creations.
+Note: You will only need to run the above command the very first time.
 
 ### 3. Verify Installation
-To verify a successful installation, check the version of **GoScrapy** using the following command:
+To verify your installation, check your version **GoScrapy** version using the following command:
 
 ```sh
 goscrapy -v
 ```
-### 4. Creating a New Project
-Create a new project using **GoScrapy** by following below steps:
+### 4. Create a New Project
+Create a new **GoScrapy** project using the following command:
 
 ```sh
 goscrapy startproject <project_name>
 ```
-Replace <project_name> with your chosen project name. For example:
+Replace <project_name> with your project name. For example:
 
 ```sh
 goscrapy startproject scrapethissite
@@ -65,15 +65,15 @@ PS D:\My-Projects\go\go-test-scrapy> goscrapy startproject scrapethissite
 
 ## Usage
 ### Defining a Scraping Task
-**GoScrapy** operates around the below three concept.
+**GoScrapy** operates around the below three concepts.
 
-- **[Job](#job):** Describes an input to the spider.
-- **[Output](#output):** Represents an output produced by the spider.
-- **[Spider](#spider):** Contains the main logic of the scraper.
+- **[Job](#job):** Describes an input to your spider.
+- **[Output](#output):** Represents an output produced by your spider.
+- **[Spider](#spider):** Contains the main logic of your scraper.
 
 
 ### Job
-A Job represents an input to the goscrapy spider. In the provided code __`job.go`__, a Job struct is defined by fields like id and query. The id field is compulsory but you can add custom fields to the Job structure as you feel required.
+A Job represents an input to the goscrapy spider. In the provided code __`job.go`__, a Job struct is defined by fields like id and query of which only the id field is compulsory and you can add custom fields to the Job structure as you feel required.
 
 ```go
 // id field is compulsory in a Job defination. You can add your custom to Job
@@ -90,7 +90,7 @@ func (j *Job) SetQuery(query string) {
 ```
 
 ### Output
-An Output represents the output produced by the spider(via yield). It encapsulates the records obtained from scraping, any potential errors, and a reference to the associated Job. The Output struct, as defined in the __`output.go`__ code, contains methods to retrieve records, error information, and other details.
+An Output represents an output produced by your spider(via yield). It encapsulates the records obtained from scraping, any potential errors, and a reference to the associated Job. The Output struct, as defined in the __`output.go`__ code, contains methods to retrieve records, error information, and other details.
 
 ```go
 // do not modify this file
@@ -138,7 +138,7 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 	var headers map[string]string
 
 	// GET is the default request method
-	req.SetUrl(s.baseUrl.String()).
+	req.SetUrl("<URL>").
 		SetMetaData("JOB", job).
 		SetHeaders(headers)
 
@@ -163,10 +163,10 @@ func (s *Spider) parse(ctx context.Context, response core.ResponseReader) {
 }
 
 ```
-The NewSpider function returns a spider instance.
+The **NewSpider** function returns a new spider instance.
 
 ### types.go
-In your __`types.go`__ file, define the Record structure that corresponds to the records you're scraping. Here's the structure for the Record type:
+In your __`types.go`__ file, define the **Record** structure that corresponds to the records you're scraping. Here's how the structure for the Record type looks like:
 
 ```go
 /*
@@ -186,10 +186,10 @@ In your __`main.go`__ file, set up and execute your spider using the **GoScrapy*
 For implementation details, you can refer to the [sample code here](./_examples/scrapethissite/main.go).
 
 ## Pipelines 
-In the **GoScrapy** framework, pipelines play a pivotal role in managing, transforming, and fine-tuning the scraped data to meet your project's specific needs. Pipelines provide a powerful mechanism for executing a sequence of actions that are executed on the scraped data.
+In **GoScrapy** framework, pipelines play a pivotal role in managing, transforming, and fine-tuning the scraped data to meet your project's specific needs. Pipelines provide a powerful mechanism for executing a sequence of actions that are executed on the scraped data.
 
 ### Built-in Pipelines
-**GoScrapy** offers a range of built-in pipelines, designed to facilitate different aspects of data manipulation and organization. Some of the noteworthy built-in pipelines include:
+**GoScrapy** as of now offers a few built-in pipelines you can choose from, designed to facilitate different aspects of data manipulation and organization.
 
 - **Export2CSV**
 - **Export2JSON**
@@ -209,7 +209,7 @@ goScrapy.Pipelines.Add(pipelines.Export2JSON[*customProject.Job, []customProject
 ```
 
 ### Incorporating custom Pipelines
-**GoScrapy** also allows you to define custom pipelines. To create your own custom pipeline, you can use the command below.
+**GoScrapy** also allows you to define your own custom pipelines. To create a custom pipeline, you can use the command below.
 
 **cd into your Goscrapy project directory**
 
@@ -224,7 +224,7 @@ PS D:\My-Projects\go\go-test-scrapy>scrapethissite> goscrapy pipeline export_2_D
 
 ### Note
 
-**GoScrapy** is in it's initial baby stage and under developement and lacks many features like html parsing, cookie management etc. So more work is under way. Thank your for your patience.
+**GoScrapy** is still in it's initial baby stage and under developement and thus lacks many features like html parsing, cookie management etc. So more work is under way. Thank your for your patience.
 
 ## Roadmap
 
