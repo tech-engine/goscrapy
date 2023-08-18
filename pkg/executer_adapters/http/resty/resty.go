@@ -7,18 +7,18 @@ import (
 
 // RestyHTTPClientAdapter implements executer's Client interface
 
-type RestyHTTPClientAdapter struct {
+type HTTPClientAdapter struct {
 	client *resty.Client
 }
 
-func NewHTTPClientAdapter() *RestyHTTPClientAdapter {
-	return &RestyHTTPClientAdapter{
+func NewHTTPClientAdapter() *HTTPClientAdapter {
+	return &HTTPClientAdapter{
 		client: resty.New(),
 	}
 }
 
-func (r *RestyHTTPClientAdapter) Request() executorhttp.Requester {
-	return RestyHTTPRequestAdapter{
+func (r *HTTPClientAdapter) Request() executorhttp.Requester {
+	return HTTPRequestAdapter{
 		req: r.client.R(),
 	}
 }

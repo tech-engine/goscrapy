@@ -12,29 +12,29 @@ import (
 
 // NativeHTTPRequestAdapter implements executer's Requester interface
 
-type NativeHTTPRequestAdapter struct {
+type HTTPRequestAdapter struct {
 	client *http.Client
 	req    *http.Request
 }
 
-func (r NativeHTTPRequestAdapter) SetContext(ctx context.Context) executorhttp.Requester {
+func (r HTTPRequestAdapter) SetContext(ctx context.Context) executorhttp.Requester {
 	r.req = r.req.WithContext(ctx)
 	return r
 }
 
-func (r NativeHTTPRequestAdapter) SetHeaders(headers map[string]string) executorhttp.Requester {
+func (r HTTPRequestAdapter) SetHeaders(headers map[string]string) executorhttp.Requester {
 	for key, value := range headers {
 		r.req.Header.Add(key, value)
 	}
 	return r
 }
 
-func (r NativeHTTPRequestAdapter) SetBody(body io.ReadCloser) executorhttp.Requester {
+func (r HTTPRequestAdapter) SetBody(body io.ReadCloser) executorhttp.Requester {
 	r.req.Body = body
 	return r
 }
 
-func (r NativeHTTPRequestAdapter) Get(target executorhttp.ResponseWriter, _url string) error {
+func (r HTTPRequestAdapter) Get(target executorhttp.ResponseWriter, _url string) error {
 	r.req.Method = http.MethodGet
 	r.req.URL, _ = url.Parse(_url)
 
@@ -44,10 +44,10 @@ func (r NativeHTTPRequestAdapter) Get(target executorhttp.ResponseWriter, _url s
 		return fmt.Errorf("Get: error dispatching request %w", err)
 	}
 
-	return NativeHTTPRequestAdapterResponse(target, source, err)
+	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r NativeHTTPRequestAdapter) Post(target executorhttp.ResponseWriter, _url string) error {
+func (r HTTPRequestAdapter) Post(target executorhttp.ResponseWriter, _url string) error {
 	r.req.Method = http.MethodPost
 	r.req.URL, _ = url.Parse(_url)
 
@@ -57,10 +57,10 @@ func (r NativeHTTPRequestAdapter) Post(target executorhttp.ResponseWriter, _url 
 		return fmt.Errorf("Post: error dispatching request %w", err)
 	}
 
-	return NativeHTTPRequestAdapterResponse(target, source, err)
+	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r NativeHTTPRequestAdapter) Put(target executorhttp.ResponseWriter, _url string) error {
+func (r HTTPRequestAdapter) Put(target executorhttp.ResponseWriter, _url string) error {
 	r.req.Method = http.MethodPut
 	r.req.URL, _ = url.Parse(_url)
 
@@ -70,10 +70,10 @@ func (r NativeHTTPRequestAdapter) Put(target executorhttp.ResponseWriter, _url s
 		return fmt.Errorf("Put: error dispatching request %w", err)
 	}
 
-	return NativeHTTPRequestAdapterResponse(target, source, err)
+	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r NativeHTTPRequestAdapter) Patch(target executorhttp.ResponseWriter, _url string) error {
+func (r HTTPRequestAdapter) Patch(target executorhttp.ResponseWriter, _url string) error {
 	r.req.Method = http.MethodPatch
 	r.req.URL, _ = url.Parse(_url)
 
@@ -83,10 +83,10 @@ func (r NativeHTTPRequestAdapter) Patch(target executorhttp.ResponseWriter, _url
 		return fmt.Errorf("Patch: error dispatching request %w", err)
 	}
 
-	return NativeHTTPRequestAdapterResponse(target, source, err)
+	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r NativeHTTPRequestAdapter) Delete(target executorhttp.ResponseWriter, _url string) error {
+func (r HTTPRequestAdapter) Delete(target executorhttp.ResponseWriter, _url string) error {
 	r.req.Method = http.MethodDelete
 	r.req.URL, _ = url.Parse(_url)
 
@@ -96,5 +96,5 @@ func (r NativeHTTPRequestAdapter) Delete(target executorhttp.ResponseWriter, _ur
 		return fmt.Errorf("Delete: error dispatching request %w", err)
 	}
 
-	return NativeHTTPRequestAdapterResponse(target, source, err)
+	return HTTPRequestAdapterResponse(target, source, err)
 }

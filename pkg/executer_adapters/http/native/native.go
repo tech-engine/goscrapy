@@ -8,18 +8,18 @@ import (
 
 // NativeHTTPClientAdapter implements executer's Client interface
 
-type NativeHTTPClientAdapter struct {
+type HTTPClientAdapter struct {
 	client *http.Client
 }
 
-func NewHTTPClientAdapter() *NativeHTTPClientAdapter {
-	return &NativeHTTPClientAdapter{
+func NewHTTPClientAdapter() *HTTPClientAdapter {
+	return &HTTPClientAdapter{
 		client: &http.Client{},
 	}
 }
 
-func (r *NativeHTTPClientAdapter) Request() executorhttp.Requester {
-	return NativeHTTPRequestAdapter{
+func (r *HTTPClientAdapter) Request() executorhttp.Requester {
+	return HTTPRequestAdapter{
 		client: r.client,
 		req:    &http.Request{},
 	}
