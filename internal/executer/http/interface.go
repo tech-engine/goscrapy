@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"io"
 	"net/http"
 )
 
@@ -9,7 +10,7 @@ type RequestReader interface {
 	Url() string
 	Headers() map[string]string
 	Method() string
-	Body() any
+	Body() io.ReadCloser
 	MetaData() map[string]any
 }
 
@@ -27,7 +28,7 @@ type Client interface {
 type Requester interface {
 	SetContext(context.Context) Requester
 	SetHeaders(map[string]string) Requester
-	SetBody(any) Requester
+	SetBody(io.ReadCloser) Requester
 	Get(ResponseWriter, string) error
 	Post(ResponseWriter, string) error
 	Patch(ResponseWriter, string) error
@@ -38,5 +39,5 @@ type Requester interface {
 type ResponseWriter interface {
 	SetStatusCode(int) ResponseWriter
 	SetHeaders(http.Header) ResponseWriter
-	SetBody([]byte) ResponseWriter
+	SetBody(io.ReadCloser) ResponseWriter
 }

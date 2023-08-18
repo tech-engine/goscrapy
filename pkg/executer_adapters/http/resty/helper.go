@@ -10,6 +10,6 @@ func RestyHTTPRequestAdapterResponse(target executorhttp.ResponseWriter, source 
 		return err
 	}
 
-	target.SetHeaders(source.Header()).SetStatusCode(source.StatusCode()).SetBody(source.Body())
+	// target.SetHeaders(source.Header()).SetStatusCode(source.StatusCode()).SetBody(source.Body())
 	return nil
 }

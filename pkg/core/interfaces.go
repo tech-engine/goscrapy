@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"io"
 	"net/http"
 
 	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
@@ -58,7 +59,7 @@ type RequestWriter interface {
 
 type ResponseReader interface {
 	Headers() http.Header
-	Body() []byte
+	Body() io.ReadCloser
 	StatusCode() int
 }
 

@@ -1,6 +1,11 @@
 package core
 
-import "strings"
+import (
+	"bytes"
+	"encoding/json"
+	"io"
+	"strings"
+)
 
 func (r *Request) SetUrl(url string) RequestWriter {
 	r.url = url
@@ -13,7 +18,21 @@ func (r *Request) SetMethod(method string) RequestWriter {
 }
 
 func (r *Request) SetBody(body any) RequestWriter {
-	r.body = body
+	switch v := body.(type) {
+	case io.Reader:
+		r.body = io.NopCloser(v)
+	case io.ReadCloser:
+		r.body = v
+	case string:
+		r.body = io.NopCloser(strings.NewReader(v))
+	case []byte:
+		r.body = io.NopCloser(bytes.NewReader(v))
+	default:
+		var buf *bytes.Buffer
+		_ = json.NewEncoder(buf).Encode(v)
+		r.body = io.NopCloser(buf)
+	}
+
 	return r
 }
 
@@ -55,7 +74,7 @@ func (r *Request) Headers() map[string]string {
 	return r.headers
 }
 
-func (r *Request) Body() any {
+func (r *Request) Body() io.ReadCloser {
 	return r.body
 }
 

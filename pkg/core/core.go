@@ -7,7 +7,7 @@ import (
 
 	executer "github.com/tech-engine/goscrapy/internal/executer/http"
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
-	restyadapter "github.com/tech-engine/goscrapy/pkg/executer_adapters/http/resty"
+	httpadapter "github.com/tech-engine/goscrapy/pkg/executer_adapters/http/native"
 )
 
 func New[IN Job, OUT any](ctx context.Context, spider Spider[IN, OUT]) *manager[IN, OUT] {
@@ -15,7 +15,7 @@ func New[IN Job, OUT any](ctx context.Context, spider Spider[IN, OUT]) *manager[
 	manager := &manager[IN, OUT]{
 		ctx:          ctx,
 		spider:       spider,
-		executer:     executer.NewExecuter(restyadapter.NewRestyHTTPClientAdapter()),
+		executer:     executer.NewExecuter(httpadapter.NewHTTPClientAdapter()),
 		requestPool:  rp.NewPooler[Request](rp.WithSize[Request](1e6)),
 		responsePool: rp.NewPooler[Response](rp.WithSize[Response](1e6)),
 		Pipelines:    NewPipelineManager[IN, any, OUT, Output[IN, OUT]](),
@@ -104,6 +104,7 @@ func (m *manager[IN, OUT]) reqResCleanUp(req *Request, res *Response) {
 	}
 
 	if res != nil {
+		res.body.Close()
 		res.Reset()
 		m.responsePool.Release(res)
 	}

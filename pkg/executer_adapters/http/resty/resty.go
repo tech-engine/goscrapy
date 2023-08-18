@@ -11,7 +11,7 @@ type RestyHTTPClientAdapter struct {
 	client *resty.Client
 }
 
-func NewRestyHTTPClientAdapter() *RestyHTTPClientAdapter {
+func NewHTTPClientAdapter() *RestyHTTPClientAdapter {
 	return &RestyHTTPClientAdapter{
 		client: resty.New(),
 	}

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"io"
 	"net/http"
 
 	executer "github.com/tech-engine/goscrapy/internal/executer/http"
@@ -10,13 +11,13 @@ func NewResponse() *Response {
 	return &Response{}
 }
 
-func (r *Response) Body() []byte {
+func (r *Response) Body() io.ReadCloser {
 	return r.body
 }
 
-func (r *Response) String() string {
-	return string(r.body)
-}
+// func (r *Response) String() string {
+// 	return string(r.body)
+// }
 
 func (r *Response) StatusCode() int {
 	return r.statuscode
@@ -32,7 +33,7 @@ func (r *Response) SetStatusCode(statuscode int) executer.ResponseWriter {
 	return r
 }
 
-func (r *Response) SetBody(body []byte) executer.ResponseWriter {
+func (r *Response) SetBody(body io.ReadCloser) executer.ResponseWriter {
 	r.body = body
 	return r
 }

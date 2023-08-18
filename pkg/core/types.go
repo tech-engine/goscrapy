@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"sync"
 
@@ -27,14 +28,14 @@ type PipelineManager[J Job, IN any, OUT any, OR Output[J, OUT]] struct {
 type Request struct {
 	url     string
 	method  string
-	body    any
+	body    io.ReadCloser
 	headers map[string]string
 	meta    map[string]any
 }
 
 type Response struct {
 	statuscode int
-	body       []byte
+	body       io.ReadCloser
 	headers    http.Header
 }
 

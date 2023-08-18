@@ -2,6 +2,7 @@ package restyadapter
 
 import (
 	"context"
+	"io"
 
 	"github.com/go-resty/resty/v2"
 	executorhttp "github.com/tech-engine/goscrapy/internal/executer/http"
@@ -23,7 +24,7 @@ func (r RestyHTTPRequestAdapter) SetHeaders(headers map[string]string) executorh
 	return r
 }
 
-func (r RestyHTTPRequestAdapter) SetBody(body any) executorhttp.Requester {
+func (r RestyHTTPRequestAdapter) SetBody(body io.ReadCloser) executorhttp.Requester {
 	r.req.SetBody(body)
 	return r
 }
