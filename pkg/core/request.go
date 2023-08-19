@@ -93,4 +93,5 @@ func (r *Request) Reset() {
 	r.headers = nil
 	r.body = nil
 	r.meta = nil
+	r.cookieJarKey = ""
 }
