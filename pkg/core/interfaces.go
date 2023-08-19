@@ -55,6 +55,7 @@ type RequestWriter interface {
 	SetMethod(string) RequestWriter
 	SetBody(any) RequestWriter
 	SetMetaData(string, any) RequestWriter
+	SetCookieJar(string) RequestWriter
 }
 
 type ResponseReader interface {

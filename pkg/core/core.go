@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"net/http"
 	"strings"
 	"sync"
 
@@ -15,10 +16,11 @@ func New[IN Job, OUT any](ctx context.Context, spider Spider[IN, OUT]) *manager[
 	manager := &manager[IN, OUT]{
 		ctx:          ctx,
 		spider:       spider,
-		executer:     executer.NewExecuter(httpadapter.NewHTTPClientAdapter()),
+		executer:     nil,
 		requestPool:  rp.NewPooler[Request](rp.WithSize[Request](1e6)),
 		responsePool: rp.NewPooler[Response](rp.WithSize[Response](1e6)),
 		Pipelines:    NewPipelineManager[IN, any, OUT, Output[IN, OUT]](),
+		middlewares:  make([]Middleware, 0),
 		outputCh:     make(chan Output[IN, OUT]),
 	}
 
@@ -31,6 +33,13 @@ func New[IN Job, OUT any](ctx context.Context, spider Spider[IN, OUT]) *manager[
 
 // start the core
 func (m *manager[IN, OUT]) Start(ctx context.Context) error {
+
+	/*
+		We chain all middlewares and create an http client and then an executer.
+	*/
+	m.executer = executer.NewExecuter(httpadapter.NewHTTPClientAdapter(&http.Client{
+		Transport: m.chainMiddlewares(),
+	}))
 
 	// first start the pipelines
 	if err := m.Pipelines.start(ctx); err != nil {
@@ -99,6 +108,7 @@ func (m *manager[IN, OUT]) NewJob(id string) IN {
 
 func (m *manager[IN, OUT]) reqResCleanUp(req *Request, res *Response) {
 	if req != nil {
+		req.body.Close()
 		req.Reset()
 		m.requestPool.Release(req)
 	}
@@ -141,4 +151,20 @@ func (m *manager[IN, OUT]) exRequest(ctx context.Context, req *Request, cb Respo
 		)
 
 	}(&m.wg, ctx, cb)
+}
+
+func (m *manager[IN, OUT]) chainMiddlewares() http.RoundTripper {
+
+	// add all the middlewares
+	roundTripper := http.DefaultTransport
+	for _, middleware := range m.middlewares {
+		roundTripper = middleware(roundTripper)
+	}
+
+	return roundTripper
+
+}
+
+func (m *manager[IN, OUT]) AddMiddlewares(middlewares ...Middleware) {
+	m.middlewares = append(m.middlewares, middlewares...)
 }

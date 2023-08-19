@@ -12,9 +12,13 @@ type HTTPClientAdapter struct {
 	client *http.Client
 }
 
-func NewHTTPClientAdapter() *HTTPClientAdapter {
+func NewHTTPClientAdapter(client *http.Client) *HTTPClientAdapter {
+	if client == nil {
+		client = &http.Client{}
+	}
+
 	return &HTTPClientAdapter{
-		client: &http.Client{},
+		client: client,
 	}
 }
 

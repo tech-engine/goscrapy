@@ -1,6 +1,8 @@
 package restyadapter
 
 import (
+	"net/http"
+
 	"github.com/go-resty/resty/v2"
 	executorhttp "github.com/tech-engine/goscrapy/internal/executer/http"
 )
@@ -11,9 +13,12 @@ type HTTPClientAdapter struct {
 	client *resty.Client
 }
 
-func NewHTTPClientAdapter() *HTTPClientAdapter {
+func NewHTTPClientAdapter(client *http.Client) *HTTPClientAdapter {
+	if client == nil {
+		client = &http.Client{}
+	}
 	return &HTTPClientAdapter{
-		client: resty.New(),
+		client: resty.NewWithClient(client),
 	}
 }
 

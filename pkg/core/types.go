@@ -17,6 +17,7 @@ type manager[IN Job, OUT any] struct {
 	ctx          context.Context
 	requestPool  *rp.Pooler[Request]
 	responsePool *rp.Pooler[Response]
+	middlewares  []Middleware
 	executer     *executer.Executer
 	outputCh     chan Output[IN, OUT]
 }
@@ -26,11 +27,12 @@ type PipelineManager[J Job, IN any, OUT any, OR Output[J, OUT]] struct {
 }
 
 type Request struct {
-	url     string
-	method  string
-	body    io.ReadCloser
-	headers map[string]string
-	meta    map[string]any
+	url          string
+	method       string
+	body         io.ReadCloser
+	headers      map[string]string
+	meta         map[string]any
+	cookieJarKey string
 }
 
 type Response struct {

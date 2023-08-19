@@ -41,6 +41,11 @@ func (r *Request) SetHeaders(headers map[string]string) RequestWriter {
 	return r
 }
 
+func (r *Request) SetCookieJar(key string) RequestWriter {
+	r.cookieJarKey = key
+	return r
+}
+
 func (r *Request) SetMetaData(key string, val any) RequestWriter {
 	if r.meta == nil {
 		r.meta = make(map[string]any)
