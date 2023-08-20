@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 
@@ -15,9 +16,11 @@ func (r *Response) Body() io.ReadCloser {
 	return r.body
 }
 
-// func (r *Response) String() string {
-// 	return string(r.body)
-// }
+func (r *Response) Bytes() []byte {
+	buff := new(bytes.Buffer)
+	buff.ReadFrom(r.body)
+	return buff.Bytes()
+}
 
 func (r *Response) StatusCode() int {
 	return r.statuscode

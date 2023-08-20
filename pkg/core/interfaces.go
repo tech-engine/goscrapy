@@ -61,6 +61,7 @@ type RequestWriter interface {
 type ResponseReader interface {
 	Headers() http.Header
 	Body() io.ReadCloser
+	Bytes() []byte
 	StatusCode() int
 }
 
