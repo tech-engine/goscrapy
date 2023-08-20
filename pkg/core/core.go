@@ -108,13 +108,17 @@ func (m *manager[IN, OUT]) NewJob(id string) IN {
 
 func (m *manager[IN, OUT]) reqResCleanUp(req *Request, res *Response) {
 	if req != nil {
-		req.body.Close()
+		if req.body != nil {
+			req.body.Close()
+		}
 		req.Reset()
 		m.requestPool.Release(req)
 	}
 
 	if res != nil {
-		res.body.Close()
+		if res.body != nil {
+			res.body.Close()
+		}
 		res.Reset()
 		m.responsePool.Release(res)
 	}
