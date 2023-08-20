@@ -3,6 +3,7 @@ package restyadapter
 import (
 	"context"
 	"io"
+	"net/url"
 
 	"github.com/go-resty/resty/v2"
 	executorhttp "github.com/tech-engine/goscrapy/internal/executer/http"
@@ -29,27 +30,27 @@ func (r HTTPRequestAdapter) SetBody(body io.ReadCloser) executorhttp.Requester {
 	return r
 }
 
-func (r HTTPRequestAdapter) Get(target executorhttp.ResponseWriter, url string) error {
-	source, err := r.req.Get(url)
+func (r HTTPRequestAdapter) Get(target executorhttp.ResponseWriter, url *url.URL) error {
+	source, err := r.req.Get(url.String())
 	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r HTTPRequestAdapter) Post(target executorhttp.ResponseWriter, url string) error {
-	source, err := r.req.Post(url)
+func (r HTTPRequestAdapter) Post(target executorhttp.ResponseWriter, url *url.URL) error {
+	source, err := r.req.Post(url.String())
 	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r HTTPRequestAdapter) Put(target executorhttp.ResponseWriter, url string) error {
-	source, err := r.req.Put(url)
+func (r HTTPRequestAdapter) Put(target executorhttp.ResponseWriter, url *url.URL) error {
+	source, err := r.req.Put(url.String())
 	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r HTTPRequestAdapter) Patch(target executorhttp.ResponseWriter, url string) error {
-	source, err := r.req.Patch(url)
+func (r HTTPRequestAdapter) Patch(target executorhttp.ResponseWriter, url *url.URL) error {
+	source, err := r.req.Patch(url.String())
 	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r HTTPRequestAdapter) Delete(target executorhttp.ResponseWriter, url string) error {
-	source, err := r.req.Delete(url)
+func (r HTTPRequestAdapter) Delete(target executorhttp.ResponseWriter, url *url.URL) error {
+	source, err := r.req.Delete(url.String())
 	return HTTPRequestAdapterResponse(target, source, err)
 }

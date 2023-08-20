@@ -10,6 +10,9 @@ func HTTPRequestAdapterResponse(target executorhttp.ResponseWriter, source *rest
 		return err
 	}
 
-	// target.SetHeaders(source.Header()).SetStatusCode(source.StatusCode()).SetBody(source.Body())
+	target.SetHeaders(source.Header()).
+		SetStatusCode(source.StatusCode()).
+		SetBody(source.RawResponse.Body).
+		SetCookies(source.Cookies())
 	return nil
 }

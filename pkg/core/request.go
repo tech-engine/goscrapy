@@ -3,12 +3,20 @@ package core
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
+	"net/url"
 	"strings"
 )
 
-func (r *Request) SetUrl(url string) RequestWriter {
-	r.url = url
+func (r *Request) SetUrl(_url string) RequestWriter {
+	__url, err := url.Parse(_url)
+
+	if err != nil {
+		panic(fmt.Sprintf("SetUrl: error parsing url"))
+	}
+
+	r.url = __url
 	return r
 }
 
@@ -71,7 +79,7 @@ func (r *Request) MetaDataKey(key string) (any, bool) {
 	return val, ok
 }
 
-func (r *Request) Url() string {
+func (r *Request) Url() *url.URL {
 	return r.url
 }
 
@@ -89,7 +97,7 @@ func (r *Request) Method() string {
 
 func (r *Request) Reset() {
 	r.method = "GET"
-	r.url = ""
+	r.url = nil
 	r.headers = nil
 	r.body = nil
 	r.meta = nil

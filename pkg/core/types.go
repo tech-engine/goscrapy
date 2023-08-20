@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 
 	executer "github.com/tech-engine/goscrapy/internal/executer/http"
@@ -27,7 +28,7 @@ type PipelineManager[J Job, IN any, OUT any, OR Output[J, OUT]] struct {
 }
 
 type Request struct {
-	url          string
+	url          *url.URL
 	method       string
 	body         io.ReadCloser
 	headers      map[string]string
@@ -39,6 +40,7 @@ type Response struct {
 	statuscode int
 	body       io.ReadCloser
 	headers    http.Header
+	cookies    []*http.Cookie
 }
 
 type DelegatedOperator[IN Job, OUT any] struct {

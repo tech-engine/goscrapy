@@ -34,9 +34,9 @@ func (r HTTPRequestAdapter) SetBody(body io.ReadCloser) executorhttp.Requester {
 	return r
 }
 
-func (r HTTPRequestAdapter) Get(target executorhttp.ResponseWriter, _url string) error {
+func (r HTTPRequestAdapter) Get(target executorhttp.ResponseWriter, url *url.URL) error {
 	r.req.Method = http.MethodGet
-	r.req.URL, _ = url.Parse(_url)
+	r.req.URL = url
 
 	source, err := r.client.Do(r.req)
 
@@ -47,9 +47,9 @@ func (r HTTPRequestAdapter) Get(target executorhttp.ResponseWriter, _url string)
 	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r HTTPRequestAdapter) Post(target executorhttp.ResponseWriter, _url string) error {
+func (r HTTPRequestAdapter) Post(target executorhttp.ResponseWriter, url *url.URL) error {
 	r.req.Method = http.MethodPost
-	r.req.URL, _ = url.Parse(_url)
+	r.req.URL = url
 
 	source, err := r.client.Do(r.req)
 
@@ -60,9 +60,9 @@ func (r HTTPRequestAdapter) Post(target executorhttp.ResponseWriter, _url string
 	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r HTTPRequestAdapter) Put(target executorhttp.ResponseWriter, _url string) error {
+func (r HTTPRequestAdapter) Put(target executorhttp.ResponseWriter, url *url.URL) error {
 	r.req.Method = http.MethodPut
-	r.req.URL, _ = url.Parse(_url)
+	r.req.URL = url
 
 	source, err := r.client.Do(r.req)
 
@@ -73,9 +73,9 @@ func (r HTTPRequestAdapter) Put(target executorhttp.ResponseWriter, _url string)
 	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r HTTPRequestAdapter) Patch(target executorhttp.ResponseWriter, _url string) error {
+func (r HTTPRequestAdapter) Patch(target executorhttp.ResponseWriter, url *url.URL) error {
 	r.req.Method = http.MethodPatch
-	r.req.URL, _ = url.Parse(_url)
+	r.req.URL = url
 
 	source, err := r.client.Do(r.req)
 
@@ -86,9 +86,9 @@ func (r HTTPRequestAdapter) Patch(target executorhttp.ResponseWriter, _url strin
 	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r HTTPRequestAdapter) Delete(target executorhttp.ResponseWriter, _url string) error {
+func (r HTTPRequestAdapter) Delete(target executorhttp.ResponseWriter, url *url.URL) error {
 	r.req.Method = http.MethodDelete
-	r.req.URL, _ = url.Parse(_url)
+	r.req.URL = url
 
 	source, err := r.client.Do(r.req)
 

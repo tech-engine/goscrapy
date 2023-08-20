@@ -63,6 +63,7 @@ type ResponseReader interface {
 	Body() io.ReadCloser
 	Bytes() []byte
 	StatusCode() int
+	Cookies() []*http.Cookie
 }
 
 type ResponseCallback func(context.Context, ResponseReader)

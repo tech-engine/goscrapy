@@ -30,6 +30,10 @@ func (r *Response) Headers() http.Header {
 	return r.headers
 }
 
+func (r *Response) Cookies() []*http.Cookie {
+	return r.cookies
+}
+
 // setters
 func (r *Response) SetStatusCode(statuscode int) executer.ResponseWriter {
 	r.statuscode = statuscode
@@ -43,6 +47,11 @@ func (r *Response) SetBody(body io.ReadCloser) executer.ResponseWriter {
 
 func (r *Response) SetHeaders(headers http.Header) executer.ResponseWriter {
 	r.headers = headers
+	return r
+}
+
+func (r *Response) SetCookies(cookies []*http.Cookie) executer.ResponseWriter {
+	r.cookies = cookies
 	return r
 }
 

@@ -4,10 +4,11 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/url"
 )
 
 type RequestReader interface {
-	Url() string
+	Url() *url.URL
 	Headers() map[string]string
 	Method() string
 	Body() io.ReadCloser
@@ -29,15 +30,16 @@ type Requester interface {
 	SetContext(context.Context) Requester
 	SetHeaders(map[string]string) Requester
 	SetBody(io.ReadCloser) Requester
-	Get(ResponseWriter, string) error
-	Post(ResponseWriter, string) error
-	Patch(ResponseWriter, string) error
-	Put(ResponseWriter, string) error
-	Delete(ResponseWriter, string) error
+	Get(ResponseWriter, *url.URL) error
+	Post(ResponseWriter, *url.URL) error
+	Patch(ResponseWriter, *url.URL) error
+	Put(ResponseWriter, *url.URL) error
+	Delete(ResponseWriter, *url.URL) error
 }
 
 type ResponseWriter interface {
 	SetStatusCode(int) ResponseWriter
 	SetHeaders(http.Header) ResponseWriter
 	SetBody(io.ReadCloser) ResponseWriter
+	SetCookies([]*http.Cookie) ResponseWriter
 }

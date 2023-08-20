@@ -11,6 +11,9 @@ func HTTPRequestAdapterResponse(target executorhttp.ResponseWriter, source *http
 		return err
 	}
 
-	target.SetHeaders(source.Header).SetStatusCode(source.StatusCode).SetBody(source.Body)
+	target.SetHeaders(source.Header).
+		SetStatusCode(source.StatusCode).
+		SetBody(source.Body).
+		SetCookies(source.Cookies())
 	return nil
 }
