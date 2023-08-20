@@ -1,8 +1,11 @@
 package middlewares
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
 	"net/http/cookiejar"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -34,6 +37,29 @@ func (m *MultiCookieJar) CookieJar(key string) http.CookieJar {
 	}
 
 	return jar
+}
+
+// EncodeCookieJar returns coo
+func (m *MultiCookieJar) EncodeCookieJar(key string, _url string) string {
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	jar, ok := m.jars[key]
+
+	if !ok {
+		return ""
+	}
+
+	var buf bytes.Buffer
+	__url, _ := url.Parse(_url)
+
+	for _, cookie := range jar.Cookies(__url) {
+		buf.WriteString(fmt.Sprintf("%s=%s; ", cookie.Name, cookie.Value))
+	}
+	
+	return buf.String()
+
 }
 
 func (m *MultiCookieJar) SetCookieJar(key string, jar http.CookieJar) http.CookieJar {
