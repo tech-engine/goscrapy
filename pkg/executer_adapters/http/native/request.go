@@ -23,6 +23,7 @@ func (r HTTPRequestAdapter) SetContext(ctx context.Context) executorhttp.Request
 }
 
 func (r HTTPRequestAdapter) SetHeaders(headers map[string]string) executorhttp.Requester {
+	r.req.Header = http.Header{}
 	for key, value := range headers {
 		r.req.Header.Add(key, value)
 	}
