@@ -21,17 +21,31 @@ func NewMultiCookieJar() *MultiCookieJar {
 	}
 }
 
+// CookieJar returns a CookieJar corresponding to a key or create one if key doesn't exist
 func (m *MultiCookieJar) CookieJar(key string) http.CookieJar {
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	jar, ok := m.jars[key]
+
+	if !ok {
+		return nil
+	}
+
+	return jar
+}
+
+func (m *MultiCookieJar) SetCookieJar(key string, jar http.CookieJar) http.CookieJar {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	jar, ok := m.jars[key]
-	if ok {
-		return jar
-	}
+	key = strings.Trim(key, " ")
 
-	jar, _ = cookiejar.New(nil)
+	if jar == nil {
+		jar, _ = cookiejar.New(nil)
+	}
 
 	m.jars[key] = jar
 	return jar
@@ -42,8 +56,14 @@ func MultiCookieJarMiddleware(next http.RoundTripper) http.RoundTripper {
 	return core.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
 		cookieJarKey := strings.Trim(req.Header.Get("cookie-jar"), " ")
 
-		// pick cookies from jar and add cookies to request
+		// try picking cookies from jar corresponding to a key
 		jar := mCookieJar.CookieJar(cookieJarKey)
+
+		if jar == nil {
+			// create an empty jar
+			jar = mCookieJar.SetCookieJar(cookieJarKey, nil)
+		}
+
 		reqCookies := jar.Cookies(req.URL)
 
 		for _, rc := range reqCookies {
