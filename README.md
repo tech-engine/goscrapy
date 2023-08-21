@@ -147,6 +147,7 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 	SetMethod("POST").
 	SetMetaData("JOB", job).
 	SetHeaders(headers).
+	SetCookieJar("myjar").  // if not set it uses a default cookie jar, you can also set a cookie jar to use for the request, optional
 	SetBody(<BODY_HERE>)
 	*/
 
@@ -158,6 +159,7 @@ func (s *Spider) parse(ctx context.Context, response core.ResponseReader) {
 	// response.Body()
 	// response.StatusCode()
 	// response.Headers()
+	// response.Cookies() // response cookies returned by the previous request
 	// check output.go for the fields
 	// s.yield(output)
 }
@@ -256,7 +258,7 @@ goScrapy.AddMiddlewares(
 
 ### Note
 
-**GoScrapy** is still in it's initial baby stage and under developement and thus lacks many features like html parsing, cookie management etc. So more work is under way. Thank your for your patience.
+**GoScrapy** is still in it's initial baby stage and under developement and thus lacks many features like html parsing etc. So more work is under way. Thank your for your patience.
 
 ## Roadmap
 
