@@ -1,4 +1,5 @@
 ﻿# GoScrapy: Web Scraping Framework in Go
+ [![Go Reference](https://pkg.go.dev/badge/github.com/tech-engine/goscrapy.svg)](https://pkg.go.dev/github.com/tech-engine/goscrapy) [![Alt Text](https://goreportcard.com/badge/github.com/tech-engine/goscrapy)](https://github.com/tech-engine/goscrapy)
 <p align="center">
   <img width="200" src="./logo.png">
 </p>
