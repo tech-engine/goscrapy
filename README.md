@@ -222,13 +222,46 @@ PS D:\My-Projects\go\go-test-scrapy>scrapethissite> goscrapy pipeline export_2_D
 ✨ Congrates, export_2_DB created successfully.
 ```
 
+## Middlewares
+**GoScrapy** also support inbuilt + custom middlewares for manipulation outgoing request.
+
+### Built-in Middlewares
+- **MultiCookiJarMiddleware** - used for maintaining different cookie sessions while scraping.
+
+## Custom middleware
+Implementing your custom middleware is fairly easy in **GoScrapy**. A custom middleware must implement the below interface.
+
+```go
+func MultiCookieJarMiddleware(next http.RoundTripper) http.RoundTripper {
+	return core.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
+		// you middleware custom code here
+	})
+}
+```
+
+### Incorporating Middlewares into Your Scraping Workflow
+To seamlessly integrate middlewares into your scraping workflow, you can utilize the **AddMiddlewares** method which is a variadic function and can accept arbirary number of middlewares.
+
+Here is an example on how you can add middlewares to your scraping process:
+
+__`MultiCookieJarMiddleware Middleware`__:
+
+```go
+// goScrapy instance
+goScrapy.AddMiddlewares(
+	middlewares.MultiCookieJarMiddleware,
+	...
+)
+```
+
 ### Note
 
 **GoScrapy** is still in it's initial baby stage and under developement and thus lacks many features like html parsing, cookie management etc. So more work is under way. Thank your for your patience.
 
 ## Roadmap
 
-- Cookie management
-- Builtin & Custom Middlewares support
+- ~~Cookie management~~
+- ~~Builtin & Custom Middlewares support~~
 - HTML element selectors
 - Triggers
+- Unit Tests
