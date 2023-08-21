@@ -107,8 +107,6 @@ func singleHostCookieJar(client *http.Client, session string) func(t *testing.T)
 		testServer := httptest.NewServer(handlerGetCookieJar(t))
 		defer testServer.Close()
 
-		fmt.Println("00000", session)
-
 		requester := makeRequestWithClient(client)
 
 		headerOne := http.Header{
