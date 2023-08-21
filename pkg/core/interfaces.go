@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"io"
 	"net/http"
 
 	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
@@ -54,12 +55,15 @@ type RequestWriter interface {
 	SetMethod(string) RequestWriter
 	SetBody(any) RequestWriter
 	SetMetaData(string, any) RequestWriter
+	SetCookieJar(string) RequestWriter
 }
 
 type ResponseReader interface {
 	Headers() http.Header
-	Body() []byte
+	Body() io.ReadCloser
+	Bytes() []byte
 	StatusCode() int
+	Cookies() []*http.Cookie
 }
 
 type ResponseCallback func(context.Context, ResponseReader)

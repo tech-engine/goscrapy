@@ -5,11 +5,14 @@ import (
 	executorhttp "github.com/tech-engine/goscrapy/internal/executer/http"
 )
 
-func RestyHTTPRequestAdapterResponse(target executorhttp.ResponseWriter, source *resty.Response, err error) error {
+func HTTPRequestAdapterResponse(target executorhttp.ResponseWriter, source *resty.Response, err error) error {
 	if err != nil {
 		return err
 	}
 
-	target.SetHeaders(source.Header()).SetStatusCode(source.StatusCode()).SetBody(source.Body())
+	target.SetHeaders(source.Header()).
+		SetStatusCode(source.StatusCode()).
+		SetBody(source.RawResponse.Body).
+		SetCookies(source.Cookies())
 	return nil
 }

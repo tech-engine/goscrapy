@@ -2,7 +2,9 @@ package core
 
 import (
 	"context"
+	"io"
 	"net/http"
+	"net/url"
 	"sync"
 
 	executer "github.com/tech-engine/goscrapy/internal/executer/http"
@@ -16,6 +18,7 @@ type manager[IN Job, OUT any] struct {
 	ctx          context.Context
 	requestPool  *rp.Pooler[Request]
 	responsePool *rp.Pooler[Response]
+	middlewares  []Middleware
 	executer     *executer.Executer
 	outputCh     chan Output[IN, OUT]
 }
@@ -25,17 +28,19 @@ type PipelineManager[J Job, IN any, OUT any, OR Output[J, OUT]] struct {
 }
 
 type Request struct {
-	url     string
-	method  string
-	body    any
-	headers map[string]string
-	meta    map[string]any
+	url          *url.URL
+	method       string
+	body         io.ReadCloser
+	headers      map[string]string
+	meta         map[string]any
+	cookieJarKey string
 }
 
 type Response struct {
 	statuscode int
-	body       []byte
+	body       io.ReadCloser
 	headers    http.Header
+	cookies    []*http.Cookie
 }
 
 type DelegatedOperator[IN Job, OUT any] struct {

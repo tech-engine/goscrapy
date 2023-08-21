@@ -1,29 +1,30 @@
-package restyadapter
+package nativeadapter
 
 import (
 	"net/http"
 
-	"github.com/go-resty/resty/v2"
 	executorhttp "github.com/tech-engine/goscrapy/internal/executer/http"
 )
 
-// RestyHTTPClientAdapter implements executer's Client interface
+// NativeHTTPClientAdapter implements executer's Client interface
 
 type HTTPClientAdapter struct {
-	client *resty.Client
+	client *http.Client
 }
 
 func NewHTTPClientAdapter(client *http.Client) *HTTPClientAdapter {
 	if client == nil {
 		client = &http.Client{}
 	}
+
 	return &HTTPClientAdapter{
-		client: resty.NewWithClient(client),
+		client: client,
 	}
 }
 
 func (r *HTTPClientAdapter) Request() executorhttp.Requester {
 	return HTTPRequestAdapter{
-		req: r.client.R(),
+		client: r.client,
+		req:    &http.Request{},
 	}
 }

@@ -1,9 +1,22 @@
 package core
 
-import "strings"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/url"
+	"strings"
+)
 
-func (r *Request) SetUrl(url string) RequestWriter {
-	r.url = url
+func (r *Request) SetUrl(_url string) RequestWriter {
+	__url, err := url.Parse(_url)
+
+	if err != nil {
+		panic(fmt.Sprintf("SetUrl: error parsing url"))
+	}
+
+	r.url = __url
 	return r
 }
 
@@ -13,12 +26,31 @@ func (r *Request) SetMethod(method string) RequestWriter {
 }
 
 func (r *Request) SetBody(body any) RequestWriter {
-	r.body = body
+	switch v := body.(type) {
+	case io.Reader:
+		r.body = io.NopCloser(v)
+	case io.ReadCloser:
+		r.body = v
+	case string:
+		r.body = io.NopCloser(strings.NewReader(v))
+	case []byte:
+		r.body = io.NopCloser(bytes.NewReader(v))
+	default:
+		var buf *bytes.Buffer
+		_ = json.NewEncoder(buf).Encode(v)
+		r.body = io.NopCloser(buf)
+	}
+
 	return r
 }
 
 func (r *Request) SetHeaders(headers map[string]string) RequestWriter {
 	r.headers = headers
+	return r
+}
+
+func (r *Request) SetCookieJar(key string) RequestWriter {
+	r.cookieJarKey = key
 	return r
 }
 
@@ -47,7 +79,7 @@ func (r *Request) MetaDataKey(key string) (any, bool) {
 	return val, ok
 }
 
-func (r *Request) Url() string {
+func (r *Request) Url() *url.URL {
 	return r.url
 }
 
@@ -55,7 +87,7 @@ func (r *Request) Headers() map[string]string {
 	return r.headers
 }
 
-func (r *Request) Body() any {
+func (r *Request) Body() io.ReadCloser {
 	return r.body
 }
 
@@ -65,8 +97,9 @@ func (r *Request) Method() string {
 
 func (r *Request) Reset() {
 	r.method = "GET"
-	r.url = ""
+	r.url = nil
 	r.headers = nil
 	r.body = nil
 	r.meta = nil
+	r.cookieJarKey = ""
 }

@@ -55,12 +55,6 @@ func (p *export2JSON[IN, OUT, OR]) ProcessItem(input any, original OR, metadata 
 		return nil, nil
 	}
 
-	byteData, err := json.Marshal(original.Records())
-
-	if err != nil {
-		return nil, err
-	}
-
 	if p.filename == "" {
 		p.filename = "JOB_" + original.Job().Id() + ".json"
 	}
@@ -73,7 +67,12 @@ func (p *export2JSON[IN, OUT, OR]) ProcessItem(input any, original OR, metadata 
 
 	defer file.Close()
 
-	_, err = file.Write(byteData)
+	jsonEncoder := json.NewEncoder(file)
 
-	return nil, err
+	// Encode and write the JSON data
+	if err := jsonEncoder.Encode(original.Records()); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
