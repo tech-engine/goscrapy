@@ -57,7 +57,7 @@ func (m *MultiCookieJar) EncodeCookieJar(key string, _url string) string {
 	for _, cookie := range jar.Cookies(__url) {
 		buf.WriteString(fmt.Sprintf("%s=%s; ", cookie.Name, cookie.Value))
 	}
-	
+
 	return buf.String()
 
 }

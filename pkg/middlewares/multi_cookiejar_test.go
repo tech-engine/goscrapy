@@ -31,7 +31,7 @@ func makeRequestWithClient(client *http.Client) func(string, string, http.Header
 
 /*
 Handler func to test default cookiejar.
-We send 2 consequtive http requests. In first request, the server responds back with set-cookie header,
+We send 2 consecutive http requests. In first request, the server responds back with set-cookie header,
 and in the second request our client sends the cookies from default cookie jar to the server.
 */
 func handlerGetCookieJar(t *testing.T) *http.ServeMux {
