@@ -107,6 +107,8 @@ func singleHostCookieJar(client *http.Client, session string) func(t *testing.T)
 		testServer := httptest.NewServer(handlerGetCookieJar(t))
 		defer testServer.Close()
 
+		fmt.Println("00000", session)
+
 		requester := makeRequestWithClient(client)
 
 		headerOne := http.Header{
@@ -214,9 +216,10 @@ func TestMultiCookierJar(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			singleHostCookieJar(client, tc.SessionKey)
+			singleHostCookieJar(client, tc.SessionKey)(t)
 		})
 	}
 }
