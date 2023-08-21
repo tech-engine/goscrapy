@@ -17,7 +17,7 @@ func makeRequestWithClient(client *http.Client) func(string, string, http.Header
 		req, err := http.NewRequest(method, url, nil)
 
 		if err != nil {
-			return nil, fmt.Errorf("makeRequest: error creating http request %w", err)
+			return nil, fmt.Errorf("makeRequestWithClient: error creating http request %w", err)
 		}
 
 		if header != nil {
@@ -181,111 +181,6 @@ func singleHostCookieJar(client *http.Client, session string) func(t *testing.T)
 
 		assert.True(t, found, "expected 2 cookies, X-Goscrapy-Server-Req-1=single_host_req_1 & X-Goscrapy-Server-Req-2=single_host_req_2 to be passed to /send-cookie, but not passed")
 
-	}
-}
-
-// // Handler func to test custom cookiejar
-// func handlerGet4CustomCookieJar(t *testing.T) *http.ServeMux {
-// 	mux := http.NewServeMux()
-
-// 	// Set cookie
-// 	mux.HandleFunc("/get-cookie", func(w http.ResponseWriter, r *http.Request) {
-
-// 		// Create a new cookie
-// 		cookie := http.Cookie{
-// 			Name:   "TEST_COOKIE",
-// 			Value:  "1",
-// 			Domain: r.URL.Host,
-// 			Path:   "/",
-// 		}
-
-// 		// Set the cookie in the response
-// 		http.SetCookie(w, &cookie)
-
-// 		w.WriteHeader(http.StatusOK)
-
-// 	})
-
-// 	mux.HandleFunc("/send-cookie-1", func(w http.ResponseWriter, r *http.Request) {
-
-// 		w.WriteHeader(http.StatusOK)
-
-// 		// Inspect the request's cookies
-// 		cookies := r.Cookies()
-// 		if len(cookies) == 0 {
-// 			t.Error("Expected cookies in the request, but found none.")
-// 		}
-
-// 		found := false
-
-// 		for _, c := range cookies {
-// 			if c.Name == "TEST_COOKIE" && c.Value == "1" {
-// 				found = true
-// 			}
-// 		}
-
-// 		if !found {
-// 			t.Error("Expected cookie TEST_COOKIE=1 in the request, but not found.")
-// 		}
-
-// 	})
-// 	return mux
-// }
-
-// Both the 2 http requested to the same server HOST
-func multiHostCookieJar(client *http.Client, header http.Header) func(t *testing.T) {
-	return func(t *testing.T) {
-		// Create 2 test servers with the custom RoundTripper
-		testServerOne := httptest.NewServer(handlerGetCookieJar(t))
-		defer testServerOne.Close()
-
-		testServerTwo := httptest.NewServer(handlerGetCookieJar(t))
-		defer testServerTwo.Close()
-
-		// We make a first request to testServerOne
-		testServerOneFirstReq, err := http.NewRequest("GET", testServerOne.URL+"/get-cookie", nil)
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		testServerOneFirstReq.Header = http.Header{
-			"cookie-jar": []string{"test_jar_one"},
-		}
-
-		if _, err = client.Do(testServerOneFirstReq); err != nil {
-			t.Fatal(err)
-		}
-
-		// We make a first request to testServerTwo
-		testServerTwoFirstReq, err := http.NewRequest("GET", testServerTwo.URL+"/get-cookie", nil)
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		testServerTwoFirstReq.Header = http.Header{
-			"cookie-jar": []string{"test_jar_two"},
-		}
-
-		if _, err = client.Do(testServerTwoFirstReq); err != nil {
-			t.Fatal(err)
-		}
-
-		// We make a first request to testServerTwo
-		testServerTwoSecondReq, err := http.NewRequest("GET", testServerTwo.URL+"/send-cookie", nil)
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		testServerTwoSecondReq.Header = http.Header{
-			"cookie-jar": []string{"test_jar_two"},
-		}
-
-		if _, err = client.Do(testServerTwoSecondReq); err != nil {
-			t.Fatal(err)
-		}
 	}
 }
 
