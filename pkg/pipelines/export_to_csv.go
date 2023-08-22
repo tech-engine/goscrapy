@@ -60,7 +60,7 @@ func (p *export2CSV[IN, OUT, OR]) ProcessItem(input any, original OR, MetaData m
 		p.filename = "JOB_" + original.Job().Id() + ".csv"
 	}
 
-	file, err := os.OpenFile(p.filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0640)
+	file, err := os.OpenFile(p.filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640)
 
 	if err != nil {
 		return nil, err
