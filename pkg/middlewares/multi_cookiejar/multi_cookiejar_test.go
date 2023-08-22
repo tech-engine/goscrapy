@@ -1,4 +1,4 @@
-package middlewares
+package mutlicookiejar
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func makeRequestWithClient(client *http.Client) func(string, string, http.Header) (*http.Response, error) {
+func makeTestRequestWithClient(client *http.Client) func(string, string, http.Header) (*http.Response, error) {
 	return func(method, url string, header http.Header) (*http.Response, error) {
 		// Create a first GET request without any cookie
 		req, err := http.NewRequest(method, url, nil)
@@ -107,7 +107,7 @@ func singleHostCookieJar(client *http.Client, session string) func(t *testing.T)
 		testServer := httptest.NewServer(handlerGetCookieJar(t))
 		defer testServer.Close()
 
-		requester := makeRequestWithClient(client)
+		requester := makeTestRequestWithClient(client)
 
 		headerOne := http.Header{
 			"X-Goscrapy-Server-Req-1": []string{"single_host_req_1"},
@@ -119,7 +119,7 @@ func singleHostCookieJar(client *http.Client, session string) func(t *testing.T)
 		// Create the first GET request with default cookiejar, this is set the cookie in our client
 		respOne, err := requester("GET", testServer.URL+"/get-cookie", headerOne)
 
-		assert.Nil(t, err, "error in making http request 1")
+		assert.Nil(t, err, "error making http request 1")
 
 		defer respOne.Body.Close()
 
