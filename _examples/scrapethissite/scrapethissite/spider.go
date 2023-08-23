@@ -74,7 +74,7 @@ func (s *Spider) parse(ctx context.Context, response core.ResponseReader) {
 	}
 
 	var data []Record
-	err = json.Unmarshal(response.Body(), &data)
+	err = json.Unmarshal(response.Bytes(), &data)
 
 	if err != nil {
 		fmt.Print("Error", err)
