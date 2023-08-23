@@ -229,7 +229,8 @@ PS D:\My-Projects\go\go-test-scrapy>scrapethissite> goscrapy pipeline export_2_D
 **GoScrapy** also support inbuilt + custom middlewares for manipulation outgoing request.
 
 ### Built-in Middlewares
-- **MultiCookiJarMiddleware** - used for maintaining different cookie sessions while scraping.
+- **MultiCookiJarMiddleware** 	- used for maintaining different cookie sessions while scraping.
+- **DupeFilterMiddleware** 		- filters duplicate requests
 
 ## Custom middleware
 Implementing your custom middleware is fairly easy in **GoScrapy**. A custom middleware must implement the below interface.
