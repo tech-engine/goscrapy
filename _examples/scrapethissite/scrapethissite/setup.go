@@ -1,0 +1,19 @@
+package scrapeThisSite
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/tech-engine/goscrapy/pkg/core"
+)
+
+func Setup(ctx context.Context) (core.Manager[*Job, []Record], error) {
+	// Create a spider instance
+	spider, err := NewSpider()
+
+	if err != nil {
+		return nil, fmt.Errorf("Setup: %w", err)
+	}
+
+	return core.New[*Job, []Record](ctx, spider), nil
+}
