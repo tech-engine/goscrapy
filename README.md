@@ -4,7 +4,7 @@
   <img width="200" src="./logo.png">
 </p>
 
-**GoScrapy** aims to be a powerful open-source web scraping framework written in the Go and inspired by Python's Scrapy framework. It offers a user-friendly interface for extracting data from websites, making it an ideal tool for various data collection and analysis tasks.
+**GoScrapy** aims to be a powerful web scraping framework written in the Go and inspired by Python's Scrapy framework. It offers a user-friendly interface for extracting data from websites, making it an ideal tool for various data collection and analysis tasks.
 
 ## Getting Started
 Follow these steps to start using **GoScrapy**:
