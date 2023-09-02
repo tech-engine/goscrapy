@@ -11,7 +11,7 @@ import (
 	httpadapter "github.com/tech-engine/goscrapy/pkg/executer_adapters/http/native"
 )
 
-func New[IN Job, OUT any](ctx context.Context, spider Spider[IN, OUT]) *manager[IN, OUT] {
+func New[IN Job, OUT any](ctx context.Context, spider Spider[IN, OUT]) Manager[IN] {
 
 	manager := &manager[IN, OUT]{
 		ctx:          ctx,
@@ -47,7 +47,7 @@ func (m *manager[IN, OUT]) Start(ctx context.Context) error {
 	}
 
 	m.wg.Add(1)
-	go m.ProcessOutput()
+	go m.processOutput()
 
 	return nil
 }
@@ -79,7 +79,7 @@ func (m *manager[IN, OUT]) close() {
 }
 
 // ProcessOutput runs continuously
-func (m *manager[IN, OUT]) ProcessOutput() {
+func (m *manager[IN, OUT]) processOutput() {
 	defer m.wg.Done()
 	for {
 		select {

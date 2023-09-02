@@ -11,6 +11,14 @@ import (
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 )
 
+type Manager[IN Job] interface {
+	AddMiddlewares(...Middleware)
+	NewJob(string) IN
+	Run(IN)
+	Start(context.Context) error
+	Wait()
+}
+
 type manager[IN Job, OUT any] struct {
 	wg           sync.WaitGroup
 	spider       Spider[IN, OUT]
