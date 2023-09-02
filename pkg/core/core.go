@@ -11,7 +11,7 @@ import (
 	httpadapter "github.com/tech-engine/goscrapy/pkg/executer_adapters/http/native"
 )
 
-func New[IN Job, OUT any](ctx context.Context, spider Spider[IN, OUT]) Manager[IN] {
+func New[IN Job, OUT any](ctx context.Context, spider Spider[IN, OUT]) Manager[IN, OUT] {
 
 	manager := &manager[IN, OUT]{
 		ctx:          ctx,
@@ -19,7 +19,7 @@ func New[IN Job, OUT any](ctx context.Context, spider Spider[IN, OUT]) Manager[I
 		executer:     nil,
 		requestPool:  rp.NewPooler[Request](rp.WithSize[Request](1e6)),
 		responsePool: rp.NewPooler[Response](rp.WithSize[Response](1e6)),
-		Pipelines:    NewPipelineManager[IN, any, OUT, Output[IN, OUT]](),
+		pipelines:    NewPipelineManager[IN, any, OUT, Output[IN, OUT]](),
 		middlewares:  make([]Middleware, 0),
 		outputCh:     make(chan Output[IN, OUT]),
 	}
@@ -42,7 +42,7 @@ func (m *manager[IN, OUT]) Start(ctx context.Context) error {
 	}))
 
 	// first start the pipelines
-	if err := m.Pipelines.start(ctx); err != nil {
+	if err := m.pipelines.start(ctx); err != nil {
 		return err
 	}
 
@@ -72,7 +72,7 @@ func (m *manager[IN, OUT]) Run(job IN) {
 
 func (m *manager[IN, OUT]) close() {
 	// execute pipelines' close hooks - blocking
-	m.Pipelines.stop()
+	m.pipelines.stop()
 	// close spider's output channel
 	m.spider.Close()
 	close(m.outputCh)
@@ -96,7 +96,7 @@ func (m *manager[IN, OUT]) processOutput() {
 			// if we have data we push to pipelines
 			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
-				m.Pipelines.do(data, nil)
+				m.pipelines.do(data, nil)
 			}(&m.wg)
 		}
 	}
@@ -171,4 +171,8 @@ func (m *manager[IN, OUT]) chainMiddlewares() http.RoundTripper {
 
 func (m *manager[IN, OUT]) AddMiddlewares(middlewares ...Middleware) {
 	m.middlewares = append(m.middlewares, middlewares...)
+}
+
+func (m *manager[IN, OUT]) Pipelines() *PipelineManager[IN, any, OUT, Output[IN, OUT]] {
+	return m.pipelines
 }

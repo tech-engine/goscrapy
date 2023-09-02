@@ -11,8 +11,9 @@ import (
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 )
 
-type Manager[IN Job] interface {
+type Manager[IN Job, OUT any] interface {
 	AddMiddlewares(...Middleware)
+	Pipelines() *PipelineManager[IN, any, OUT, Output[IN, OUT]]
 	NewJob(string) IN
 	Run(IN)
 	Start(context.Context) error
@@ -22,7 +23,7 @@ type Manager[IN Job] interface {
 type manager[IN Job, OUT any] struct {
 	wg           sync.WaitGroup
 	spider       Spider[IN, OUT]
-	Pipelines    *PipelineManager[IN, any, OUT, Output[IN, OUT]]
+	pipelines    *PipelineManager[IN, any, OUT, Output[IN, OUT]]
 	ctx          context.Context
 	requestPool  *rp.Pooler[Request]
 	responsePool *rp.Pooler[Response]
