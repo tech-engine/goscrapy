@@ -60,6 +60,7 @@ PS D:\My-Projects\go\go-test-scrapy> goscrapy startproject scrapethissite
 ✔️  scrapethissite\output.go
 ✔️  scrapethissite\spider.go
 ✔️  scrapethissite\types.go
+✔️  scrapethissite\setup.go
 
 ✨ Congrates. scrapethissite created successfully.
 ```
