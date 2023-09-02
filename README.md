@@ -4,7 +4,7 @@
   <img width="200" src="./logo.png">
 </p>
 
-**GoScrapy** aims to be a powerful web scraping framework written in the Go and inspired by Python's Scrapy framework. It offers a user-friendly interface for extracting data from websites, making it an ideal tool for various data collection and analysis tasks.
+**GoScrapy** aims to be a powerful web scraping framework in Go, inspired by Python's Scrapy framework. It offers an easy-to-use Scrapy-like experience for extracting data from websites, making it an ideal tool for various data collection and analysis tasks, especially for those coming from Python and wanting to try scraping in Golang..
 
 ## Getting Started
 Follow these steps to start using **GoScrapy**:
@@ -201,7 +201,7 @@ In **GoScrapy** framework, pipelines play a pivotal role in managing, transformi
 - **Export2MONGODB**
 
 ### Incorporating Pipelines into Your Scraping Workflow
-To seamlessly integrate pipelines into your scraping workflow, you can utilize the **Pipelines.Add** method.
+To seamlessly integrate pipelines into your scraping workflow, you can utilize the **Pipelines().Add()** method.
 
 Here is an example on how you can add pipelines to your scraping process:
 
@@ -209,7 +209,7 @@ __`Export to JSON Pipeline`__:
 
 ```go
 // goScrapy instance
-goScrapy.Pipelines.Add(pipelines.Export2JSON[*customProject.Job, []customProject.Record]())
+goScrapy.Pipelines().Add(pipelines.Export2JSON[*customProject.Job, []customProject.Record]())
 ```
 
 ### Incorporating custom Pipelines
