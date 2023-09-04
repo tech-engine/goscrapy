@@ -20,7 +20,7 @@ type {{.}}[IN core.Job, OUT any, OR core.Output[IN, OUT]] struct {
 */
 func {{ capitalizeFirstLetter .}}[IN core.Job, OUT any](args ...string) (*{{.}}[IN, OUT, core.Output[IN, OUT]], error) {
 	// your custom initialization code goes here
-	return &{{.}}[IN, OUT, core.Output[IN, OUT]]{}
+	return &{{.}}[IN, OUT, core.Output[IN, OUT]]{}, nil
 }
 
 func (p *{{.}}[IN, OUT, OR]) SetOpenHook(open pipelines.OpenHook) *{{.}}[IN, OUT, OR] {
