@@ -263,6 +263,10 @@ goScrapy.AddMiddlewares(
 
 **GoScrapy** is still in it's initial baby stage and under developement and thus lacks many features like html parsing etc. So more work is under way. Thank your for your patience.
 
+## License
+
+**GoScrapy** is available under BSL with additional usage grant which allows for free internal use. Please make sure you agree with the license before contributing to **GoScrapy**.
+
 ## Roadmap
 
 - ~~Cookie management~~
