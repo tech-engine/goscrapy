@@ -19,9 +19,6 @@ func (s *Spider) NewJob(id string) *Job {
 	return NewJob(id)
 }
 
-func (s *Spider) Close() {
-}
-
 func (s *Spider) SetDelegator(delegator core.Delegator[*Job, []Record]) {
 	s.delegator = delegator
 }

@@ -53,6 +53,10 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 	s.Request(ctx, req, s.parse)
 }
 
+// called when spider is above to close
+func (s *Spider) Close() {
+}
+
 func (s *Spider) parse(ctx context.Context, response core.ResponseReader) {
     // response.Body()
     // response.StatusCode()

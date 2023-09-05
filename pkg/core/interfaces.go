@@ -16,7 +16,7 @@ type Delegator[IN Job, OUT any] interface {
 
 type SpiderCore[IN Job, OUT any] interface {
 	StartRequest(context.Context, IN)
-	Close()
+	Close(context.Context)
 	NewJob(string) IN
 }
 

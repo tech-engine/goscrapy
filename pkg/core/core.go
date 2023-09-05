@@ -74,7 +74,7 @@ func (m *manager[IN, OUT]) close() {
 	// execute pipelines' close hooks - blocking
 	m.pipelines.stop()
 	// close spider's output channel
-	m.spider.Close()
+	m.spider.Close(m.ctx)
 	close(m.outputCh)
 }
 
