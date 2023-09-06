@@ -7,7 +7,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-func Setup(ctx context.Context) (core.Manager[*Job], error) {
+func Setup(ctx context.Context) (core.Manager[*Job, []Record], error) {
 	// Create a spider instance
 	spider, err := NewSpider()
 
