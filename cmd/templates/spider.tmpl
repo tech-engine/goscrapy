@@ -54,7 +54,7 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 }
 
 // called when spider is above to close
-func (s *Spider) Close() {
+func (s *Spider) Close(ctx context.Context) {
 }
 
 func (s *Spider) parse(ctx context.Context, response core.ResponseReader) {
