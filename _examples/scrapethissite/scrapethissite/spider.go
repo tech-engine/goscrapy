@@ -50,6 +50,9 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 	}
 }
 
+func (s *Spider) Close(ctx context.Context) {
+}
+
 func (s *Spider) parse(ctx context.Context, response core.ResponseReader) {
 
 	var (
