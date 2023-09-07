@@ -173,6 +173,6 @@ func (m *manager[IN, OUT]) AddMiddlewares(middlewares ...Middleware) {
 	m.middlewares = append(m.middlewares, middlewares...)
 }
 
-func (m *manager[IN, OUT]) Pipelines() *PipelineManager[IN, any, OUT, Output[IN, OUT]] {
-	return m.pipelines
+func (m *manager[IN, OUT]) AddPipelines(pipeline Pipeline[IN, any, OUT, Output[IN, OUT]], err error, required ...bool) {
+	m.pipelines.add(pipeline, err, required...)
 }

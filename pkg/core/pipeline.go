@@ -10,7 +10,7 @@ func NewPipelineManager[J Job, IN any, OUT any, OR Output[J, OUT]]() *PipelineMa
 	return &PipelineManager[J, IN, OUT, OR]{}
 }
 
-func (p *PipelineManager[J, IN, OUT, OR]) Add(pipeline Pipeline[J, IN, OUT, OR], err error, required ...bool) *PipelineManager[J, IN, OUT, OR] {
+func (p *PipelineManager[J, IN, OUT, OR]) add(pipeline Pipeline[J, IN, OUT, OR], err error, required ...bool) *PipelineManager[J, IN, OUT, OR] {
 
 	if (err != nil) && (len(required) > 0) && required[0] {
 		panic(err.Error())

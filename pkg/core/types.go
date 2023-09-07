@@ -13,7 +13,6 @@ import (
 
 type Manager[IN Job, OUT any] interface {
 	AddMiddlewares(...Middleware)
-	Pipelines() *PipelineManager[IN, any, OUT, Output[IN, OUT]]
 	NewJob(string) IN
 	Run(IN)
 	Start(context.Context) error
