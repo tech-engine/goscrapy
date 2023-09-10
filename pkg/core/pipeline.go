@@ -6,16 +6,23 @@ import (
 	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
 )
 
+func IsRequired[J Job, IN any, OUT any, OR Output[J, OUT]](r bool) PipelineOption[J, IN, OUT, OR] {
+	return func(p Pipeline[J, IN, OUT, OR]) {
+		p.SetRequired(r)
+	}
+}
+
+func IsAsync[J Job, IN any, OUT any, OR Output[J, OUT]](r bool) PipelineOption[J, IN, OUT, OR] {
+	return func(p Pipeline[J, IN, OUT, OR]) {
+		p.SetAsync(r)
+	}
+}
+
 func NewPipelineManager[J Job, IN any, OUT any, OR Output[J, OUT]]() *PipelineManager[J, IN, OUT, OR] {
 	return &PipelineManager[J, IN, OUT, OR]{}
 }
 
-func (p *PipelineManager[J, IN, OUT, OR]) add(pipeline Pipeline[J, IN, OUT, OR], err error, required ...bool) *PipelineManager[J, IN, OUT, OR] {
-
-	if (err != nil) && (len(required) > 0) && required[0] {
-		panic(err.Error())
-	}
-
+func (p *PipelineManager[J, IN, OUT, OR]) add(pipeline Pipeline[J, IN, OUT, OR]) *PipelineManager[J, IN, OUT, OR] {
 	p.pipelines = append(p.pipelines, pipeline)
 	return p
 }

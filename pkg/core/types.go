@@ -35,6 +35,8 @@ type PipelineManager[J Job, IN any, OUT any, OR Output[J, OUT]] struct {
 	pipelines []Pipeline[J, IN, OUT, OR]
 }
 
+type PipelineOption[J Job, IN any, OUT any, OR Output[J, OUT]] func(Pipeline[J, IN, OUT, OR])
+
 type Request struct {
 	url          *url.URL
 	method       string

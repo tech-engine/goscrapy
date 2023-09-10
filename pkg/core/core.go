@@ -173,6 +173,15 @@ func (m *manager[IN, OUT]) AddMiddlewares(middlewares ...Middleware) {
 	m.middlewares = append(m.middlewares, middlewares...)
 }
 
-func (m *manager[IN, OUT]) AddPipelines(pipeline Pipeline[IN, any, OUT, Output[IN, OUT]], err error, required ...bool) {
-	m.pipelines.add(pipeline, err, required...)
+func (m *manager[IN, OUT]) AddPipelines(pipeline Pipeline[IN, any, OUT, Output[IN, OUT]], err error, options ...PipelineOption[IN, any, OUT, Output[IN, OUT]]) {
+
+	for _, option := range options {
+		option(pipeline)
+	}
+
+	if (err != nil) && pipeline.IsRequired() {
+		panic(err.Error())
+	}
+
+	m.pipelines.add(pipeline)
 }
