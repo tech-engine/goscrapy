@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"sync"
 
 	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
 )
@@ -29,15 +30,28 @@ func (p *PipelineManager[J, IN, OUT, OR]) add(pipeline Pipeline[J, IN, OUT, OR])
 
 func (p *PipelineManager[J, IN, OUT, OR]) do(original OR, metadata metadata.MetaData) (IN, error) {
 	var (
+		wg    sync.WaitGroup
 		input IN
 		err   error
 	)
 	for _, pipeline := range p.pipelines {
+		// if pipeline set to async will it be run in a separate goroutine
+		if pipeline.IsAsync() {
+			wg.Add(1)
+			go func(_wg *sync.WaitGroup) {
+				defer _wg.Done()
+				pipeline.ProcessItem(input, original, metadata)
+			}(&wg)
+			continue
+		}
+
 		input, err = pipeline.ProcessItem(input, original, metadata)
+
 		if err != nil {
 			break
 		}
 	}
+	wg.Wait()
 
 	return input, err
 }
