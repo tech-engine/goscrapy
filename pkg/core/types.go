@@ -13,6 +13,7 @@ import (
 
 type Manager[IN Job, OUT any] interface {
 	AddMiddlewares(...Middleware)
+	AddPipelines(Pipeline[IN, any, OUT, Output[IN, OUT]], error, ...PipelineOption[IN, any, OUT, Output[IN, OUT]])
 	NewJob(string) IN
 	Run(IN)
 	Start(context.Context) error
