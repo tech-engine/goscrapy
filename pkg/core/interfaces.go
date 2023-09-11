@@ -47,10 +47,8 @@ type Pipeline[J Job, IN any, OUT any, OR Output[J, OUT]] interface {
 	Open(context.Context) error
 	Close()
 	ProcessItem(IN, OR, metadata.MetaData) (IN, error)
-	IsRequired() bool
-	IsAsync() bool
-	SetRequired(bool)
-	SetAsync(bool)
+	Required(...bool) bool
+	Async(...bool) bool
 }
 
 type RequestWriter interface {

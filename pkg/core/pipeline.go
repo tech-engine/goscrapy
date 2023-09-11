@@ -7,15 +7,15 @@ import (
 	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
 )
 
-func IsRequired[J Job, IN any, OUT any, OR Output[J, OUT]](r bool) PipelineOption[J, IN, OUT, OR] {
+func WithRequired[J Job, IN any, OUT any, OR Output[J, OUT]](r bool) PipelineOption[J, IN, OUT, OR] {
 	return func(p Pipeline[J, IN, OUT, OR]) {
-		p.SetRequired(r)
+		p.Required(r)
 	}
 }
 
-func IsAsync[J Job, IN any, OUT any, OR Output[J, OUT]](r bool) PipelineOption[J, IN, OUT, OR] {
+func WithAsync[J Job, IN any, OUT any, OR Output[J, OUT]](r bool) PipelineOption[J, IN, OUT, OR] {
 	return func(p Pipeline[J, IN, OUT, OR]) {
-		p.SetAsync(r)
+		p.Async(r)
 	}
 }
 
@@ -36,7 +36,7 @@ func (p *PipelineManager[J, IN, OUT, OR]) do(original OR, metadata metadata.Meta
 	)
 	for _, pipeline := range p.pipelines {
 		// if pipeline set to async will it be run in a separate goroutine
-		if pipeline.IsAsync() {
+		if pipeline.Async() {
 			wg.Add(1)
 			go func(_wg *sync.WaitGroup) {
 				defer _wg.Done()

@@ -179,7 +179,7 @@ func (m *manager[IN, OUT]) AddPipelines(pipeline Pipeline[IN, any, OUT, Output[I
 		option(pipeline)
 	}
 
-	if (err != nil) && pipeline.IsRequired() {
+	if (err != nil) && pipeline.Required() {
 		panic(err.Error())
 	}
 
