@@ -58,11 +58,32 @@ func (p *PipelineManager[J, IN, OUT, OR]) do(original OR, metadata metadata.Meta
 
 // runs when spider starts job
 func (p *PipelineManager[J, IN, OUT, OR]) start(ctx context.Context) error {
+
+	var wg sync.WaitGroup
+
+	errCh := make(chan error, len(p.pipelines))
+
+	wg.Add(len(p.pipelines))
 	for _, pipeline := range p.pipelines {
-		if err := pipeline.Open(ctx); err != nil {
-			return err
-		}
+
+		go func(_wg *sync.WaitGroup, pipeline Pipeline[J, IN, OUT, OR]) {
+			defer _wg.Done()
+
+			if err := pipeline.Open(ctx); err != nil {
+				errCh <- err
+			}
+		}(&wg, pipeline)
 	}
+
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	for err := range errCh {
+		return err
+	}
+
 	return nil
 }
 
