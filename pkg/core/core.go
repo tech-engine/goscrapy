@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -173,15 +174,16 @@ func (m *manager[IN, OUT]) AddMiddlewares(middlewares ...Middleware) {
 	m.middlewares = append(m.middlewares, middlewares...)
 }
 
-func (m *manager[IN, OUT]) AddPipelines(pipeline Pipeline[IN, any, OUT, Output[IN, OUT]], err error, options ...PipelineOption[IN, any, OUT, Output[IN, OUT]]) {
+func (m *manager[IN, OUT]) AddPipeline(p Pipeline[IN, any, OUT, Output[IN, OUT]], err error) *pipeline[IN, any, OUT, Output[IN, OUT]] {
 
-	for _, option := range options {
-		option(pipeline)
+	pipeline := &pipeline[IN, any, OUT, Output[IN, OUT]]{
+		p: p,
 	}
 
-	if (err != nil) && pipeline.Required() {
-		panic(err.Error())
+	if err != nil {
+		log.Panicf("Core:AddPipeline %s", err.Error())
 	}
 
 	m.pipelines.add(pipeline)
+	return pipeline
 }
