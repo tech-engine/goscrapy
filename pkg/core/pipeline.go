@@ -82,10 +82,12 @@ func (pm *PipelineManager[J, IN, OUT, OR]) stop() {
 	}
 }
 
-func (p *pipeline[J, IN, OUT, OR]) WithRequired() {
+func (p *pipeline[J, IN, OUT, OR]) WithRequired() *pipeline[J, IN, OUT, OR] {
 	p.required = true
+	return p
 }
 
-func (p *pipeline[J, IN, OUT, OR]) WithAsync() {
+func (p *pipeline[J, IN, OUT, OR]) WithAsync() *pipeline[J, IN, OUT, OR] {
 	p.required = true
+	return p
 }
