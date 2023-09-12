@@ -24,23 +24,6 @@ func {{ capitalizeFirstLetter .}}[IN core.Job, OUT any](args ...string) (*{{.}}[
 	return &{{.}}[IN, OUT, core.Output[IN, OUT]]{}, nil
 }
 
-// used internally
-func (p *{{.}}[IN, OUT, OR]) Required(args ...bool) bool {
-	if len(args) > 0 {
-		p.required = args[0]
-	}
-	return p.required
-}
-
-// used internally
-func (p *{{.}}[IN, OUT, OR]) Async(args ...bool) bool {
-	if len(args) > 0 {
-		p.async = args[0]
-	}
-	return p.async
-}
-
-
 func (p *{{.}}[IN, OUT, OR]) SetOpenHook(open pipelines.OpenHook) *{{.}}[IN, OUT, OR] {
 	p.onOpenHook = open
 	return p
