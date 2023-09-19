@@ -88,6 +88,6 @@ func (p *pipeline[J, IN, OUT, OR]) WithRequired() *pipeline[J, IN, OUT, OR] {
 }
 
 func (p *pipeline[J, IN, OUT, OR]) WithAsync() *pipeline[J, IN, OUT, OR] {
-	p.required = true
+	p.async = true
 	return p
 }
