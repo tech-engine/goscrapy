@@ -128,6 +128,11 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
+type Spider struct {
+	coreSpider
+	// you custom fields can go here
+}
+
 func NewSpider() (*Spider, error) {
 	return &Spider{}, nil
 }
@@ -199,6 +204,7 @@ In **GoScrapy** framework, pipelines play a pivotal role in managing, transformi
 - **Export2JSON**
 - **Export2GSHEET**
 - **Export2MONGODB**
+- **Export2FIREBASE**
 
 ### Incorporating Pipelines into Your Scraping Workflow
 To seamlessly integrate pipelines into your scraping workflow, you can utilize the **Pipelines().Add()** method.
@@ -209,7 +215,12 @@ __`Export to JSON Pipeline`__:
 
 ```go
 // goScrapy instance
-goScrapy.Pipelines().Add(pipelines.Export2JSON[*customProject.Job, []customProject.Record]())
+goScrapy.AddPipelines(pipelines.Export2JSON[*customProject.Job, []customProject.Record]())
+
+// async pipelines
+// the top pipeline will run in a separate goroutine
+goScrapy.AddPipelines(pipelines.Export2JSON[*customProject.Job, []customProject.Record]()).WithAsync()
+goScrapy.AddPipelines(pipelines.Export2CSV[*customProject.Job, []customProject.Record]())
 ```
 
 ### Incorporating custom Pipelines
@@ -265,7 +276,7 @@ goScrapy.AddMiddlewares(
 
 ## License
 
-**GoScrapy** is available under BSL with additional usage grant which allows for free internal use. Please make sure you agree with the license before contributing to **GoScrapy**.
+**GoScrapy** is available under BSL with additional usage grant which allows for free internal use. Please make sure that you must agree with the license before contributing to **GoScrapy**.
 
 ## Roadmap
 
