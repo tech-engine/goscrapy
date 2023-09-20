@@ -20,7 +20,7 @@ func main() {
 	}
 
 	// Using JSON pipeline to export data as JSON.
-	goScrapy.Pipelines().Add(pipelines.Export2JSON[*scrapeThisSite.Job, []scrapeThisSite.Record]())
+	goScrapy.AddPipeline(pipelines.Export2JSON[*scrapeThisSite.Job, []scrapeThisSite.Record]()).WithRequired()
 
 	if err := goScrapy.Start(ctx); err != nil {
 		log.Fatalln(err)
