@@ -8,7 +8,6 @@ import (
 	"firebase.google.com/go/db"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
-	"github.com/tech-engine/goscrapy/pkg/pipelines"
 	"google.golang.org/api/option"
 )
 
@@ -46,12 +45,12 @@ func Export2FIREBASE[IN core.Job, OUT any](_url, filePath, collName string) (*ex
 	}, nil
 }
 
-func (p *export2FIREBASE[IN, OUT, OR]) SetOpenHook(open pipelines.OpenHook) *export2FIREBASE[IN, OUT, OR] {
+func (p *export2FIREBASE[IN, OUT, OR]) SetOpenHook(open OpenHook) *export2FIREBASE[IN, OUT, OR] {
 	p.onOpenHook = open
 	return p
 }
 
-func (p *export2FIREBASE[IN, OUT, OR]) SetCloseHook(close pipelines.CloseHook) *export2FIREBASE[IN, OUT, OR] {
+func (p *export2FIREBASE[IN, OUT, OR]) SetCloseHook(close CloseHook) *export2FIREBASE[IN, OUT, OR] {
 	p.onCloseHook = close
 	return p
 }
