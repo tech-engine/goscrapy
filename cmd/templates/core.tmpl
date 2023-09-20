@@ -9,33 +9,32 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-type Spider struct {
-	baseUrl   *url.URL
+type coreSpider struct {
 	ctx       context.Context
 	delegator core.Delegator[*Job, []Record]
 }
 
-func (s *Spider) NewJob(id string) *Job {
+func (cs *coreSpider) NewJob(id string) *Job {
 	return NewJob(id)
 }
 
-func (s *Spider) SetDelegator(delegator core.Delegator[*Job, []Record]) {
-	s.delegator = delegator
+func (cs *coreSpider) SetDelegator(delegator core.Delegator[*Job, []Record]) {
+	cs.delegator = delegator
 }
 
-func (s *Spider) NewRequest() *core.Request {
-	return s.delegator.NewRequest()
+func (cs *coreSpider) NewRequest() *core.Request {
+	return cs.delegator.NewRequest()
 }
 
-func (s *Spider) Request(ctx context.Context, req *core.Request, cb core.ResponseCallback) {
-	s.delegator.ExRequest(ctx, req, cb)
+func (s *coreSpider) Request(ctx context.Context, req *core.Request, cb core.ResponseCallback) {
+	cs.delegator.ExRequest(ctx, req, cb)
 }
 
-func (s *Spider) yield(output *Output) {
-	s.delegator.Yield(output)
+func (cs *coreSpider) yield(output *Output) {
+	cs.delegator.Yield(output)
 }
 
-func (s *Spider) jobFromContext(ctx context.Context) (*Job, error) {
+func (cs *coreSpider) jobFromContext(ctx context.Context) (*Job, error) {
 	meta, ok := ctx.Value("META_DATA").(map[string]any)
 
 	if !ok {

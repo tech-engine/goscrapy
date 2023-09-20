@@ -9,15 +9,11 @@ import (
 )
 
 type {{.}}[IN core.Job, OUT any, OR core.Output[IN, OUT]] struct {
-	onOpenHook  pipelines.OpenHook
-	onCloseHook pipelines.CloseHook
+	onOpenHook  	pipelines.OpenHook
+	onCloseHook 	pipelines.CloseHook
 	// add your custom fields here
 }
 
-/*	NOTE:
-	.Pipelines.Add(<pipeline>), non nil error will not cause panic as required is false by default 
-	.Pipelines.Add(<pipeline>, true), non nil error cause panic if required is true
-*/
 func {{ capitalizeFirstLetter .}}[IN core.Job, OUT any](args ...string) (*{{.}}[IN, OUT, core.Output[IN, OUT]], error) {
 	// your custom initialization code goes here
 	return &{{.}}[IN, OUT, core.Output[IN, OUT]]{}, nil

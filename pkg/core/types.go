@@ -13,7 +13,7 @@ import (
 
 type Manager[IN Job, OUT any] interface {
 	AddMiddlewares(...Middleware)
-	Pipelines() *PipelineManager[IN, any, OUT, Output[IN, OUT]]
+	AddPipeline(Pipeline[IN, any, OUT, Output[IN, OUT]], error) *pipeline[IN, any, OUT, Output[IN, OUT]]
 	NewJob(string) IN
 	Run(IN)
 	Start(context.Context) error
@@ -32,9 +32,16 @@ type manager[IN Job, OUT any] struct {
 	outputCh     chan Output[IN, OUT]
 }
 
-type PipelineManager[J Job, IN any, OUT any, OR Output[J, OUT]] struct {
-	pipelines []Pipeline[J, IN, OUT, OR]
+type pipeline[J Job, IN any, OUT any, OR Output[J, OUT]] struct {
+	p               Pipeline[J, IN, OUT, OR]
+	required, async bool
 }
+
+type PipelineManager[J Job, IN any, OUT any, OR Output[J, OUT]] struct {
+	pipelines []*pipeline[J, IN, OUT, OR]
+}
+
+type PipelineOption[J Job, IN any, OUT any, OR Output[J, OUT]] func(pipeline[J, IN, OUT, OR])
 
 type Request struct {
 	url          *url.URL
