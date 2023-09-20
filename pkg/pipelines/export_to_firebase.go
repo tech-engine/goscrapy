@@ -19,11 +19,11 @@ type export2FIREBASE[IN core.Job, OUT any, OR core.Output[IN, OUT]] struct {
 	ref         *db.Ref
 }
 
-func Export2FIREBASE[IN core.Job, OUT any](filePath, url, collName string) (*export2FIREBASE[IN, OUT, core.Output[IN, OUT]], error) {
+func Export2FIREBASE[IN core.Job, OUT any](_url, filePath, collName string) (*export2FIREBASE[IN, OUT, core.Output[IN, OUT]], error) {
 	ctx := context.Background()
 
 	conf := &firebase.Config{
-		DatabaseURL: url,
+		DatabaseURL: _url,
 	}
 
 	opt := option.WithCredentialsFile(filePath)
@@ -40,11 +40,9 @@ func Export2FIREBASE[IN core.Job, OUT any](filePath, url, collName string) (*exp
 		return nil, fmt.Errorf("Export2FIREBASE: Error initializing Firebase client %w", err)
 	}
 
-	ref := client.NewRef(collName)
-
 	return &export2FIREBASE[IN, OUT, core.Output[IN, OUT]]{
 		ctx: ctx,
-		ref: ref,
+		ref: client.NewRef(collName),
 	}, nil
 }
 
@@ -78,9 +76,8 @@ func (p *export2FIREBASE[IN, OUT, OR]) ProcessItem(input any, original OR, MetaD
 	if original.IsEmpty() {
 		return nil, nil
 	}
-	_, err := p.ref.Push(p.ctx, original.Records())
 
-	if err != nil {
+	if _, err := p.ref.Push(p.ctx, original.Records()); err != nil {
 		return nil, fmt.Errorf("Export2FIREBASE: error inserting data to DB %w", err)
 	}
 
