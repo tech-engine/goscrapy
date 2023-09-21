@@ -9,6 +9,11 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
+type Spider struct {
+	coreSpider
+	baseUrl *url.URL
+}
+
 func NewSpider() (*Spider, error) {
 	// create pool
 	var (
