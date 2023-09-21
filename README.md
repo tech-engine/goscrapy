@@ -272,7 +272,7 @@ goScrapy.AddMiddlewares(
 
 ### Note
 
-**GoScrapy** is still in it's initial baby stage and under developement and thus lacks many features like html parsing etc. So more work is under way. Thank your for your patience.
+**GoScrapy** is not stable, so its API may change drastically. Please exercise caution when using it in production.
 
 ## License
 
@@ -282,6 +282,6 @@ goScrapy.AddMiddlewares(
 
 - ~~Cookie management~~
 - ~~Builtin & Custom Middlewares support~~
-- HTML element selectors
+- HTML parsing
 - Triggers
 - Unit Tests
