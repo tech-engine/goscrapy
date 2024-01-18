@@ -6,7 +6,7 @@ import (
 	executorhttp "github.com/tech-engine/goscrapy/internal/executer/http"
 )
 
-func HTTPRequestAdapterResponse(target executorhttp.ResponseWriter, source *http.Response, err error) error {
+func HTTPRequestAdapterResponse(target executorhttp.ResponseSetter, source *http.Response, err error) error {
 	if err != nil {
 		return err
 	}

@@ -35,22 +35,22 @@ func (r *Response) Cookies() []*http.Cookie {
 }
 
 // setters
-func (r *Response) SetStatusCode(statuscode int) executer.ResponseWriter {
+func (r *Response) SetStatusCode(statuscode int) executer.ResponseSetter {
 	r.statuscode = statuscode
 	return r
 }
 
-func (r *Response) SetBody(body io.ReadCloser) executer.ResponseWriter {
+func (r *Response) SetBody(body io.ReadCloser) executer.ResponseSetter {
 	r.body = body
 	return r
 }
 
-func (r *Response) SetHeaders(headers http.Header) executer.ResponseWriter {
+func (r *Response) SetHeaders(headers http.Header) executer.ResponseSetter {
 	r.headers = headers
 	return r
 }
 
-func (r *Response) SetCookies(cookies []*http.Cookie) executer.ResponseWriter {
+func (r *Response) SetCookies(cookies []*http.Cookie) executer.ResponseSetter {
 	r.cookies = cookies
 	return r
 }

@@ -30,16 +30,16 @@ type Requester interface {
 	SetContext(context.Context) Requester
 	SetHeaders(map[string]string) Requester
 	SetBody(io.ReadCloser) Requester
-	Get(ResponseWriter, *url.URL) error
-	Post(ResponseWriter, *url.URL) error
-	Patch(ResponseWriter, *url.URL) error
-	Put(ResponseWriter, *url.URL) error
-	Delete(ResponseWriter, *url.URL) error
+	Get(ResponseSetter, *url.URL) error
+	Post(ResponseSetter, *url.URL) error
+	Patch(ResponseSetter, *url.URL) error
+	Put(ResponseSetter, *url.URL) error
+	Delete(ResponseSetter, *url.URL) error
 }
 
-type ResponseWriter interface {
-	SetStatusCode(int) ResponseWriter
-	SetHeaders(http.Header) ResponseWriter
-	SetBody(io.ReadCloser) ResponseWriter
-	SetCookies([]*http.Cookie) ResponseWriter
+type ResponseSetter interface {
+	SetStatusCode(int) ResponseSetter
+	SetHeaders(http.Header) ResponseSetter
+	SetBody(io.ReadCloser) ResponseSetter
+	SetCookies([]*http.Cookie) ResponseSetter
 }

@@ -10,7 +10,7 @@ func NewExecuter(client Client) *Executer {
 	}
 }
 
-func (e *Executer) Execute(ctx context.Context, req RequestReader, res ResponseWriter) error {
+func (e *Executer) Execute(ctx context.Context, req RequestReader, res ResponseSetter) error {
 	switch req.Method() {
 	case "GET":
 		return e.Get(ctx, req, res)
@@ -27,7 +27,7 @@ func (e *Executer) Execute(ctx context.Context, req RequestReader, res ResponseW
 	}
 }
 
-func (e *Executer) Get(ctx context.Context, req RequestReader, res ResponseWriter) (err error) {
+func (e *Executer) Get(ctx context.Context, req RequestReader, res ResponseSetter) (err error) {
 
 	err = e.client.Request().
 		SetContext(ctx).
@@ -37,7 +37,7 @@ func (e *Executer) Get(ctx context.Context, req RequestReader, res ResponseWrite
 	return
 }
 
-func (e *Executer) Post(ctx context.Context, req RequestReader, res ResponseWriter) (err error) {
+func (e *Executer) Post(ctx context.Context, req RequestReader, res ResponseSetter) (err error) {
 
 	err = e.client.Request().
 		SetContext(ctx).
@@ -48,7 +48,7 @@ func (e *Executer) Post(ctx context.Context, req RequestReader, res ResponseWrit
 	return
 }
 
-func (e *Executer) Delete(ctx context.Context, req RequestReader, res ResponseWriter) (err error) {
+func (e *Executer) Delete(ctx context.Context, req RequestReader, res ResponseSetter) (err error) {
 
 	err = e.client.Request().
 		SetContext(ctx).
@@ -58,7 +58,7 @@ func (e *Executer) Delete(ctx context.Context, req RequestReader, res ResponseWr
 	return
 }
 
-func (e *Executer) Put(ctx context.Context, req RequestReader, res ResponseWriter) (err error) {
+func (e *Executer) Put(ctx context.Context, req RequestReader, res ResponseSetter) (err error) {
 
 	err = e.client.Request().
 		SetContext(ctx).
@@ -69,7 +69,7 @@ func (e *Executer) Put(ctx context.Context, req RequestReader, res ResponseWrite
 	return
 }
 
-func (e *Executer) Patch(ctx context.Context, req RequestReader, res ResponseWriter) (err error) {
+func (e *Executer) Patch(ctx context.Context, req RequestReader, res ResponseSetter) (err error) {
 	err = e.client.Request().
 		SetContext(ctx).
 		SetHeaders(req.Headers()).

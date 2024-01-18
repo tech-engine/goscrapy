@@ -35,7 +35,7 @@ func (r HTTPRequestAdapter) SetBody(body io.ReadCloser) executorhttp.Requester {
 	return r
 }
 
-func (r HTTPRequestAdapter) Get(target executorhttp.ResponseWriter, url *url.URL) error {
+func (r HTTPRequestAdapter) Get(target executorhttp.ResponseSetter, url *url.URL) error {
 	r.req.Method = http.MethodGet
 	r.req.URL = url
 
@@ -48,7 +48,7 @@ func (r HTTPRequestAdapter) Get(target executorhttp.ResponseWriter, url *url.URL
 	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r HTTPRequestAdapter) Post(target executorhttp.ResponseWriter, url *url.URL) error {
+func (r HTTPRequestAdapter) Post(target executorhttp.ResponseSetter, url *url.URL) error {
 	r.req.Method = http.MethodPost
 	r.req.URL = url
 
@@ -61,7 +61,7 @@ func (r HTTPRequestAdapter) Post(target executorhttp.ResponseWriter, url *url.UR
 	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r HTTPRequestAdapter) Put(target executorhttp.ResponseWriter, url *url.URL) error {
+func (r HTTPRequestAdapter) Put(target executorhttp.ResponseSetter, url *url.URL) error {
 	r.req.Method = http.MethodPut
 	r.req.URL = url
 
@@ -74,7 +74,7 @@ func (r HTTPRequestAdapter) Put(target executorhttp.ResponseWriter, url *url.URL
 	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r HTTPRequestAdapter) Patch(target executorhttp.ResponseWriter, url *url.URL) error {
+func (r HTTPRequestAdapter) Patch(target executorhttp.ResponseSetter, url *url.URL) error {
 	r.req.Method = http.MethodPatch
 	r.req.URL = url
 
@@ -87,7 +87,7 @@ func (r HTTPRequestAdapter) Patch(target executorhttp.ResponseWriter, url *url.U
 	return HTTPRequestAdapterResponse(target, source, err)
 }
 
-func (r HTTPRequestAdapter) Delete(target executorhttp.ResponseWriter, url *url.URL) error {
+func (r HTTPRequestAdapter) Delete(target executorhttp.ResponseSetter, url *url.URL) error {
 	r.req.Method = http.MethodDelete
 	r.req.URL = url
 
