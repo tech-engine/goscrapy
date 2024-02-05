@@ -276,7 +276,7 @@ goScrapy.AddMiddlewares(
 
 ## License
 
-**GoScrapy** is available under BSL with additional usage grant which allows for free internal use. Please make sure that you must agree with the license before contributing to **GoScrapy**.
+**GoScrapy** is available under BSL with additional usage grant which allows for free internal use. Please make sure you agree with the license before contributing to **GoScrapy** or by contributing to **GoScrapy** you agree to the license.
 
 ## Roadmap
 
