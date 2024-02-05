@@ -21,11 +21,11 @@ func (cs *coreSpider) SetDelegator(delegator core.Delegator[*Job, []Record]) {
 	cs.delegator = delegator
 }
 
-func (cs *coreSpider) NewRequest() *core.Request {
+func (cs *coreSpider) NewRequest() *core.GSRequest {
 	return cs.delegator.NewRequest()
 }
 
-func (cs *coreSpider) Request(ctx context.Context, req *core.Request, cb core.ResponseCallback) {
+func (cs *coreSpider) Request(ctx context.Context, req *core.GSRequest, cb core.ResponseCallback) {
 	cs.delegator.ExRequest(ctx, req, cb)
 }
 
