@@ -8,10 +8,11 @@ import (
 
 type CoreSpiderBuilder[OUT any] struct {
 	*core.Core[OUT]
-	engine          IEngineConfigurer[OUT]
-	pipelineManager IPipelineManagerAdder[OUT]
-	scheduler       ISchedulerConfigurer[OUT]
-	executor        IExecutorConfigurer[OUT]
-	executorAdapter IExecutorAdapterConfigurer
-	httpClient      *http.Client
+	engine            IEngineConfigurer[OUT]
+	pipelineManager   IPipelineManagerAdder[OUT]
+	scheduler         ISchedulerConfigurer[OUT]
+	executor          IExecutorConfigurer[OUT]
+	executorAdapter   IExecutorAdapterConfigurer
+	middlewareManager IMiddlewareManager
+	httpClient        *http.Client
 }

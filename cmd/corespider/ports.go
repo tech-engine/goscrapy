@@ -6,6 +6,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/executor"
+	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 	pipelinemanager "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 	"github.com/tech-engine/goscrapy/pkg/scheduler"
 )
@@ -26,7 +27,7 @@ type ICoreSpider[OUT any] interface {
 // purpose and to access it we have created the IPipelineManagerAdder[OUT] interface.
 type IPipelineManagerAdder[OUT any] interface {
 	engine.IPipelineManager[OUT]
-	Add(pipelinemanager.IPipeline[OUT])
+	Add(...pipelinemanager.IPipeline[OUT])
 }
 
 // core.*Core[OUT] accepts an engine that implements core.IEngine[OUT] interface which
@@ -65,4 +66,9 @@ type IExecutorConfigurer[OUT any] interface {
 type IExecutorAdapterConfigurer interface {
 	executor.IExecutorAdapter
 	WithClient(*http.Client)
+}
+
+type IMiddlewareManager interface {
+	HTTPClient() *http.Client
+	Add(...middlewaremanager.Middleware)
 }

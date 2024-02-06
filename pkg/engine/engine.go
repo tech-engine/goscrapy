@@ -8,10 +8,8 @@ import (
 )
 
 type Engine[OUT any] struct {
-	wg              sync.WaitGroup
 	scheduler       IScheduler
 	pipelineManager IPipelineManager[OUT]
-	middlewares     []Middleware
 	outputCh        chan core.IOutput[OUT]
 }
 
@@ -20,7 +18,6 @@ func New[OUT any](schd IScheduler, pm IPipelineManager[OUT]) *Engine[OUT] {
 	engine := &Engine[OUT]{
 		scheduler:       schd,
 		pipelineManager: pm,
-		middlewares:     make([]Middleware, 0),
 	}
 
 	return engine
@@ -86,33 +83,3 @@ func (m *Engine[OUT]) WithScheduler(schd IScheduler) {
 func (m *Engine[OUT]) WithPipelineManager(pm IPipelineManager[OUT]) {
 	m.pipelineManager = pm
 }
-
-// func (m *Engine[OUT]) chainMiddlewares() http.RoundTripper {
-
-// 	// add all the middlewares
-// 	roundTripper := http.DefaultTransport
-// 	for _, middleware := range m.middlewares {
-// 		roundTripper = middleware(roundTripper)
-// 	}
-
-// 	return roundTripper
-
-// }
-
-// func (m *Engine[OUT]) AddMiddlewares(middlewares ...Middleware) {
-// 	m.middlewares = append(m.middlewares, middlewares...)
-// }
-
-// func (m *Manager[OUT]) AddPipeline(p Pipeline[IN, any, OUT, Output[OUT]], err error) *pipeline[IN, any, OUT, Output[OUT]] {
-
-// 	pipeline := &pipeline[IN, any, OUT, Output[OUT]]{
-// 		p: p,
-// 	}
-
-// 	if err != nil {
-// 		log.Panicf("Core:AddPipeline %s", err.Error())
-// 	}
-
-// 	m.pipelines.add(pipeline)
-// 	return pipeline
-// }

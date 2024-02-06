@@ -9,6 +9,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/executor"
 	httpnative "github.com/tech-engine/goscrapy/pkg/executor_adapters/http_native"
+	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 	pipelinemanager "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 	"github.com/tech-engine/goscrapy/pkg/scheduler"
 )
@@ -19,7 +20,11 @@ func New[OUT any]() *CoreSpiderBuilder[OUT] {
 
 	c.httpClient = &http.Client{}
 
-	c.executorAdapter = httpnative.NewHTTPClientAdapter(c.httpClient)
+	c.middlewareManager = middlewaremanager.New(c.httpClient)
+
+	c.executorAdapter = httpnative.NewHTTPClientAdapter(
+		c.middlewareManager.HTTPClient(),
+	)
 
 	c.executor = executor.New(c.executorAdapter)
 
@@ -99,6 +104,20 @@ func (c *CoreSpiderBuilder[OUT]) WithExecutorAdapter(adapter IExecutorAdapterCon
 	}
 
 	c.executorAdapter = adapter
+
+	return c
+}
+
+func (c *CoreSpiderBuilder[OUT]) MiddlewareManager() IMiddlewareManager {
+	return c.middlewareManager
+}
+
+func (c *CoreSpiderBuilder[OUT]) WithMiddlewareManager(manager IMiddlewareManager) *CoreSpiderBuilder[OUT] {
+	if manager == nil {
+		log.Fatal("corespider.go:WithMiddlewareManager(manager): manager cannot be nil")
+	}
+
+	c.middlewareManager = manager
 
 	return c
 }
