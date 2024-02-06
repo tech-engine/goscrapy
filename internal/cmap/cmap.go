@@ -10,7 +10,7 @@ import (
 type CMap struct {
 	opts
 	lock sync.RWMutex
-	data map[string]void
+	data map[string]Void[any]
 }
 
 func NewCMap(optFuncs ...types.OptFunc[opts]) *CMap {
@@ -23,7 +23,7 @@ func NewCMap(optFuncs ...types.OptFunc[opts]) *CMap {
 
 	return &CMap{
 		opts: opts,
-		data: make(map[string]void, opts.size),
+		data: make(map[string]Void[any], opts.size),
 	}
 }
 
@@ -34,7 +34,7 @@ func (cm *CMap) Get(key string) (any, bool) {
 
 	val, ok := cm.data[key]
 
-	return val.data, ok
+	return val.Data, ok
 }
 
 func (cm *CMap) Set(key string, val any) error {
@@ -48,7 +48,7 @@ func (cm *CMap) Set(key string, val any) error {
 		return fmt.Errorf("Set: max items of %d exceeded", cm.size)
 	}
 
-	cm.data[key] = void{val}
+	cm.data[key] = Void[any]{val}
 
 	return nil
 }

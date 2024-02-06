@@ -7,6 +7,6 @@ type opts struct {
 
 type hashFn func(string) uint64
 
-type void struct {
-	data any
+type Void[V any] struct {
+	Data V
 }

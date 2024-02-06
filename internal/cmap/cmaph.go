@@ -11,7 +11,7 @@ import (
 type CMapH struct {
 	opts
 	lock         sync.RWMutex
-	data         map[uint64]void
+	data         map[uint64]Void[any]
 	keys         []any
 	lastKeyIndex int
 }
@@ -45,7 +45,7 @@ func NewHCMap(optFuncs ...types.OptFunc[opts]) *CMapH {
 
 	return &CMapH{
 		opts: opts,
-		data: make(map[uint64]void, opts.size),
+		data: make(map[uint64]Void[any], opts.size),
 		keys: make([]any, opts.size),
 	}
 }
@@ -59,7 +59,7 @@ func (cm *CMapH) Get(key string) (any, bool) {
 
 	val, ok := cm.data[hkey]
 
-	return val.data, ok
+	return val.Data, ok
 }
 
 func (cm *CMapH) Set(key string, val any) error {
@@ -75,7 +75,7 @@ func (cm *CMapH) Set(key string, val any) error {
 		return fmt.Errorf("Set: max items of %d exceeded", cm.size)
 	}
 
-	cm.data[hkey] = void{val}
+	cm.data[hkey] = Void[any]{val}
 
 	if cm.lastKeyIndex < cm.opts.size {
 		cm.keys[cm.lastKeyIndex] = key
