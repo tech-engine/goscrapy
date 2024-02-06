@@ -36,8 +36,8 @@ func New[OUT any](optFuncs ...types.OptFunc[opts]) *PipelineManager[OUT] {
 	}
 }
 
-func (pm *PipelineManager[OUT]) Add(pipeline IPipeline[OUT]) {
-	pm.pipelines = append(pm.pipelines, pipeline)
+func (pm *PipelineManager[OUT]) Add(pipeline ...IPipeline[OUT]) {
+	pm.pipelines = append(pm.pipelines, pipeline...)
 }
 
 // runs after the spider's Open func and calls all open function of pipelines
