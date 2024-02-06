@@ -72,32 +72,33 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 
 	// we do some cleanup here on the response object
 	defer func() {
+		resetAndRelease(work)
 		res.body.Close()
 		res.Reset()
 		responsePool.Release(res)
 	}()
 
 	if err := w.executor.Execute(work.request, res); err != nil {
-		resetAndRelease(work)
+		// resetAndRelease(work)
 		return err
 	}
 
 	next := (*work).next
 	pCtx := work.request.ReadContext()
 
-	resetAndRelease(work)
-
 	// next==nil means this is the last callback of the spider
 	if next == nil {
 		return nil
 	}
-	
+
 	// call to callback must me blocking so that the callback can read from the response
 	// before the response is resetted and returned to pool
-
 	if pCtx == nil {
 		pCtx = context.Background()
 	}
+
+	// we copy meta from our request to our response to be accessible to the spider
+	res.WriteMeta(work.request.ReadMeta())
 
 	next(context.WithValue(pCtx, "WORKER_ID", w.ID), res)
 	return nil

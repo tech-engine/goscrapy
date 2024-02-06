@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+
+	"github.com/tech-engine/goscrapy/internal/fsm"
 )
 
 func NewResponse() *response {
@@ -16,7 +18,7 @@ type response struct {
 	header     http.Header
 	cookies    []*http.Cookie
 	request    *http.Request
-	meta       map[string]any
+	meta       *fsm.FixedSizeMap[string, any]
 }
 
 // response implementing core.ResponseReader
@@ -40,8 +42,8 @@ func (r *response) Cookies() []*http.Cookie {
 	return r.cookies
 }
 
-func (r *response) Meta() map[string]any {
-	return r.meta
+func (r *response) Meta(key string) (any, bool) {
+	return r.meta.Get(key)
 }
 
 func (r *response) Bytes() []byte {
@@ -56,10 +58,12 @@ func (r *response) Reset() {
 	r.header = nil
 	r.cookies = nil
 	r.request = nil
+	// because we there isn't guarantee that we will have the same pair for req-res from the pools,
+	// we must set it meta=nil upon releasing req-res to their respective pools, otherwise we will have corrupt data.
 	r.meta = nil
 }
 
-// response implementing core.ResponseWriter
+// response implementing engine.ResponseWriter
 func (r *response) WriteRequest(request *http.Request) {
 	r.request = request
 }
@@ -80,6 +84,6 @@ func (r *response) WriteCookies(cookies []*http.Cookie) {
 	r.cookies = cookies
 }
 
-func (r *response) WriteMeta(meta map[string]any) {
+func (r *response) WriteMeta(meta *fsm.FixedSizeMap[string, any]) {
 	r.meta = meta
 }

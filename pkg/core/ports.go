@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/tech-engine/goscrapy/internal/fsm"
 )
 
 type IEngine[OUT any] interface {
@@ -20,6 +22,7 @@ type IRequestReader interface {
 	ReadHeader() http.Header
 	ReadMethod() string
 	ReadBody() io.ReadCloser
+	ReadMeta() *fsm.FixedSizeMap[string, any]
 }
 
 type IRequestWriter interface {
@@ -45,7 +48,7 @@ type IResponseReader interface {
 	StatusCode() int
 	Cookies() []*http.Cookie
 	Request() *http.Request
-	Meta() map[string]any
+	Meta(string) (any, bool)
 }
 
 type IJob interface {

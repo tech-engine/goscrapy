@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/tech-engine/goscrapy/internal/fsm"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
@@ -19,7 +20,7 @@ type request struct {
 	method       string
 	body         io.ReadCloser
 	header       http.Header
-	meta         map[string]any
+	meta         *fsm.FixedSizeMap[string, any]
 	cookieJarKey string
 }
 
@@ -42,6 +43,11 @@ func (r *request) ReadBody() io.ReadCloser {
 
 func (r *request) ReadContext() context.Context {
 	return r.ctx
+}
+
+// ReadMeta give us a shallow copy of meta.
+func (r *request) ReadMeta() *fsm.FixedSizeMap[string, any] {
+	return r.meta
 }
 
 // Request inplements core.IRequestWriter
@@ -92,9 +98,9 @@ func (r *request) CookieJar(key string) core.IRequestWriter {
 
 func (r *request) MetaData(key string, val any) core.IRequestWriter {
 	if r.meta == nil {
-		r.meta = make(map[string]any)
+		r.meta = fsm.New[string, any](24)
 	}
-	r.meta[key] = val
+	r.meta.Set(key, val)
 	return r
 }
 
@@ -117,6 +123,6 @@ func (r *request) Reset() {
 	r.url = nil
 	r.header = nil
 	r.body = nil
-	r.meta = nil
 	r.cookieJarKey = ""
+	r.meta.Clear()
 }
