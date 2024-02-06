@@ -31,7 +31,7 @@ type IRequestWriter interface {
 	Header(http.Header) IRequestWriter
 	Method(string) IRequestWriter
 	Body(any) IRequestWriter
-	MetaData(string, any) IRequestWriter
+	Meta(string, any) IRequestWriter
 	CookieJar(string) IRequestWriter
 }
 

@@ -96,7 +96,8 @@ func (r *request) CookieJar(key string) core.IRequestWriter {
 	return r
 }
 
-func (r *request) MetaData(key string, val any) core.IRequestWriter {
+// Pass meta data as key/value pair to be available in callback response.
+func (r *request) Meta(key string, val any) core.IRequestWriter {
 	if r.meta == nil {
 		r.meta = fsm.New[string, any](24)
 	}
