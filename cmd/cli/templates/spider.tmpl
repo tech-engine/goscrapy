@@ -5,33 +5,18 @@ import (
 	"errors"
 	"net/url"
 
+	"github.com/tech-engine/goscrapy/cmd/corespider"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
 type Spider struct {
-	coreSpider
-	baseUrl *url.URL
+	corespider.ICoreSpider[[]Record]
 }
 
-func NewSpider() (*Spider, error) {
-	// create pool
-	var (
-		err  error
-		_url *url.URL
-		s    *Spider
-	)
-
-	_url, err = url.Parse("<URL_HERE>")
-
-	if err != nil {
-		return nil, err
+func NewSpider(core corespider.ICoreSpider[[]Record]) *CustomSpider {
+	return &CustomSpider{
+		core,
 	}
-
-	s = &Spider{
-		baseUrl: _url,
-	}
-
-	return s, nil
 }
 
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
@@ -39,33 +24,35 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
     // for each request we must call NewRequest() and never reuse it
 	req := s.NewRequest()
 
-    var headers map[string]string
+    var headers http.Header{}
 
     // GET is the request method
-	req.SetUrl(s.baseUrl.String()).
-		SetMetaData("JOB", job).
-		SetHeaders(headers)
+	req.Url(s.baseUrl.String())
+	req.Meta("MY_KEY1", "MY_VALUE")
+	req.Meta("MY_KEY2", true)
+	req.Header(headers)
     
     /* POST
-    req.SetUrl(s.baseUrl.String()).
-        SetMethod("POST").
-		SetMetaData("JOB", job).
-		SetHeaders(headers).
-        SetBody(<BODY_HERE>)
+    req.Url(s.baseUrl.String())
+    req.Method("POST")
+	req.Header(headers)
+    req.Body(<BODY_HERE>)
     */
     
     // call the next parse method
-	s.Request(ctx, req, s.parse)
+	s.Request(req, s.parse)
 }
 
-// called when spider is above to close
+// can be called when spider is about to close
 func (s *Spider) Close(ctx context.Context) {
 }
 
-func (s *Spider) parse(ctx context.Context, response core.ResponseReader) {
+func (s *Spider) parse(ctx context.Context, response core.IResponseReader) {
     // response.Body()
     // response.StatusCode()
-    // response.Headers()
+    // response.Header()
+	// response.Bytes()
+	// response.Meta("MY_KEY1")
     // check output.go for the fields
-    // s.yield(output)
+    // s.Yield(output)
 }

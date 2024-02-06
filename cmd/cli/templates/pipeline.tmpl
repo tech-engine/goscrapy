@@ -4,47 +4,28 @@ import (
 	"context"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
-	metadata "github.com/tech-engine/goscrapy/pkg/meta_data"
-	"github.com/tech-engine/goscrapy/pkg/pipelines"
+	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 )
 
-type {{.}}[IN core.Job, OUT any, OR core.Output[IN, OUT]] struct {
-	onOpenHook  	pipelines.OpenHook
-	onCloseHook 	pipelines.CloseHook
+type {{.}}[OUT any] struct {
 	// add your custom fields here
 }
 
-func {{ capitalizeFirstLetter .}}[IN core.Job, OUT any](args ...string) (*{{.}}[IN, OUT, core.Output[IN, OUT]], error) {
+func {{ capitalizeFirstLetter .}}[OUT any](args ...string) *{{.}}[OUT] {
 	// your custom initialization code goes here
-	return &{{.}}[IN, OUT, core.Output[IN, OUT]]{}, nil
+	return &{{.}}[OUT]{}
 }
 
-func (p *{{.}}[IN, OUT, OR]) SetOpenHook(open pipelines.OpenHook) *{{.}}[IN, OUT, OR] {
-	p.onOpenHook = open
-	return p
+// Open runs when we start the corespider engine.
+func (p *{{.}}[OUT]) Open(ctx context.Context) error {
 }
 
-func (p *{{.}}[IN, OUT, OR]) SetCloseHook(close pipelines.CloseHook) *{{.}}[IN, OUT, OR] {
-	p.onCloseHook = close
-	return p
-}
-
-func (p *{{.}}[IN, OUT, OR]) Open(ctx context.Context) error {
-	if p.onOpenHook == nil {
-		return nil
-	}
-	return p.onOpenHook(ctx)
-}
-
-func (p *{{.}}[IN, OUT, OR]) Close() {
-	if p.onCloseHook == nil {
-		return
-	}
-	p.onCloseHook()
+// Close runs just before the corespider engine exits.
+func (p *{{.}}[OUT]) Close() {
 }
 
 // your custome pipeline processing code goes here
-func (p *{{.}}[IN, OUT, OR]) ProcessItem(input any, original OR, MetaData metadata.MetaData) (any, error) {
+func (p *{{.}}[OUT]) ProcessItem(item pm.IPipelineItem, original OR) error {
 
 	// original is the output yield from spider
 	// original.IsEmpty()   	- check if data is empty

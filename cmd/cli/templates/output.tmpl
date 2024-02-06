@@ -1,6 +1,9 @@
 package {{.}}
 
-import "reflect"
+import (
+	"reflect"
+	"github.com/tech-engine/goscrapy/pkg/core"
+)
 // do not modify this file
 
 type Output struct {
@@ -62,7 +65,7 @@ func (o *Output) Error() error {
 	return o.err
 }
 
-func (o *Output) Job() *Job {
+func (o *Output) Job() core.IJob {
 	return o.job
 }
 

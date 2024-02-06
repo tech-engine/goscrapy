@@ -45,6 +45,7 @@ var startprojectCmd = &cobra.Command{
 
 		fmt.Printf("\n🚀 GoScrapy generating project files. Please wait!\n\n")
 
+		// create [projectName] dir where we will put spider code & pipelines
 		err = createDirIfNotExist(projectName)
 
 		if err != nil {
@@ -52,13 +53,15 @@ var startprojectCmd = &cobra.Command{
 			return
 		}
 
-		// create pipelines dir
+		// create [projectName]/pipelines dir
 		err = createDirIfNotExist(path.Join(projectName, "pipelines"))
 
 		if err != nil {
 			fmt.Printf("❌ Error creating dir %s/pipelines, %v", projectName, err)
 			return
 		}
+
+		var sourceFilename string
 
 		// Parse and execute each template
 		for _, templateFile := range templateFiles {
@@ -98,7 +101,13 @@ var startprojectCmd = &cobra.Command{
 				return
 			}
 
-			sourceFilename := filepath.Join(projectName, strings.TrimSuffix(tmpl.Name(), ".tmpl")+".go")
+			filename := strings.TrimSuffix(tmpl.Name(), ".tmpl") + ".go"
+
+			if templateFile == "templates/main.tmpl" {
+				sourceFilename = filename
+			} else {
+				sourceFilename = filepath.Join(projectName, filename)
+			}
 
 			err = writeToFile(sourceFilename, formattedCode)
 
