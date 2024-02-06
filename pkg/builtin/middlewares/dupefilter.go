@@ -1,4 +1,4 @@
-package dupefilter
+package middlewares
 
 import (
 	"crypto/sha1"
@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/tech-engine/goscrapy/pkg/middleware"
+	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 )
 
 var ERR_DUPEFILTER_BLOCKED = errors.New("duplicate request")
@@ -82,9 +82,9 @@ func generateSHA1FingerprintFromReq(r *http.Request) (string, error) {
 
 }
 
-func DupeFilterMiddleware(next http.RoundTripper) http.RoundTripper {
+func DupeFilter(next http.RoundTripper) http.RoundTripper {
 	requestMap := NewRequestMap()
-	return middleware.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
+	return middlewaremanager.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
 		signature, err := generateSHA1FingerprintFromReq(req)
 
 		if err != nil {

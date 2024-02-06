@@ -1,4 +1,4 @@
-package dupefilter
+package middlewares
 
 import (
 	"fmt"
@@ -28,7 +28,7 @@ func TestDupeFilter(t *testing.T) {
 
 	// Set our custom transport middleware
 	client := &http.Client{
-		Transport: DupeFilterMiddleware(http.DefaultTransport),
+		Transport: DupeFilter(http.DefaultTransport),
 	}
 
 	testServer := httptest.NewServer(http.HandlerFunc(handler))

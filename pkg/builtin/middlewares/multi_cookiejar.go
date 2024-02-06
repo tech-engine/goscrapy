@@ -1,4 +1,4 @@
-package mutlicookiejar
+package middlewares
 
 import (
 	"bytes"
@@ -9,23 +9,23 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/tech-engine/goscrapy/pkg/middleware"
+	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 )
 
-type MultiCookieJar struct {
+type multiCookieJar struct {
 	jars map[string]http.CookieJar
 	mu   sync.RWMutex
 }
 
 // NewMultiCookieJar creates a new MultiCookieJar.
-func NewMultiCookieJar() *MultiCookieJar {
-	return &MultiCookieJar{
+func NewMultiCookieJar() *multiCookieJar {
+	return &multiCookieJar{
 		jars: make(map[string]http.CookieJar),
 	}
 }
 
 // CookieJar returns a CookieJar corresponding to a key or create one if key doesn't exist
-func (m *MultiCookieJar) CookieJar(key string) http.CookieJar {
+func (m *multiCookieJar) CookieJar(key string) http.CookieJar {
 
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -40,7 +40,7 @@ func (m *MultiCookieJar) CookieJar(key string) http.CookieJar {
 }
 
 // EncodeCookieJar returns coo
-func (m *MultiCookieJar) EncodeCookieJar(key string, _url string) string {
+func (m *multiCookieJar) EncodeCookieJar(key string, _url string) string {
 
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -62,7 +62,7 @@ func (m *MultiCookieJar) EncodeCookieJar(key string, _url string) string {
 
 }
 
-func (m *MultiCookieJar) SetCookieJar(key string, jar http.CookieJar) http.CookieJar {
+func (m *multiCookieJar) SetCookieJar(key string, jar http.CookieJar) http.CookieJar {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -77,9 +77,9 @@ func (m *MultiCookieJar) SetCookieJar(key string, jar http.CookieJar) http.Cooki
 	return jar
 }
 
-func MultiCookieJarMiddleware(next http.RoundTripper) http.RoundTripper {
+func MultiCookieJar(next http.RoundTripper) http.RoundTripper {
 	mCookieJar := NewMultiCookieJar()
-	return middleware.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
+	return middlewaremanager.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
 		cookieJarKey := strings.Trim(req.Header.Get("cookie-jar"), " ")
 
 		// try picking cookies from jar corresponding to a key

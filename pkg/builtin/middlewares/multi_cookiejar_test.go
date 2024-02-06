@@ -1,4 +1,4 @@
-package mutlicookiejar
+package middlewares
 
 import (
 	"fmt"
@@ -188,7 +188,7 @@ func TestMultiCookierJar(t *testing.T) {
 
 	// Set our custom transport middleware
 	client := &http.Client{
-		Transport: MultiCookieJarMiddleware(http.DefaultTransport),
+		Transport: MultiCookieJar(http.DefaultTransport),
 	}
 
 	testCases := []struct {
