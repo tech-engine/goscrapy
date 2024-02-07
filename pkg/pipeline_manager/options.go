@@ -8,7 +8,7 @@ import (
 )
 
 type opts struct {
-	itemPoolSize, outputQueueBuffSize, maxProcessItemConcurrency uint64
+	itemPoolSize, itemSize, outputQueueBuffSize, maxProcessItemConcurrency uint64
 }
 
 // Setup all the default pipelinemanger options.
@@ -21,6 +21,16 @@ func defaultOpts() opts {
 		parsedPoolSize, err := strconv.ParseUint(envVal, 10, 64)
 		if err == nil {
 			opts.itemPoolSize = parsedPoolSize
+		}
+	}
+
+	opts.itemSize = PIPELINEMANAGER_ITEM_SIZE
+	envVal, ok = os.LookupEnv("PIPELINEMANAGER_ITEM_SIZE")
+
+	if ok {
+		parsedSize, err := strconv.ParseUint(envVal, 10, 64)
+		if err == nil {
+			opts.itemSize = parsedSize
 		}
 	}
 
@@ -50,6 +60,12 @@ func defaultOpts() opts {
 func WithItemPoolSize(val uint64) types.OptFunc[opts] {
 	return func(opts *opts) {
 		opts.itemPoolSize = val
+	}
+}
+
+func WithItemSize(val uint64) types.OptFunc[opts] {
+	return func(opts *opts) {
+		opts.itemSize = val
 	}
 }
 

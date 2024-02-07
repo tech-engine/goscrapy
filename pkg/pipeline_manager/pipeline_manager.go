@@ -142,24 +142,25 @@ func (pm *PipelineManager[OUT]) processItem(original core.IOutput[OUT]) {
 
 	// call sync pipelines
 	var (
-		pItem IPipelineItem // pipeline item
+		pItem *cmap.CMap // pipeline item
 		err   error
 	)
 
 	pItem = pm.itemPool.Acquire()
+
 	defer func() {
 		pItem.Clear()
-		pm.itemPool.Release(pItem.(*cmap.CMap))
+		pm.itemPool.Release(pItem)
 	}()
 
 	if pItem == nil {
-		pItem = cmap.NewCMap()
+		pItem = cmap.NewCMap(cmap.WithSize(int(pm.itemSize)))
 	}
 
 	for _, pipeline := range pm.pipelines {
 
 		// we check if pipeline is a group by checking
-		if err = pipeline.ProcessItem(pItem, original); err != nil {
+		if err = pipeline.ProcessItem(IPipelineItem(pItem), original); err != nil {
 			return
 		}
 	}
