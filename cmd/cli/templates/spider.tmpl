@@ -24,7 +24,7 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
     // for each request we must call NewRequest() and never reuse it
 	req := s.NewRequest()
 
-    var headers http.Header{}
+    var headers http.Header
 
     // GET is the request method, method chaining possible
 	req.Url(s.baseUrl.String()).

@@ -8,6 +8,8 @@ import (
     "os"
 	"os/signal"
 	"syscall"
+	// replace with your own project name
+	"{{.}}/{{.}}"
 
 	"github.com/tech-engine/goscrapy/cmd/corespider"
 )
@@ -26,7 +28,7 @@ func main() {
 	wg.Add(1)
 
 	// get core spider
-	coreSpider := corespider.New[[]Record]()
+	coreSpider := corespider.New[[]{{.}}.Record]()
 
     // we can use middlewares like below
 	// coreSpider.MiddlewareManager().Add(
@@ -34,15 +36,15 @@ func main() {
 	// 	middlewares.MultiCookieJar,
 	// )
 
-	// pipelineGroup := pipelinemanager.NewGroup[[]Record](
+	// pipelineGroup := pipelinemanager.NewGroup[[]{{.}}Record](
     //  you can add pipelines you want to run concurrenly using pipeline groups
     // )
 
     // we can use piplines
 	// coreSpider.PipelineManager().Add(
-	// 	pipelines.Export2CSV[[]Record]("itstimeitsnowornever.csv"),
+	// 	pipelines.Export2CSV[[]{{.}}Record]("itstimeitsnowornever.csv"),
     //  pipelineGroup,
-	//  pipelines.Export2JSON[[]Record]("itstimeitsnowornever.json")
+	//  pipelines.Export2JSON[[]{{.}}Record]("itstimeitsnowornever.json")
 	// )
 
 	go func() {
@@ -57,7 +59,7 @@ func main() {
 		fmt.Printf("failed: %q", err)
 	}()
 
-	spider := NewSpider(coreSpider)
+	spider := {{.}}.NewSpider(coreSpider)
 
 	// start the scraper with a job, currently nil is passed but you can pass your job here
 	spider.StartRequest(ctx, nil)
