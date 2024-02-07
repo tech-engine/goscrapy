@@ -1,11 +1,8 @@
 package middlewares
 
 import (
-	"bytes"
-	"fmt"
 	"net/http"
 	"net/http/cookiejar"
-	"net/url"
 	"strings"
 	"sync"
 
@@ -24,71 +21,26 @@ func NewMultiCookieJar() *multiCookieJar {
 	}
 }
 
-// CookieJar returns a CookieJar corresponding to a key or create one if key doesn't exist
-func (m *multiCookieJar) CookieJar(key string) http.CookieJar {
-
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	jar, ok := m.jars[key]
-
-	if !ok {
-		return nil
-	}
-
-	return jar
-}
-
-// EncodeCookieJar returns coo
-func (m *multiCookieJar) EncodeCookieJar(key string, _url string) string {
-
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	jar, ok := m.jars[key]
-
-	if !ok {
-		return ""
-	}
-
-	var buf bytes.Buffer
-	__url, _ := url.Parse(_url)
-
-	for _, cookie := range jar.Cookies(__url) {
-		buf.WriteString(fmt.Sprintf("%s=%s; ", cookie.Name, cookie.Value))
-	}
-
-	return buf.String()
-
-}
-
-func (m *multiCookieJar) SetCookieJar(key string, jar http.CookieJar) http.CookieJar {
+// GetCookieJar returns a CookieJar corresponding to a key or create one if key doesn't exist
+func (m *multiCookieJar) GetCookieJar(key string) http.CookieJar {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	jar, ok := m.jars[key]
 
-	key = strings.Trim(key, " ")
-
-	if jar == nil {
+	// in case we don't have a cookie jar based on the key, we create a new one
+	if !ok {
 		jar, _ = cookiejar.New(nil)
 	}
-
-	m.jars[key] = jar
 	return jar
 }
 
 func MultiCookieJar(next http.RoundTripper) http.RoundTripper {
 	mCookieJar := NewMultiCookieJar()
 	return middlewaremanager.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
-		cookieJarKey := strings.Trim(req.Header.Get("cookie-jar"), " ")
+		cookieJarKey := strings.Trim(req.Header.Get("COOKIE_JAR_KEY"), " ")
 
-		// try picking cookies from jar corresponding to a key
-		jar := mCookieJar.CookieJar(cookieJarKey)
-
-		if jar == nil {
-			// create an empty jar
-			jar = mCookieJar.SetCookieJar(cookieJarKey, nil)
-		}
+		jar := mCookieJar.GetCookieJar(cookieJarKey)
 
 		reqCookies := jar.Cookies(req.URL)
 
@@ -96,8 +48,8 @@ func MultiCookieJar(next http.RoundTripper) http.RoundTripper {
 			req.AddCookie(rc)
 		}
 
-		// remove cookie-jar header
-		req.Header.Del("cookie-jar")
+		// remove cookie_jar_key header
+		req.Header.Del("COOKIE_JAR_KEY")
 
 		resp, err := next.RoundTrip(req)
 
