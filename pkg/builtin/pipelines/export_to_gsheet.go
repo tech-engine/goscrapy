@@ -2,8 +2,8 @@ package pipelines
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"log"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
@@ -18,23 +18,26 @@ type export2GSHEET[OUT any] struct {
 	sheetId       int64
 }
 
-func Export2GSHEET[OUT any](keyFilePath, spreadSheetId string, sheetId int64) (*export2GSHEET[OUT], error) {
+func Export2GSHEET[OUT any](keyFilePath, spreadSheetId string, sheetId int64) *export2GSHEET[OUT] {
 	ctx := context.Background()
 
 	service, err := sheets.NewService(ctx, option.WithCredentialsFile(keyFilePath))
 
 	if err != nil {
-		return nil, fmt.Errorf("Export2GSHEET: error creating a service using provided creds %w", err)
+		log.Printf("Export2GSHEET: error creating a service using provided creds %s", err)
+		return nil
 	}
 
 	response, err := service.Spreadsheets.Get(spreadSheetId).Fields("sheets(properties(sheetId,title))").Do()
 
 	if err != nil {
-		return nil, fmt.Errorf("Export2GSHEET: error getting spreadsheet by id %s %w", spreadSheetId, err)
+		log.Printf("Export2GSHEET: error getting spreadsheet by id %s %s", spreadSheetId, err)
+		return nil
 	}
 
 	if response.HTTPStatusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("Export2GSHEET: %d status code received", response.HTTPStatusCode))
+		log.Printf(fmt.Sprintf("Export2GSHEET: %d status code received", response.HTTPStatusCode))
+		return nil
 	}
 
 	sheetName := ""
@@ -47,7 +50,8 @@ func Export2GSHEET[OUT any](keyFilePath, spreadSheetId string, sheetId int64) (*
 	}
 
 	if sheetName == "" {
-		return nil, errors.New("Export2GSHEET: empty sheetname")
+		log.Printf("Export2GSHEET: %d status code received", response.HTTPStatusCode)
+		return nil
 	}
 
 	return &export2GSHEET[OUT]{
@@ -55,7 +59,7 @@ func Export2GSHEET[OUT any](keyFilePath, spreadSheetId string, sheetId int64) (*
 		sheetName:     sheetName,
 		spreadSheetId: spreadSheetId,
 		sheetId:       sheetId,
-	}, nil
+	}
 }
 
 func (p *export2GSHEET[OUT]) Open(ctx context.Context) error {

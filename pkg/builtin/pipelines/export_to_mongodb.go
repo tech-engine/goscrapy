@@ -3,6 +3,7 @@ package pipelines
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
@@ -18,7 +19,7 @@ type export2MONGODB[OUT any] struct {
 	collection *mongo.Collection
 }
 
-func Export2MONGODB[OUT any](_url string, dbName string, collName string) (*export2MONGODB[OUT], error) {
+func Export2MONGODB[OUT any](_url string, dbName string, collName string) *export2MONGODB[OUT] {
 
 	ctx := context.Background()
 
@@ -28,13 +29,15 @@ func Export2MONGODB[OUT any](_url string, dbName string, collName string) (*expo
 	client, err := mongo.Connect(ctx, opts)
 
 	if err != nil {
-		return nil, fmt.Errorf("Export2MONGODB: error connecting to DB %w", err)
+		log.Printf("Export2MONGODB: error connecting to DB %s", err)
+		return nil
 	}
 
 	var result bson.M
 
 	if err := client.Database(dbName).RunCommand(ctx, bson.D{{Key: "ping", Value: 1}}).Decode(&result); err != nil {
-		return nil, fmt.Errorf("Export2MONGODB: error connecting to DB %w", err)
+		log.Printf("Export2MONGODB: error connecting to DB %s", err)
+		return nil
 	}
 
 	collection := client.Database(dbName).Collection(collName)
@@ -43,7 +46,7 @@ func Export2MONGODB[OUT any](_url string, dbName string, collName string) (*expo
 		ctx:        ctx,
 		client:     client,
 		collection: collection,
-	}, nil
+	}
 }
 
 func (p *export2MONGODB[OUT]) Open(ctx context.Context) error {

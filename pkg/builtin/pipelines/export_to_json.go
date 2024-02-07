@@ -5,22 +5,22 @@ import (
 	"os"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
-	"golang.org/x/net/context"
 	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
+	"golang.org/x/net/context"
 )
 
 type export2JSON[OUT any] struct {
 	filename string
 }
 
-func Export2JSON[OUT any](args ...string) (*export2JSON[OUT], error) {
+func Export2JSON[OUT any](args ...string) *export2JSON[OUT] {
 	var filename string
 	if len(args) > 0 {
 		filename = args[0]
 	}
 	return &export2JSON[OUT]{
 		filename: filename,
-	}, nil
+	}
 }
 
 func (p *export2JSON[OUT]) Open(ctx context.Context) error {

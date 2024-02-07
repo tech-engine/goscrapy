@@ -3,6 +3,7 @@ package pipelines
 import (
 	"context"
 	"fmt"
+	"log"
 
 	firebase "firebase.google.com/go"
 	"firebase.google.com/go/db"
@@ -16,7 +17,7 @@ type export2FIREBASE[OUT any] struct {
 	ref *db.Ref
 }
 
-func Export2FIREBASE[OUT any](_url, filePath, collName string) (*export2FIREBASE[OUT], error) {
+func Export2FIREBASE[OUT any](_url, filePath, collName string) *export2FIREBASE[OUT] {
 	ctx := context.Background()
 
 	conf := &firebase.Config{
@@ -28,19 +29,21 @@ func Export2FIREBASE[OUT any](_url, filePath, collName string) (*export2FIREBASE
 	app, err := firebase.NewApp(ctx, conf, opt)
 
 	if err != nil {
-		return nil, fmt.Errorf("Export2FIREBASE: Error initializing app %w", err)
+		log.Printf("Export2FIREBASE: Error initializing app %s", err)
+		return nil
 	}
 
 	client, err := app.Database(ctx)
 
 	if err != nil {
-		return nil, fmt.Errorf("Export2FIREBASE: Error initializing Firebase client %w", err)
+		log.Printf("Export2FIREBASE: Error initializing Firebase client %s", err)
+		return nil
 	}
 
 	return &export2FIREBASE[OUT]{
 		ctx: ctx,
 		ref: client.NewRef(collName),
-	}, nil
+	}
 }
 
 func (p *export2FIREBASE[OUT]) Open(ctx context.Context) error {
