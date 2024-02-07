@@ -147,6 +147,10 @@ func (pm *PipelineManager[OUT]) processItem(original core.IOutput[OUT]) {
 	)
 
 	pItem = pm.itemPool.Acquire()
+	defer func() {
+		pItem.Clear()
+		pm.itemPool.Release(pItem.(*cmap.CMap))
+	}()
 
 	if pItem == nil {
 		pItem = cmap.NewCMap()
