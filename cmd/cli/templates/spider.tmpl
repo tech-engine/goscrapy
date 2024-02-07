@@ -1,0 +1,59 @@
+package {{.}}
+
+import (
+	"context"
+	"errors"
+	"net/url"
+
+	"github.com/tech-engine/goscrapy/cmd/corespider"
+	"github.com/tech-engine/goscrapy/pkg/core"
+)
+
+type Spider struct {
+	corespider.ICoreSpider[[]Record]
+}
+
+func NewSpider(core corespider.ICoreSpider[[]Record]) *Spider {
+	return &Spider{
+		core,
+	}
+}
+
+func (s *Spider) StartRequest(ctx context.Context, job *Job) {
+
+    // for each request we must call NewRequest() and never reuse it
+	req := s.NewRequest()
+
+    var headers http.Header
+
+    // GET is the request method, method chaining possible
+	req.Url(s.baseUrl.String()).
+	Meta("MY_KEY1", "MY_VALUE").
+	Meta("MY_KEY2", true).
+	Header(headers)
+    
+    /* POST
+    req.Url(s.baseUrl.String())
+    req.Method("POST")
+	req.Header(headers)
+    req.Body(<BODY_HERE>)
+    */
+    
+    // call the next parse method
+	s.Request(req, s.parse)
+}
+
+// can be called when spider is about to close
+func (s *Spider) Close(ctx context.Context) {
+}
+
+func (s *Spider) parse(ctx context.Context, response core.IResponseReader) {
+    // response.Body()
+    // response.StatusCode()
+    // response.Header()
+	// response.Bytes()
+	// response.Meta("MY_KEY1")
+	
+    // yielding output pushes output to be processed by pipelines, also check output.go for the fields
+    // s.Yield(output)
+}

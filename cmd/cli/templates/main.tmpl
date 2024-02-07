@@ -1,0 +1,73 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"sync"
+    "os"
+	"os/signal"
+	"syscall"
+	// replace with your own project name
+	"{{.}}/{{.}}"
+
+	"github.com/tech-engine/goscrapy/cmd/corespider"
+)
+// sample terminate function to demostrate spider termination.
+func OnTerminate(fn func()) {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	<-ctx.Done()
+	stop()
+	fn()
+}
+
+func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	// get core spider
+	coreSpider := corespider.New[[]{{.}}.Record]()
+
+    // we can use middlewares like below
+	// coreSpider.MiddlewareManager().Add(
+	// 	middlewares.DupeFilter,
+	// 	middlewares.MultiCookieJar,
+	// )
+
+	// pipelineGroup := pipelinemanager.NewGroup[[]{{.}}.Record](
+    //  you can add pipelines you want to run concurrenly using pipeline groups
+    // )
+
+    // we can use piplines
+	// coreSpider.PipelineManager().Add(
+	// 	pipelines.Export2CSV[[]{{.}}.Record]("itstimeitsnowornever.csv"),
+    //  pipelineGroup,
+	//  pipelines.Export2JSON[[]{{.}}.Record]("itstimeitsnowornever.json")
+	// )
+
+	go func() {
+		defer wg.Done()
+
+		err := coreSpider.Start(ctx)
+
+		if err != nil && errors.Is(err, context.Canceled) {
+			return
+		}
+
+		fmt.Printf("failed: %q", err)
+	}()
+
+	spider := {{.}}.NewSpider(coreSpider)
+
+	// start the scraper with a job, currently nil is passed but you can pass your job here
+	spider.StartRequest(ctx, nil)
+
+	OnTerminate(func() {
+		fmt.Println("exit signal received: shutting down gracefully")
+		cancel()
+		wg.Wait()
+	})
+
+}

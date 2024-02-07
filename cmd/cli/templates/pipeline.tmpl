@@ -1,0 +1,43 @@
+package pipelines
+
+import (
+	"context"
+
+	"github.com/tech-engine/goscrapy/pkg/core"
+	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
+)
+
+type {{.}}[OUT any] struct {
+	// add your custom fields here
+}
+
+func {{ capitalizeFirstLetter .}}[OUT any](args ...string) *{{.}}[OUT] {
+	// your custom initialization code goes here
+	return &{{.}}[OUT]{}
+}
+
+// Open runs when we start the corespider engine.
+func (p *{{.}}[OUT]) Open(ctx context.Context) error {
+	return nil
+}
+
+// Close runs just before the corespider engine exits.
+func (p *{{.}}[OUT]) Close() {
+}
+
+// your custome pipeline processing code goes here
+func (p *{{.}}[OUT]) ProcessItem(item pm.IPipelineItem, original OR) error {
+
+	// original is the output yield from spider
+	// original.IsEmpty()   	- check if data is empty
+	// original.Job()       	- access Job
+	// original.Records()   	- access []Record
+	// original.RecordKeys()  	- access Record keys in a slice
+	// original.RecordsFlat()	- access []Record in [][]any format
+
+	if original.IsEmpty() {
+		return nil
+	}
+
+	return nil
+}
