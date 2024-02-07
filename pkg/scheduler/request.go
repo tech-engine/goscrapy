@@ -125,5 +125,7 @@ func (r *request) Reset() {
 	r.header = nil
 	r.body = nil
 	r.cookieJarKey = ""
-	r.meta.Clear()
+	if r.meta != nil {
+		r.meta.Clear()
+	}
 }
