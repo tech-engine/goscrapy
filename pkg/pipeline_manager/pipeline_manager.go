@@ -131,6 +131,9 @@ func (pm *PipelineManager[OUT]) stop() {
 }
 
 func (pm *PipelineManager[OUT]) Push(original core.IOutput[OUT]) {
+	if len(pm.pipelines) <= 0 {
+		return
+	}
 	pm.outputQueue <- original
 }
 
