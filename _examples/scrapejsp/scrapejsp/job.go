@@ -1,4 +1,4 @@
-package scrapeThisSite
+package scrapejsp
 
 // id field is compulsory in a Job defination. You can add your custom to Job
 type Job struct {

@@ -1,4 +1,4 @@
-package scrapeThisSite
+package scrapejsp
 
 import "reflect"
 
