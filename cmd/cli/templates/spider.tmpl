@@ -13,8 +13,8 @@ type Spider struct {
 	corespider.ICoreSpider[[]Record]
 }
 
-func NewSpider(core corespider.ICoreSpider[[]Record]) *CustomSpider {
-	return &CustomSpider{
+func NewSpider(core corespider.ICoreSpider[[]Record]) *Spider {
+	return &Spider{
 		core,
 	}
 }
