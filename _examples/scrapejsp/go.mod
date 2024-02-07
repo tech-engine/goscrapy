@@ -1,4 +1,4 @@
-module scrapeThisSiteExample
+module scrapejsp
 
 go 1.21.0
 
