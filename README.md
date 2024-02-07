@@ -54,13 +54,12 @@ PS D:\My-Projects\go\go-test-scrapy> goscrapy startproject scrapethissite
 🚀 GoScrapy generating project files. Please wait!
 
 ✔️  scrapethissite\constants.go
-✔️  scrapethissite\core.go
 ✔️  scrapethissite\errors.go
 ✔️  scrapethissite\job.go
+✔️  main.go
 ✔️  scrapethissite\output.go
 ✔️  scrapethissite\spider.go
 ✔️  scrapethissite\types.go
-✔️  scrapethissite\setup.go
 
 ✨ Congrates. scrapethissite created successfully.
 ```
@@ -84,7 +83,7 @@ type Job struct {
 	query string // your custom field
 }
 
-// add your custom receiver functions below
+// can add your custom receiver functions below
 func (j *Job) SetQuery(query string) {
 	j.query = query
 	return
@@ -133,8 +132,8 @@ type Spider struct {
 	// you custom fields can go here
 }
 
-func NewSpider() (*Spider, error) {
-	return &Spider{}, nil
+func NewSpider() *Spider {
+	return &Spider{}
 }
 
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
@@ -142,33 +141,38 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 	// for each request we must call NewRequest() and never reuse it
 	req := s.NewRequest()
 
-	var headers map[string]string
+    var headers http.Header
 
-	// GET is the default request method
-	req.SetUrl("<URL>").
-		SetMetaData("JOB", job).
-		SetHeaders(headers)
+    // GET is the request method, method chaining possible
+	req.Url(s.baseUrl.String()).
+	Meta("MY_KEY1", "MY_VALUE").
+	Meta("MY_KEY2", true).
+	Header(headers)
+    
+    /* POST
+    req.Url(s.baseUrl.String())
+    req.Method("POST")
+	req.Header(headers)
+    req.Body(<BODY_HERE>)
+    */
+    
+    // call the next parse method
+	s.Request(req, s.parse)
+}
 
-	/* POST
-	req.SetUrl(s.baseUrl.String()).
-	SetMethod("POST").
-	SetMetaData("JOB", job).
-	SetHeaders(headers).
-	SetCookieJar("myjar").  // if not set it uses a default cookie jar, you can also set a cookie jar to use for the request, optional
-	SetBody(<BODY_HERE>)
-	*/
-
-	// call the next parse method
-	s.Request(ctx, req, s.parse)
+// can be called when spider is about to close
+func (s *Spider) Close(ctx context.Context) {
 }
 
 func (s *Spider) parse(ctx context.Context, response core.ResponseReader) {
 	// response.Body()
-	// response.StatusCode()
-	// response.Headers()
-	// response.Cookies() // response cookies returned by the previous request
-	// check output.go for the fields
-	// s.yield(output)
+    // response.StatusCode()
+    // response.Header()
+	// response.Bytes()
+	// response.Meta("MY_KEY1")
+	
+    // yielding output pushes output to be processed by pipelines, also check output.go for the fields
+    // s.Yield(output)
 }
 
 ```
@@ -207,7 +211,7 @@ In **GoScrapy** framework, pipelines play a pivotal role in managing, transformi
 - **Export2FIREBASE**
 
 ### Incorporating Pipelines into Your Scraping Workflow
-To seamlessly integrate pipelines into your scraping workflow, you can utilize the **Pipelines().Add()** method.
+To seamlessly integrate pipelines into your scraping workflow, you can utilize the **coreSpider.PipelineManager().Add()** method.
 
 Here is an example on how you can add pipelines to your scraping process:
 
@@ -215,12 +219,17 @@ __`Export to JSON Pipeline`__:
 
 ```go
 // goScrapy instance
-goScrapy.AddPipelines(pipelines.Export2JSON[*customProject.Job, []customProject.Record]())
+goScrapy.PipelineManager().Add(
+	pipelines.Export2CSV[[]Record](),
+	pipelines.Export2JSON[[]Record](),
+)
 
-// async pipelines
-// the top pipeline will run in a separate goroutine
-goScrapy.AddPipelines(pipelines.Export2JSON[*customProject.Job, []customProject.Record]()).WithAsync()
-goScrapy.AddPipelines(pipelines.Export2CSV[*customProject.Job, []customProject.Record]())
+// We can also create a pipelines group. All pipelines in a group runs concurrently.
+// A group behaves like a single pipeline. Also pipelines in a group shouldn't be used
+// for data transformation but for independent tasks like data export to a database etc.
+pipelineGroup := pipelinemanager.NewGroup[[]scrapethissite.Record](
+	//you can add pipelines you want to run concurrenly using pipeline groups
+)
 ```
 
 ### Incorporating custom Pipelines
@@ -241,8 +250,8 @@ PS D:\My-Projects\go\go-test-scrapy>scrapethissite> goscrapy pipeline export_2_D
 **GoScrapy** also support inbuilt + custom middlewares for manipulation outgoing request.
 
 ### Built-in Middlewares
-- **MultiCookiJarMiddleware** 	- used for maintaining different cookie sessions while scraping.
-- **DupeFilterMiddleware** 		- filters duplicate requests
+- **MultiCookiJar** 	- used for maintaining different cookie sessions while scraping.
+- **DupeFilter** 		- filters duplicate requests
 
 ## Custom middleware
 Implementing your custom middleware is fairly easy in **GoScrapy**. A custom middleware must implement the below interface.
@@ -264,9 +273,9 @@ __`MultiCookieJarMiddleware Middleware`__:
 
 ```go
 // goScrapy instance
-goScrapy.AddMiddlewares(
-	middlewares.MultiCookieJarMiddleware,
-	...
+goScrapy.MiddlewareManager().Add(
+	middlewares.DupeFilter,
+	middlewares.MultiCookieJar,
 )
 ```
 
@@ -276,7 +285,7 @@ goScrapy.AddMiddlewares(
 
 ## License
 
-**GoScrapy** is available under BSL with additional usage grant which allows for free internal use. Please make sure that you must agree with the license before contributing to **GoScrapy**.
+**GoScrapy** is available under BSL with additional usage grant which allows for free internal use. Please make sure that you agree with the license before contributing to **GoScrapy** because by contributing to goscrapy project you are agreeing on the license.
 
 ## Roadmap
 
@@ -285,3 +294,6 @@ goScrapy.AddMiddlewares(
 - HTML parsing
 - Triggers
 - Unit Tests
+
+## Contact
+[Discord](https://discord.gg/FPvxETjYPH)
