@@ -26,11 +26,11 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 
     var headers http.Header{}
 
-    // GET is the request method
-	req.Url(s.baseUrl.String())
-	req.Meta("MY_KEY1", "MY_VALUE")
-	req.Meta("MY_KEY2", true)
-	req.Header(headers)
+    // GET is the request method, method chaining possible
+	req.Url(s.baseUrl.String()).
+	Meta("MY_KEY1", "MY_VALUE").
+	Meta("MY_KEY2", true).
+	Header(headers)
     
     /* POST
     req.Url(s.baseUrl.String())
@@ -53,6 +53,7 @@ func (s *Spider) parse(ctx context.Context, response core.IResponseReader) {
     // response.Header()
 	// response.Bytes()
 	// response.Meta("MY_KEY1")
-    // check output.go for the fields
+	
+    // yielding output pushes output to be processed by pipelines, also check output.go for the fields
     // s.Yield(output)
 }

@@ -11,7 +11,7 @@ import (
 
 	"github.com/tech-engine/goscrapy/cmd/corespider"
 )
-
+// sample terminate function to demostrate spider termination.
 func OnTerminate(fn func()) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	<-ctx.Done()
@@ -28,7 +28,7 @@ func main() {
 	// get core spider
 	coreSpider := corespider.New[[]Record]()
 
-    // we can use middlewares
+    // we can use middlewares like below
 	// coreSpider.MiddlewareManager().Add(
 	// 	middlewares.DupeFilter,
 	// 	middlewares.MultiCookieJar,
@@ -42,6 +42,7 @@ func main() {
 	// coreSpider.PipelineManager().Add(
 	// 	pipelines.Export2CSV[[]Record]("itstimeitsnowornever.csv"),
     //  pipelineGroup,
+	//  pipelines.Export2JSON[[]Record]("itstimeitsnowornever.json")
 	// )
 
 	go func() {
@@ -58,7 +59,7 @@ func main() {
 
 	spider := NewSpider(coreSpider)
 
-	// start the scraper with a job
+	// start the scraper with a job, currently nil is passed but you can pass your job here
 	spider.StartRequest(ctx, nil)
 
 	OnTerminate(func() {

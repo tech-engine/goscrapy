@@ -18,6 +18,7 @@ func {{ capitalizeFirstLetter .}}[OUT any](args ...string) *{{.}}[OUT] {
 
 // Open runs when we start the corespider engine.
 func (p *{{.}}[OUT]) Open(ctx context.Context) error {
+	return nil
 }
 
 // Close runs just before the corespider engine exits.
@@ -35,8 +36,8 @@ func (p *{{.}}[OUT]) ProcessItem(item pm.IPipelineItem, original OR) error {
 	// original.RecordsFlat()	- access []Record in [][]any format
 
 	if original.IsEmpty() {
-		return nil, nil
+		return nil
 	}
 
-	return nil, nil
+	return nil
 }
