@@ -7,13 +7,13 @@ import (
 	"github.com/tech-engine/goscrapy/internal/types"
 )
 
-type CMap struct {
+type CMap[K comparable, V any] struct {
 	opts
 	lock sync.RWMutex
-	data map[string]Void[any]
+	data map[K]Void[V]
 }
 
-func NewCMap(optFuncs ...types.OptFunc[opts]) *CMap {
+func NewCMap[K comparable, V any](optFuncs ...types.OptFunc[opts]) *CMap[K, V] {
 
 	opts := defaultOpts()
 
@@ -21,13 +21,13 @@ func NewCMap(optFuncs ...types.OptFunc[opts]) *CMap {
 		fn(&opts)
 	}
 
-	return &CMap{
+	return &CMap[K, V]{
 		opts: opts,
-		data: make(map[string]Void[any], opts.size),
+		data: make(map[K]Void[V], opts.size),
 	}
 }
 
-func (cm *CMap) Get(key string) (any, bool) {
+func (cm *CMap[K, V]) Get(key K) (V, bool) {
 
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
@@ -37,7 +37,7 @@ func (cm *CMap) Get(key string) (any, bool) {
 	return val.Data, ok
 }
 
-func (cm *CMap) Set(key string, val any) error {
+func (cm *CMap[K, V]) Set(key K, val V) error {
 
 	cm.lock.Lock()
 	defer cm.lock.Unlock()
@@ -48,20 +48,20 @@ func (cm *CMap) Set(key string, val any) error {
 		return fmt.Errorf("Set: max items of %d exceeded", cm.size)
 	}
 
-	cm.data[key] = Void[any]{val}
+	cm.data[key] = Void[V]{val}
 
 	return nil
 }
 
-func (cm *CMap) Del(key string) {
+func (cm *CMap[K, V]) Del(key K) {
 	delete(cm.data, key)
 }
 
-func (cm *CMap) Clear() {
+func (cm *CMap[K, V]) Clear() {
 	clear(cm.data)
 }
 
-func (cm *CMap) Keys() []any {
+func (cm *CMap[K, V]) Keys() []any {
 	keys := make([]any, cm.size)
 
 	var i = 0
@@ -73,7 +73,7 @@ func (cm *CMap) Keys() []any {
 	return keys
 }
 
-func (cm *CMap) Len() int {
+func (cm *CMap[K, V]) Len() int {
 
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
