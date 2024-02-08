@@ -1,11 +1,14 @@
 package cmap
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/tech-engine/goscrapy/internal/types"
 )
+
+var ERR_MAX_ITEM_EXCEEDED = errors.New("CMAP max item exceeded")
 
 type CMap[K comparable, V any] struct {
 	opts
@@ -44,8 +47,8 @@ func (cm *CMap[K, V]) Set(key K, val V) error {
 
 	_, ok := cm.data[key]
 
-	if (len(cm.data) > cm.size) && !ok {
-		return fmt.Errorf("Set: max items of %d exceeded", cm.size)
+	if (len(cm.data) >= cm.size) && !ok {
+		return fmt.Errorf("Set: %w: max allowed=[%d]", ERR_MAX_ITEM_EXCEEDED, cm.size)
 	}
 
 	cm.data[key] = Void[V]{val}
