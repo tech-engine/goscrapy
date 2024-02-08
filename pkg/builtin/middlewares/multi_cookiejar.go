@@ -38,7 +38,7 @@ func (m *multiCookieJar) GetCookieJar(key string) http.CookieJar {
 func MultiCookieJar(next http.RoundTripper) http.RoundTripper {
 	mCookieJar := NewMultiCookieJar()
 	return middlewaremanager.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
-		cookieJarKey := strings.Trim(req.Header.Get("COOKIE_JAR_KEY"), " ")
+		cookieJarKey := strings.Trim(req.Header.Get("X-Goscrapy-CookieJar-Key"), " ")
 
 		jar := mCookieJar.GetCookieJar(cookieJarKey)
 
@@ -48,8 +48,8 @@ func MultiCookieJar(next http.RoundTripper) http.RoundTripper {
 			req.AddCookie(rc)
 		}
 
-		// remove cookie_jar_key header
-		req.Header.Del("COOKIE_JAR_KEY")
+		// remove X-Goscrapy-CookieJar-Key header
+		req.Header.Del("X-Goscrapy-CookieJar-Key")
 
 		resp, err := next.RoundTrip(req)
 
