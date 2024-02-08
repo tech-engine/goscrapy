@@ -13,7 +13,7 @@ import (
 
 type PipelineManager[OUT any] struct {
 	opts
-	itemPool    *rp.Pooler[cmap.CMap]
+	itemPool    *rp.Pooler[cmap.CMap[string, any]]
 	outputQueue chan core.IOutput[OUT]
 	pipelines   []IPipeline[OUT]
 }
@@ -32,7 +32,7 @@ func New[OUT any](optFuncs ...types.OptFunc[opts]) *PipelineManager[OUT] {
 		opts:        opts,
 		outputQueue: make(chan core.IOutput[OUT], opts.outputQueueBuffSize),
 		pipelines:   make([]IPipeline[OUT], 0),
-		itemPool:    rp.NewPooler[cmap.CMap](rp.WithSize[cmap.CMap](opts.itemPoolSize)),
+		itemPool:    rp.NewPooler[cmap.CMap[string, any]](rp.WithSize[cmap.CMap[string, any]](opts.itemPoolSize)),
 	}
 }
 
@@ -142,7 +142,7 @@ func (pm *PipelineManager[OUT]) processItem(original core.IOutput[OUT]) {
 
 	// call sync pipelines
 	var (
-		pItem *cmap.CMap // pipeline item
+		pItem *cmap.CMap[string, any] // pipeline item
 		err   error
 	)
 
@@ -154,7 +154,7 @@ func (pm *PipelineManager[OUT]) processItem(original core.IOutput[OUT]) {
 	}()
 
 	if pItem == nil {
-		pItem = cmap.NewCMap(cmap.WithSize(int(pm.itemSize)))
+		pItem = cmap.NewCMap[string, any](cmap.WithSize(int(pm.itemSize)))
 	}
 
 	for _, pipeline := range pm.pipelines {
