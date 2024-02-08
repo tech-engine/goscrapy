@@ -50,6 +50,11 @@ func (r *request) ReadMeta() *fsm.FixedSizeMap[string, any] {
 	return r.meta
 }
 
+// Read the cookie jar key associated with a request
+func (r *request) ReadCookieJar() string {
+	return r.cookieJarKey
+}
+
 // Request inplements core.IRequestWriter
 func (r *request) Url(_url string) core.IRequestWriter {
 	__url, err := url.Parse(_url)

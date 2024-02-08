@@ -23,6 +23,7 @@ type IRequestReader interface {
 	ReadMethod() string
 	ReadBody() io.ReadCloser
 	ReadMeta() *fsm.FixedSizeMap[string, any]
+	ReadCookieJar() string
 }
 
 type IRequestWriter interface {

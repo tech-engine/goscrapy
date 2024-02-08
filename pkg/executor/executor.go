@@ -21,7 +21,11 @@ func (e *Executor) Execute(req core.IRequestReader, res engine.IResponseWriter) 
 		e.adapter.WithContext(req.ReadContext())
 	}
 
-	e.adapter.Header(req.ReadHeader())
+	headers := req.ReadHeader()
+	// we inject a header for cookiejar implementation
+	headers.Add("X-CookieJar-Key", req.ReadCookieJar())
+
+	e.adapter.Header(headers)
 	e.adapter.Body(req.ReadBody())
 
 	switch req.ReadMethod() {
