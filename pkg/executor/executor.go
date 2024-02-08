@@ -23,7 +23,7 @@ func (e *Executor) Execute(req core.IRequestReader, res engine.IResponseWriter) 
 
 	headers := req.ReadHeader()
 	// we inject a header for cookiejar implementation
-	headers.Add("X-CookieJar-Key", req.ReadCookieJar())
+	headers.Add("X-Goscrapy-CookieJar-Key", req.ReadCookieJar())
 
 	e.adapter.Header(headers)
 	e.adapter.Body(req.ReadBody())
