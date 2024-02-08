@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"net/http"
 	"sync"
 
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
@@ -118,6 +119,7 @@ func (s *scheduler) NewRequest() core.IRequestRW {
 	if req == nil {
 		req = &request{
 			method: "GET",
+			header: make(http.Header),
 		}
 	}
 	return req
