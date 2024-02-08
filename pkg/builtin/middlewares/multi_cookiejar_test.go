@@ -4,12 +4,33 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"slices"
 
 	"github.com/stretchr/testify/assert"
 )
+
+// Set our custom transport middleware
+var client = &http.Client{
+	Transport: MultiCookieJar(http.DefaultTransport),
+}
+
+func filteredHeaders(h http.Header) http.Header {
+	var newHeader = make(http.Header)
+	skipHeaders := []string{"User-Agent", "Accept-Encoding", "Cookie", "Content-Length", "Date"}
+
+	for name, value := range h {
+		// we skip the default headers
+		if slices.Contains(skipHeaders, name) {
+			continue
+		}
+		newHeader.Add(name, value[0])
+	}
+
+	return newHeader
+}
 
 func makeTestRequestWithClient(client *http.Client) func(string, string, http.Header) (*http.Response, error) {
 	return func(method, url string, header http.Header) (*http.Response, error) {
@@ -26,20 +47,14 @@ func makeTestRequestWithClient(client *http.Client) func(string, string, http.He
 
 		return client.Do(req)
 	}
-
 }
 
-/*
-Handler func to test default cookiejar.
-We send 2 consecutive http requests. In first request, the server responds back with set-cookie header,
-and in the second request our client sends the cookies from default cookie jar to the server.
-*/
+// handlerGetCookieJar provides us our dummy server handlers
 func handlerGetCookieJar(t *testing.T) *http.ServeMux {
 	mux := http.NewServeMux()
 	skipHeaders := []string{"User-Agent", "Accept-Encoding", "Cookie"}
-	// /get-cookie responds back to client with set-cookie header
-	mux.HandleFunc("/get-cookie", func(w http.ResponseWriter, r *http.Request) {
-
+	// /get-cookie receives headers from client and set those headers as response cookies
+	mux.HandleFunc("/set-cookie", func(w http.ResponseWriter, r *http.Request) {
 		for name, value := range r.Header {
 			// Set the cookie in the response
 			if len(value) <= 0 {
@@ -63,8 +78,8 @@ func handlerGetCookieJar(t *testing.T) *http.ServeMux {
 
 	})
 
-	// /send-cookie receives cookie from client and respond back with the cookie value in response
-	mux.HandleFunc("/send-cookie", func(w http.ResponseWriter, r *http.Request) {
+	// /verify receives cookies(auto injected by middleware) from client and respond back with the cookie value in response headers
+	mux.HandleFunc("/verify", func(w http.ResponseWriter, r *http.Request) {
 
 		// Inspect the request's cookies
 		receivedCookies := r.Cookies()
@@ -72,124 +87,77 @@ func handlerGetCookieJar(t *testing.T) *http.ServeMux {
 		for _, c := range receivedCookies {
 			w.Header().Set(c.Name, c.Value)
 		}
-		// add extra cookies
-		for name, value := range r.Header {
-			// Set the cookie in the response
-			if len(value) <= 0 {
-				continue
-			}
 
-			// we skip the default headers
-			if slices.Contains(skipHeaders, name) {
-				continue
-			}
-
-			cookie := &http.Cookie{
-				Name:   name,
-				Value:  value[0],
-				Domain: r.URL.Host,
-				Path:   "/",
-			}
-			http.SetCookie(w, cookie)
-
-			w.Header().Set(name, value[0])
-		}
 		w.WriteHeader(http.StatusOK)
 
 	})
 	return mux
 }
 
-// Both the 2 http request to the same server HOST:PORT
-func singleHostCookieJar(client *http.Client, session string) func(t *testing.T) {
-	return func(t *testing.T) {
-		// Create a test server with the custom RoundTripper
-		testServer := httptest.NewServer(handlerGetCookieJar(t))
-		defer testServer.Close()
+// There are 2 stages.
+//
+// Stage 1: We send a request with a few headers to our test server, and get the exact same headers back
+// as response cookies.
+//
+// Stage 2: To verify if our cookie middleware worked as expected, we will send another request to /verify.
+// If we get the exact same headers we sent in Stage 1, as response headers, our middleware worked as expected.
+func RunWithCookieJar(t *testing.T, key string) {
+	// Create a test server with the custom RoundTripper
+	key = strings.ToLower(key)
+	testServer := httptest.NewServer(handlerGetCookieJar(t))
+	defer testServer.Close()
 
-		requester := makeTestRequestWithClient(client)
+	requester := makeTestRequestWithClient(client)
 
-		headerOne := http.Header{
-			"X-Goscrapy-Server-Req-1": []string{"single_host_req_1"},
-		}
-
-		if session != "" {
-			headerOne.Add("cookie-jar", session)
-		}
-		// Create the first GET request with default cookiejar, this is set the cookie in our client
-		respOne, err := requester("GET", testServer.URL+"/get-cookie", headerOne)
-
-		assert.Nil(t, err, "error making http request 1")
-
-		defer respOne.Body.Close()
-
-		// we verify if we have received the same cookies that we have set in "X-Goscrapy-Server-Req-1" header
-		cookiesFromRespOne := respOne.Cookies()
-
-		assert.Len(t, cookiesFromRespOne, 1, fmt.Sprintf("expected only 1 cookie but got %d", len(cookiesFromRespOne)))
-
-		found := false
-		for _, cookie := range cookiesFromRespOne {
-			if cookie.Name == "X-Goscrapy-Server-Req-1" && cookie.Value == "single_host_req_1" {
-				found = true
-				break
-			}
-		}
-
-		assert.True(t, found, "expected cookie X-Goscrapy-Server-Req-1=single_host_req_1 in respOne.Cookies(), but not found")
-
-		headerTwo := http.Header{
-			"X-Goscrapy-Server-Req-2": []string{"single_host_req_2"},
-		}
-
-		if session != "" {
-			headerTwo.Add("cookie-jar", session)
-		}
-
-		// Create the second GET request with default cookiejar
-		respTwo, err := requester("GET", testServer.URL+"/send-cookie", headerTwo)
-
-		assert.Nil(t, err, "error in making http request 2")
-
-		defer respTwo.Body.Close()
-
-		// We read cookies from second request
-		cookiesFromRespTwo := respTwo.Cookies()
-
-		// as we set only 1 header in our second request we must receive only 1 cookie
-		assert.Len(t, cookiesFromRespTwo, 1, fmt.Sprintf("expected only 1 cookie but got %d", len(cookiesFromRespTwo)))
-
-		// check if we received the correct cookie
-		found = false
-		for _, cookie := range cookiesFromRespTwo {
-			if cookie.Name == "X-Goscrapy-Server-Req-2" && cookie.Value == "single_host_req_2" {
-				found = true
-				break
-			}
-		}
-
-		assert.True(t, found, "expected cookie X-Goscrapy-Server-Req-2=single_host_req_2 in respTwo.Cookies(), but not found")
-
-		found = false
-		respTwoHeaders := respTwo.Header
-
-		// we check if we have received back the 2 cookies as response headers
-
-		if (respTwoHeaders.Get("X-Goscrapy-Server-Req-1") == "single_host_req_1") && (respTwoHeaders.Get("X-Goscrapy-Server-Req-2") == "single_host_req_2") {
-			found = true
-		}
-
-		assert.True(t, found, "expected 2 cookies, X-Goscrapy-Server-Req-1=single_host_req_1 & X-Goscrapy-Server-Req-2=single_host_req_2 to be passed to /send-cookie, but not passed")
-
+	// Stage 1
+	headerOne := http.Header{
+		"X-Goscrapy-Server-Req-" + key: []string{"single_host_req_" + key},
 	}
+
+	if key != "" {
+		headerOne.Add("X-Goscrapy-Cookie-Jar-Key", key)
+	}
+
+	respOne, err := requester("GET", testServer.URL+"/set-cookie", headerOne)
+
+	assert.Nil(t, err, "error making http request 1")
+
+	defer respOne.Body.Close()
+
+	// we verify if we have received the same cookies that we have set in "X-Goscrapy-Server-Req-1" header
+	respOneCookies := respOne.Cookies()
+
+	assert.Lenf(t, respOneCookies, 1, "expected only %d cookie but got %d", 1, len(respOneCookies))
+
+	found := false
+
+	for _, cookie := range respOneCookies {
+		if strings.ToLower(cookie.Name) == "x-goscrapy-server-req-"+key && strings.ToLower(cookie.Value) == "single_host_req_"+key {
+			found = true
+			break
+		}
+	}
+
+	assert.Truef(t, found, "expected response cookies [X-Goscrapy-Server-Req-%s=single_host_req_%s] not found", key, key)
+
+	// second stage 2:
+	headerTwo := http.Header{
+		"X-Goscrapy-Cookie-Jar-Key": []string{key},
+	}
+	respTwo, err := requester("GET", testServer.URL+"/verify", headerTwo)
+
+	assert.Nil(t, err, "error making http request 2")
+
+	defer respTwo.Body.Close()
+
+	respTwoHeader := filteredHeaders(respTwo.Header)
+
+	assert.Lenf(t, respTwoHeader, 1, "expected only %d header but got %d", 1, len(respTwoHeader))
+
+	assert.Equal(t, "single_host_req_"+key, respTwoHeader.Get("X-Goscrapy-Server-Req-"+key))
 }
 
 func TestMultiCookierJar(t *testing.T) {
-
-	// Set our custom transport middleware
-	client := &http.Client{
-		Transport: MultiCookieJar(http.DefaultTransport),
-	}
 
 	testCases := []struct {
 		Name,
@@ -217,7 +185,14 @@ func TestMultiCookierJar(t *testing.T) {
 		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			singleHostCookieJar(client, tc.SessionKey)(t)
+			RunWithCookieJar(t, tc.SessionKey)
+		})
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			RunWithCookieJar(t, tc.SessionKey)
 		})
 	}
 }
