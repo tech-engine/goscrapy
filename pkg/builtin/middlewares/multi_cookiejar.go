@@ -32,13 +32,15 @@ func (m *multiCookieJar) GetCookieJar(key string) http.CookieJar {
 	if !ok {
 		jar, _ = cookiejar.New(nil)
 	}
+	m.jars[key] = jar
 	return jar
 }
 
 func MultiCookieJar(next http.RoundTripper) http.RoundTripper {
 	mCookieJar := NewMultiCookieJar()
 	return middlewaremanager.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
-		cookieJarKey := strings.Trim(req.Header.Get("X-Goscrapy-CookieJar-Key"), " ")
+		// Header keys are received as the client sends them and not normalized.
+		cookieJarKey := strings.Trim(req.Header.Get("X-Goscrapy-Cookie-Jar-Key"), " ")
 
 		jar := mCookieJar.GetCookieJar(cookieJarKey)
 
@@ -49,8 +51,9 @@ func MultiCookieJar(next http.RoundTripper) http.RoundTripper {
 		}
 
 		// remove X-Goscrapy-CookieJar-Key header
-		req.Header.Del("X-Goscrapy-CookieJar-Key")
+		req.Header.Del("X-Goscrapy-Cookie-Jar-Key")
 
+		// It is in this step Headers are normalized and sent out.
 		resp, err := next.RoundTrip(req)
 
 		// update cookies
