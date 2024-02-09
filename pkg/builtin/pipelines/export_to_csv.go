@@ -2,7 +2,6 @@ package pipelines
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 
 type export2CSV[OUT any] struct {
 	filename string
-	file     io.WriteCloser
+	file     *os.File
 }
 
 func Export2CSV[OUT any]() *export2CSV[OUT] {
@@ -24,8 +23,8 @@ func Export2CSV[OUT any]() *export2CSV[OUT] {
 	}
 }
 
-func (p *export2CSV[OUT]) WithWriteCloser(w io.WriteCloser) *export2CSV[OUT] {
-	p.file = w
+func (p *export2CSV[OUT]) WithFile(f *os.File) *export2CSV[OUT] {
+	p.file = f
 	return p
 }
 
@@ -35,8 +34,8 @@ func (p *export2CSV[OUT]) WithFilename(n string) *export2CSV[OUT] {
 }
 
 func (p *export2CSV[OUT]) Open(ctx context.Context) error {
-
 	if p.file != nil {
+		p.filename = ""
 		return nil
 	}
 
@@ -60,7 +59,7 @@ func (p *export2CSV[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutp
 		return nil
 	}
 
-	fileInfo, err := os.Stat(p.filename)
+	fileInfo, err := p.file.Stat()
 
 	if err != nil {
 		return err
@@ -73,7 +72,7 @@ func (p *export2CSV[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutp
 	if size > 0 {
 		err = gocsv.MarshalWithoutHeaders(data, p.file)
 	} else {
-		err = gocsv.MarshalFile(data, p.file.(*os.File))
+		err = gocsv.MarshalFile(data, p.file)
 	}
 
 	return err
