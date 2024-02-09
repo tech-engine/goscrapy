@@ -20,7 +20,7 @@ type export2CSV[OUT any] struct {
 
 func Export2CSV[OUT any]() *export2CSV[OUT] {
 	return &export2CSV[OUT]{
-		filename: fmt.Sprintf("JOB_%s.csv", time.Now().UTC().Format("2023-07-27-00-00-00")),
+		filename: fmt.Sprintf("JOB_%s.csv", time.Now().UTC().Format("2006-01-02-15-04-05")),
 	}
 }
 
