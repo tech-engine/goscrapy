@@ -18,7 +18,7 @@ go mod init <project_name>
 Replace <project_name> with your desired project name. For example:
 
 ```sh
-go mod init scrape_this_site
+go mod init scrapejsp
 ```
 
 ### 2. Installation
@@ -44,24 +44,24 @@ goscrapy startproject <project_name>
 Replace <project_name> with your project name. For example:
 
 ```sh
-goscrapy startproject scrapethissite
+goscrapy startproject scrapejsp
 ```
 This command will create a new project directory with the all necessary files to begin working with **GoScrapy**.
 
 ```sh
-PS D:\My-Projects\go\go-test-scrapy> goscrapy startproject scrapethissite
+PS D:\My-Projects\go\go-test-scrapy> goscrapy startproject scrapejsp
 
 🚀 GoScrapy generating project files. Please wait!
 
-✔️  scrapethissite\constants.go
-✔️  scrapethissite\errors.go
-✔️  scrapethissite\job.go
+✔️  scrapejsp\constants.go
+✔️  scrapejsp\errors.go
+✔️  scrapejsp\job.go
 ✔️  main.go
-✔️  scrapethissite\output.go
-✔️  scrapethissite\spider.go
-✔️  scrapethissite\types.go
+✔️  scrapejsp\output.go
+✔️  scrapejsp\spider.go
+✔️  scrapejsp\types.go
 
-✨ Congrates. scrapethissite created successfully.
+✨ Congrates. scrapejsp created successfully.
 ```
 
 ## Usage
@@ -83,11 +83,16 @@ type Job struct {
 	query string // your custom field
 }
 
-// can add your custom receiver functions below
-func (j *Job) SetQuery(query string) {
-	j.query = query
-	return
+// required
+func (j *Job) Id() string {
+	return j.id
 }
+
+// can add your custom receiver functions below, if you want to
+// func (j *Job) SetQuery(query string) {
+// 	j.query = query
+// 	return
+// }
 ```
 
 ### Output
@@ -107,7 +112,7 @@ A Spider encapsulate the main logic of your spider from the making a requests, p
 <!-- Here goes the spider.go -->
 
 ## Example
-This example illustrates how to utilize the **GoScrapy** framework to scrape data for the website https://www.scrapethissite.com. The example covers the following files:
+This example illustrates how to utilize the **GoScrapy** framework to scrape data for the api https://jsonplaceholder.typicode.com. The example covers the following files:
 
 - **[spider.go](#spidergo---spider-creation)**
 - **[types.go](#typesgo---data-structure-definition)**
@@ -117,37 +122,41 @@ This example illustrates how to utilize the **GoScrapy** framework to scrape dat
 Define the spider responsible for handling the scraping logic in your __`spider.go`__ file. The following code snippet sets up the spider:
 
 ```go
-package scrapethissite
+package scrapejsp
 
 import (
 	"context"
 	"errors"
 	"net/url"
 
+	"github.com/tech-engine/goscrapy/cmd/corespider"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
 type Spider struct {
-	coreSpider
+	corespider.ICoreSpider[[]Record]
 	// you custom fields can go here
 }
 
-func NewSpider() *Spider {
-	return &Spider{}
+func NewSpider(core corespider.ICoreSpider[[]Record]) *Spider {
+	return &Spider{
+		core,
+	}
 }
 
+// we will not go into the detail here
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 
 	// for each request we must call NewRequest() and never reuse it
 	req := s.NewRequest()
 
-    var headers http.Header
+    // var headers http.Header
 
     // GET is the request method, method chaining possible
-	req.Url(s.baseUrl.String()).
+	req.Url("URL_HERE").
 	Meta("MY_KEY1", "MY_VALUE").
-	Meta("MY_KEY2", true).
-	Header(headers)
+	Meta("MY_KEY2", true)
+	// Header(headers)
     
     /* POST
     req.Url(s.baseUrl.String())
@@ -164,7 +173,7 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 func (s *Spider) Close(ctx context.Context) {
 }
 
-func (s *Spider) parse(ctx context.Context, response core.ResponseReader) {
+func (s *Spider) parse(ctx context.Context, response core.IResponseReader) {
 	// response.Body()
     // response.StatusCode()
     // response.Header()
@@ -188,7 +197,10 @@ In your __`types.go`__ file, define the **Record** structure that corresponds to
 */
 
 type Record struct {
+	Id int `json:"id" csv:"id"`
+	UserId int `json:"userId" csv:"userId"`
 	Title string `json:"title" csv:"title"`
+	Completed bool `json:"completed" csv:"completed"`
 }
 ```
 
@@ -196,7 +208,7 @@ type Record struct {
 ### main.go
 In your __`main.go`__ file, set up and execute your spider using the **GoScrapy** framework by following these steps:
 
-For implementation details, you can refer to the [sample code here](./_examples/scrapethissite/main.go).
+For implementation details, you can refer to the [sample code here](./_examples/scrapejsp/main.go).
 
 ## Pipelines 
 In **GoScrapy** framework, pipelines play a pivotal role in managing, transforming, and fine-tuning the scraped data to meet your project's specific needs. Pipelines provide a powerful mechanism for executing a sequence of actions that are executed on the scraped data.
@@ -224,10 +236,16 @@ goScrapy.PipelineManager().Add(
 	pipelines.Export2JSON[[]Record](),
 )
 
+// we can also pass in your filename
+goScrapy.PipelineManager().Add(
+	pipelines.Export2CSV[[]Record]().WithFilename("test.csv"),
+	pipelines.Export2JSON[[]Record]().WithFilename("test.json"),
+)
+
 // We can also create a pipelines group. All pipelines in a group runs concurrently.
 // A group behaves like a single pipeline. Also pipelines in a group shouldn't be used
 // for data transformation but for independent tasks like data export to a database etc.
-pipelineGroup := pipelinemanager.NewGroup[[]scrapethissite.Record](
+pipelineGroup := pipelinemanager.NewGroup[[]scrapejsp.Record](
 	//you can add pipelines you want to run concurrenly using pipeline groups
 )
 ```
@@ -239,7 +257,7 @@ pipelineGroup := pipelinemanager.NewGroup[[]scrapethissite.Record](
 
 
 ```sh
-PS D:\My-Projects\go\go-test-scrapy>scrapethissite> goscrapy pipeline export_2_DB
+PS D:\My-Projects\go\go-test-scrapy>scrapejsp> goscrapy pipeline export_2_DB
 
 ✔️  pipelines\export_2_DB.go
 
@@ -257,7 +275,7 @@ PS D:\My-Projects\go\go-test-scrapy>scrapethissite> goscrapy pipeline export_2_D
 Implementing your custom middleware is fairly easy in **GoScrapy**. A custom middleware must implement the below interface.
 
 ```go
-func MultiCookieJarMiddleware(next http.RoundTripper) http.RoundTripper {
+func MultiCookieJar(next http.RoundTripper) http.RoundTripper {
 	return core.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
 		// you middleware custom code here
 	})
@@ -265,11 +283,11 @@ func MultiCookieJarMiddleware(next http.RoundTripper) http.RoundTripper {
 ```
 
 ### Incorporating Middlewares into Your Scraping Workflow
-To seamlessly integrate middlewares into your scraping workflow, you can utilize the **AddMiddlewares** method which is a variadic function and can accept arbirary number of middlewares.
+To seamlessly integrate middlewares into your scraping workflow, you can utilize the **MiddlewareManager().Add()** method which is a variadic function and can accept arbirary number of middlewares.
 
 Here is an example on how you can add middlewares to your scraping process:
 
-__`MultiCookieJarMiddleware Middleware`__:
+__`MultiCookieJar Middleware`__:
 
 ```go
 // goScrapy instance
