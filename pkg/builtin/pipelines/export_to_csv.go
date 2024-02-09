@@ -1,7 +1,9 @@
 package pipelines
 
 import (
+	"fmt"
 	"os"
+	"time"
 
 	"context"
 
@@ -12,6 +14,7 @@ import (
 
 type export2CSV[OUT any] struct {
 	filename string
+	file     *os.File
 }
 
 func Export2CSV[OUT any](args ...string) *export2CSV[OUT] {
@@ -25,10 +28,24 @@ func Export2CSV[OUT any](args ...string) *export2CSV[OUT] {
 }
 
 func (p *export2CSV[OUT]) Open(ctx context.Context) error {
-	return nil
+	filename := p.filename
+	if filename == "" {
+		formattedTime := time.Now().UTC().Format("2023-07-27-00-00-00")
+		filename = fmt.Sprintf("JOB_%s.csv", formattedTime)
+	}
+
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640)
+
+	if err != nil {
+		return err
+	}
+
+	p.file = file
+	return err
 }
 
 func (p *export2CSV[OUT]) Close() {
+	p.file.Close()
 }
 
 func (p *export2CSV[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
@@ -36,18 +53,6 @@ func (p *export2CSV[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutp
 	if original.IsEmpty() {
 		return nil
 	}
-
-	if p.filename == "" {
-		p.filename = "JOB_" + original.Job().Id() + ".csv"
-	}
-
-	file, err := os.OpenFile(p.filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640)
-
-	if err != nil {
-		return err
-	}
-
-	defer file.Close()
 
 	fileInfo, err := os.Stat(p.filename)
 
@@ -60,9 +65,9 @@ func (p *export2CSV[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutp
 	data := original.Records()
 
 	if size > 0 {
-		err = gocsv.MarshalWithoutHeaders(data, file)
+		err = gocsv.MarshalWithoutHeaders(data, p.file)
 	} else {
-		err = gocsv.MarshalFile(data, file)
+		err = gocsv.MarshalFile(data, p.file)
 	}
 
 	return err
