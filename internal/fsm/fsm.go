@@ -1,10 +1,13 @@
 package fsm
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/tech-engine/goscrapy/internal/cmap"
 )
+
+var ERR_MAX_ITEM_EXCEEDED = errors.New("FSM max item exceeded")
 
 type FixedSizeMap[K comparable, V any] struct {
 	size uint64
@@ -28,7 +31,7 @@ func (fsm *FixedSizeMap[K, V]) Get(key K) (V, bool) {
 func (fsm *FixedSizeMap[K, V]) Set(key K, val V) error {
 
 	if _, ok := fsm.data[key]; !ok && (len(fsm.data) >= int(fsm.size)) {
-		return fmt.Errorf("Set:fixedsizemap.go: max items of %d exceeded", fsm.size)
+		return fmt.Errorf("Set:fixedsizemap.go: %w: max allowed=[%d]", ERR_MAX_ITEM_EXCEEDED, fsm.size)
 	}
 
 	fsm.data[key] = cmap.Void[V]{Data: val}
