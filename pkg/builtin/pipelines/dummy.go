@@ -6,6 +6,14 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
+type dummyJob struct {
+	id string
+}
+
+func (j *dummyJob) Id() string {
+	return "dummyJob"
+}
+
 type dummyOutput struct {
 	records []dummyRecord
 	err     error
@@ -74,4 +82,9 @@ func (o *dummyOutput) IsEmpty() bool {
 		return true
 	}
 	return len(o.records) <= 0
+}
+
+type dummyRecord struct {
+	Id   string `json:"id" csv:"id"`
+	Name string `json:"name" csv:"name"`
 }
