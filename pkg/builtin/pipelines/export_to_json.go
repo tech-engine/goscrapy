@@ -14,9 +14,10 @@ import (
 )
 
 type export2JSON[OUT any] struct {
-	filename string
-	file     io.WriteCloser
-	buff     *bufio.Writer
+	filename       string
+	file           io.WriteCloser
+	buff           *bufio.Writer
+	immediateFlush bool
 }
 
 func Export2JSON[OUT any]() *export2JSON[OUT] {
@@ -25,6 +26,7 @@ func Export2JSON[OUT any]() *export2JSON[OUT] {
 	}
 }
 
+// export2JSON internally creates a bufio.Writer from provided io.WWriter
 func (p *export2JSON[OUT]) WithWriteCloser(w io.WriteCloser) {
 	p.file = w
 }
@@ -33,8 +35,14 @@ func (p *export2JSON[OUT]) WithFilename(n string) {
 	p.filename = n
 }
 
+// WithImmediate set immediateFlush=true, which flushes bufio.Writer immediately after processing
+func (p *export2JSON[OUT]) WithImmediate() {
+	p.immediateFlush = true
+}
+
 func (p *export2JSON[OUT]) Open(ctx context.Context) error {
 	if p.file != nil {
+		p.buff = bufio.NewWriter(p.file)
 		return nil
 	}
 
@@ -66,6 +74,10 @@ func (p *export2JSON[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOut
 	// Encode and write the JSON data
 	if err := jsonEncoder.Encode(original.Records()); err != nil {
 		return err
+	}
+
+	if p.immediateFlush {
+		p.buff.Flush()
 	}
 
 	return nil
