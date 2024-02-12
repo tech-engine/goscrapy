@@ -1,6 +1,7 @@
 package pipelines
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +16,7 @@ import (
 type export2JSON[OUT any] struct {
 	filename string
 	file     io.WriteCloser
+	buff     *bufio.Writer
 }
 
 func Export2JSON[OUT any]() *export2JSON[OUT] {
@@ -23,14 +25,12 @@ func Export2JSON[OUT any]() *export2JSON[OUT] {
 	}
 }
 
-func (p *export2JSON[OUT]) WithWriteCloser(w io.WriteCloser) *export2JSON[OUT] {
+func (p *export2JSON[OUT]) WithWriteCloser(w io.WriteCloser) {
 	p.file = w
-	return p
 }
 
-func (p *export2JSON[OUT]) WithFilename(n string) *export2JSON[OUT] {
+func (p *export2JSON[OUT]) WithFilename(n string) {
 	p.filename = n
-	return p
 }
 
 func (p *export2JSON[OUT]) Open(ctx context.Context) error {
@@ -45,10 +45,13 @@ func (p *export2JSON[OUT]) Open(ctx context.Context) error {
 	}
 
 	p.file = file
+	p.buff = bufio.NewWriter(p.file)
 	return nil
 }
 
 func (p *export2JSON[OUT]) Close() {
+	// flushed data to writer
+	p.buff.Flush()
 	p.file.Close()
 }
 
@@ -58,7 +61,7 @@ func (p *export2JSON[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOut
 		return nil
 	}
 
-	jsonEncoder := json.NewEncoder(p.file)
+	jsonEncoder := json.NewEncoder(p.buff)
 
 	// Encode and write the JSON data
 	if err := jsonEncoder.Encode(original.Records()); err != nil {
