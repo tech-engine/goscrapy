@@ -23,9 +23,8 @@ func Export2CSV[OUT any]() *export2CSV[OUT] {
 	}
 }
 
-func (p *export2CSV[OUT]) WithFile(f *os.File) *export2CSV[OUT] {
+func (p *export2CSV[OUT]) WithFile(f *os.File) {
 	p.file = f
-	return p
 }
 
 func (p *export2CSV[OUT]) WithFilename(n string) *export2CSV[OUT] {
