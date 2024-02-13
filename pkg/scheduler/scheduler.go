@@ -10,18 +10,13 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-// our global pools
-var (
-	schedulerWorkPool *rp.Pooler[schedulerWork]
-	responsePool      *rp.Pooler[response]
-	requestPool       *rp.Pooler[request]
-)
-
 type scheduler struct {
 	opts
-	executor    IExecutor
-	workerQueue WorkerQueue
-	workQueue   WorkQueue
+	executor          IExecutor
+	schedulerWorkPool *rp.Pooler[schedulerWork]
+	requestPool       *rp.Pooler[request]
+	workerQueue       WorkerQueue
+	workQueue         WorkQueue
 }
 
 // NewScheduler creates a new scheduler.
@@ -35,15 +30,13 @@ func New(executor IExecutor, optFuncs ...types.OptFunc[opts]) *scheduler {
 		fn(&opts)
 	}
 
-	schedulerWorkPool = rp.NewPooler[schedulerWork](rp.WithSize[schedulerWork](opts.reqResPoolSize))
-	responsePool = rp.NewPooler[response](rp.WithSize[response](opts.reqResPoolSize))
-	requestPool = rp.NewPooler[request](rp.WithSize[request](opts.reqResPoolSize))
-
 	return &scheduler{
-		opts:        opts,
-		executor:    executor,
-		workerQueue: make(WorkerQueue, opts.numWorkers),
-		workQueue:   make(WorkQueue, opts.workQueueSize),
+		opts:              opts,
+		executor:          executor,
+		schedulerWorkPool: rp.NewPooler[schedulerWork](rp.WithSize[schedulerWork](opts.reqResPoolSize)),
+		requestPool:       rp.NewPooler[request](rp.WithSize[request](opts.reqResPoolSize)),
+		workerQueue:       make(WorkerQueue, opts.numWorkers),
+		workQueue:         make(WorkQueue, opts.workQueueSize),
 	}
 }
 
@@ -73,7 +66,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 	for i = 0; i < s.opts.numWorkers; i++ {
 		go func(i uint16) {
 			defer wg.Done()
-			worker := NewWorker(i+1, s.executor, s.workerQueue)
+			worker := NewWorker(i+1, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.opts.reqResPoolSize)
 
 			// blocking
 			_ = worker.Start(wCtx)
@@ -102,7 +95,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 
 func (s *scheduler) Schedule(req core.IRequestReader, next core.ResponseCallback) {
 
-	work := schedulerWorkPool.Acquire()
+	work := s.schedulerWorkPool.Acquire()
 
 	if work == nil {
 		work = &schedulerWork{}
@@ -115,7 +108,7 @@ func (s *scheduler) Schedule(req core.IRequestReader, next core.ResponseCallback
 }
 
 func (s *scheduler) NewRequest() core.IRequestRW {
-	req := requestPool.Acquire()
+	req := s.requestPool.Acquire()
 	if req == nil {
 		req = &request{
 			method: "GET",

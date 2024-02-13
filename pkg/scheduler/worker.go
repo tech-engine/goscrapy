@@ -3,24 +3,32 @@ package scheduler
 import (
 	"context"
 	"sync"
+
+	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 )
 
 // Worker will handle the execution of a Work unit
 type Worker struct {
-	ID          uint16
-	executor    IExecutor
-	workerQueue WorkerQueue
-	workQueue   WorkQueue
-	quit        chan struct{}
+	ID                uint16
+	executor          IExecutor
+	workerQueue       WorkerQueue
+	workQueue         WorkQueue
+	schedulerWorkPool *rp.Pooler[schedulerWork]
+	responsePool      *rp.Pooler[response]
+	requestPool       *rp.Pooler[request]
+	quit              chan struct{}
 }
 
-func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue) *Worker {
+func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, schedulerWorkPool *rp.Pooler[schedulerWork], requestPool *rp.Pooler[request], respPoolSize uint64) *Worker {
 
 	return &Worker{
-		ID:          id,
-		workerQueue: workerQueue,
-		executor:    executor,
-		workQueue:   make(WorkQueue),
+		ID:                id,
+		workerQueue:       workerQueue,
+		executor:          executor,
+		workQueue:         make(WorkQueue),
+		schedulerWorkPool: schedulerWorkPool,
+		requestPool:       requestPool,
+		responsePool:      rp.NewPooler[response](rp.WithSize[response](respPoolSize)),
 	}
 }
 
@@ -64,7 +72,7 @@ func (w *Worker) Start(ctx context.Context) error {
 // Handles executing a scheduler work and calling the next callback of with the result as response
 func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 
-	res := responsePool.Acquire()
+	res := w.responsePool.Acquire()
 
 	if res == nil {
 		res = &response{}
@@ -72,10 +80,10 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 
 	// we do some cleanup here on the response object
 	defer func() {
-		resetAndRelease(work)
+		w.resetAndRelease(work)
 		res.body.Close()
 		res.Reset()
-		responsePool.Release(res)
+		w.responsePool.Release(res)
 	}()
 
 	if err := w.executor.Execute(work.request, res); err != nil {
@@ -104,7 +112,7 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 	return nil
 }
 
-func resetAndRelease(work *schedulerWork) {
+func (w *Worker) resetAndRelease(work *schedulerWork) {
 	// release *request to pool
 	req, ok := work.request.(*request)
 
@@ -114,10 +122,10 @@ func resetAndRelease(work *schedulerWork) {
 
 	req.Reset()
 
-	requestPool.Release(req)
+	w.requestPool.Release(req)
 
 	// release *schedulerWork to pool
 	work.Reset()
 
-	schedulerWorkPool.Release(work)
+	w.schedulerWorkPool.Release(work)
 }
