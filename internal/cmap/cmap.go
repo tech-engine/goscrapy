@@ -57,7 +57,9 @@ func (cm *CMap[K, V]) Set(key K, val V) error {
 }
 
 func (cm *CMap[K, V]) Del(key K) {
+	cm.lock.Lock()
 	delete(cm.data, key)
+	cm.lock.Unlock()
 }
 
 func (cm *CMap[K, V]) Clear() {
