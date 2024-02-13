@@ -236,10 +236,14 @@ goScrapy.PipelineManager().Add(
 	pipelines.Export2JSON[[]Record](),
 )
 
+export2Json := pipelines.Export2JSON[[]Record]().WithFilename("test.json")
+
+export2CSV := pipelines.Export2CSV[[]Record]().WithFilename("test.csv")
+
 // we can also pass in your filename
 goScrapy.PipelineManager().Add(
-	pipelines.Export2CSV[[]Record]().WithFilename("test.csv"),
-	pipelines.Export2JSON[[]Record]().WithFilename("test.json"),
+	export2CSV,
+	export2Json,
 )
 
 // We can also create a pipelines group. All pipelines in a group runs concurrently.
