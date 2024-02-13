@@ -31,8 +31,9 @@ func (p *export2JSON[OUT]) WithWriteCloser(w io.WriteCloser) {
 	p.file = w
 }
 
-func (p *export2JSON[OUT]) WithFilename(n string) {
+func (p *export2JSON[OUT]) WithFilename(n string) *export2JSON[OUT] {
 	p.filename = n
+	return p
 }
 
 // WithImmediate set immediateFlush=true, which flushes bufio.Writer immediately after processing
