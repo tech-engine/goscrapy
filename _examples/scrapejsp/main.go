@@ -2,42 +2,78 @@ package main
 
 import (
 	"context"
-	"log"
-	scrapeThisSite "scrapeThisSiteExample/scrapethissite"
-	"scrapeThisSiteExample/utils"
+	"errors"
+	"fmt"
+	"os"
+	"os/signal"
+	"scrapejsp/scrapejsp"
+	"sync"
+	"syscall"
 
-	"github.com/tech-engine/goscrapy/pkg/pipelines"
+	// replace with your own project name
+
+	"github.com/tech-engine/goscrapy/cmd/corespider"
+	"github.com/tech-engine/goscrapy/pkg/builtin/middlewares"
+	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines"
 )
 
+// sample terminate function to demostrate spider termination.
+func OnTerminate(fn func()) {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	<-ctx.Done()
+	stop()
+	fn()
+}
+
 func main() {
-	/** Add comment according to you*/
 	ctx, cancel := context.WithCancel(context.Background())
+	// 2006-01-02-15-04-05
+	var wg sync.WaitGroup
+	wg.Add(1)
 
-	goScrapy, err := scrapeThisSite.Setup(ctx)
+	// get core spider
+	coreSpider := corespider.New[[]ggg.Record]()
 
-	if err != nil {
-		log.Fatalln(err)
-	}
+	// we can use middlewares like below
+	coreSpider.MiddlewareManager().Add(
+		middlewares.DupeFilter,
+		middlewares.MultiCookieJar,
+	)
 
-	// Using JSON pipeline to export data as JSON.
-	goScrapy.AddPipeline(pipelines.Export2JSON[*scrapeThisSite.Job, []scrapeThisSite.Record]()).WithRequired()
+	// pipelineGroup := pipelinemanager.NewGroup[[]mytestspiderRecord](
+	//  you can add pipelines you want to run concurrenly using pipeline groups
+	// )
+	exportJson := pipelines.Export2JSON[[]scrapejsp.Record]()
+	exportJson.WithFilename("test.json")
 
-	if err := goScrapy.Start(ctx); err != nil {
-		log.Fatalln(err)
-	}
+	// we can use piplines
+	coreSpider.PipelineManager().Add(
+		pipelines.Export2CSV[[]scrapejsp.Record](),
+		// pipelineGroup,
+		exportJson,
+	)
 
-	// Create a new Spider Job
-	spiderJob := goScrapy.NewJob("scrapeThisSite")
+	go func() {
+		defer wg.Done()
 
-	// Set Job parameters
-	spiderJob.SetQuery("/pages/ajax-javascript/?ajax=true&year=")
+		err := coreSpider.Start(ctx)
 
-	// Run the spider
-	goScrapy.Run(spiderJob)
+		if err != nil && errors.Is(err, context.Canceled) {
+			return
+		}
 
-	utils.OnTerminate(func() {
+		fmt.Printf("failed: %q", err)
+	}()
+
+	spider := scrapejsp.NewSpider(coreSpider)
+
+	// start the scraper with a job, currently nil is passed but you can pass your job here
+	spider.StartRequest(ctx, nil)
+
+	OnTerminate(func() {
+		fmt.Println("exit signal received: shutting down gracefully")
 		cancel()
-		// We'll wait until all go routines exit.
-		goScrapy.Wait()
+		wg.Wait()
 	})
+
 }
