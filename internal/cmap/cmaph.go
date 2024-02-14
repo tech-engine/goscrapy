@@ -95,7 +95,9 @@ func (cm *CMapH) Len() int {
 
 func (cm *CMapH) Del(key string) {
 	hkey := cm.hashFn(key)
+	cm.lock.Lock()
 	delete(cm.data, hkey)
+	cm.lock.Unlock()
 }
 
 func (cm *CMapH) Clear() {
