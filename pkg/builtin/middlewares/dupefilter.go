@@ -18,13 +18,13 @@ import (
 var ERR_DUPEFILTER_BLOCKED = errors.New("duplicate request")
 
 type RequestMap struct {
-	seen map[string]bool
+	seen map[string]struct{}
 	mu   sync.RWMutex
 }
 
 func NewRequestMap() *RequestMap {
 	return &RequestMap{
-		seen: make(map[string]bool),
+		seen: make(map[string]struct{}),
 	}
 }
 
@@ -104,7 +104,7 @@ func DupeFilter(next http.RoundTripper) http.RoundTripper {
 			return nil, fmt.Errorf("duplicatefilter.go:DupeFilterMiddleware: %w", ERR_DUPEFILTER_BLOCKED)
 		}
 
-		requestMap.seen[signature] = true
+		requestMap.seen[signature] = struct{}{}
 		requestMap.mu.Unlock()
 
 		return next.RoundTrip(req)
