@@ -1,10 +1,10 @@
 package middlewares
 
 import (
-	"crypto/sha1"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"net/http"
 	"sort"
@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
+	"golang.org/x/crypto/blake2b"
 )
 
 var ERR_DUPEFILTER_BLOCKED = errors.New("duplicate request")
@@ -32,6 +33,7 @@ func generateSHA1FingerprintFromReq(r *http.Request) (string, error) {
 	var (
 		err  error
 		body io.ReadCloser
+		hash hash.Hash
 	)
 
 	if r.GetBody != nil {
@@ -44,7 +46,10 @@ func generateSHA1FingerprintFromReq(r *http.Request) (string, error) {
 
 	var combinedBuf strings.Builder
 
-	hash := sha1.New()
+	hash, err = blake2b.New256(nil)
+	if err != nil {
+		return "", err
+	}
 
 	if body != nil {
 
@@ -72,11 +77,11 @@ func generateSHA1FingerprintFromReq(r *http.Request) (string, error) {
 		}
 	}
 
-	if _, err = combinedBuf.Write(hash.Sum(nil)); err != nil {
+	if _, err = hash.Write([]byte(combinedBuf.String())); err != nil {
 		return "", err
 	}
 
-	finalHash := sha1.Sum([]byte(combinedBuf.String()))
+	finalHash := hash.Sum(nil)
 
 	return hex.EncodeToString(finalHash[:]), nil
 
