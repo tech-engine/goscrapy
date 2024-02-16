@@ -223,7 +223,7 @@ In **GoScrapy** framework, pipelines play a pivotal role in managing, transformi
 - **Export2FIREBASE**
 
 ### Incorporating Pipelines into Your Scraping Workflow
-To seamlessly integrate pipelines into your scraping workflow, you can utilize the **coreSpider.PipelineManager().Add()** method.
+To seamlessly integrate pipelines into your scraping workflow, you can utilize the **coreSpider.PipelineManager.Add()** method.
 
 Here is an example on how you can add pipelines to your scraping process:
 
@@ -231,7 +231,7 @@ __`Export to JSON Pipeline`__:
 
 ```go
 // goScrapy instance
-goScrapy.PipelineManager().Add(
+goScrapy.PipelineManager.Add(
 	pipelines.Export2CSV[[]Record](),
 	pipelines.Export2JSON[[]Record](),
 )
@@ -241,7 +241,7 @@ export2Json := pipelines.Export2JSON[[]Record]().WithFilename("test.json")
 export2CSV := pipelines.Export2CSV[[]Record]().WithFilename("test.csv")
 
 // we can also pass in your filename
-goScrapy.PipelineManager().Add(
+goScrapy.PipelineManager.Add(
 	export2CSV,
 	export2Json,
 )
@@ -276,7 +276,7 @@ PS D:\My-Projects\go\go-test-scrapy>scrapejsp> goscrapy pipeline export_2_DB
 - **DupeFilter** 		- filters duplicate requests
 
 ## Custom middleware
-Implementing your custom middleware is fairly easy in **GoScrapy**. A custom middleware must implement the below interface.
+Implementing your custom middleware is fairly easy in **GoScrapy**. A custom middleware must implement the below http.RoundTripper interface.
 
 ```go
 func MultiCookieJar(next http.RoundTripper) http.RoundTripper {
@@ -287,7 +287,7 @@ func MultiCookieJar(next http.RoundTripper) http.RoundTripper {
 ```
 
 ### Incorporating Middlewares into Your Scraping Workflow
-To seamlessly integrate middlewares into your scraping workflow, you can utilize the **MiddlewareManager().Add()** method which is a variadic function and can accept arbirary number of middlewares.
+To seamlessly integrate middlewares into your scraping workflow, you can utilize the **MiddlewareManager.Add()** method which is a variadic function and can accept arbirary number of middlewares.
 
 Here is an example on how you can add middlewares to your scraping process:
 
@@ -295,7 +295,7 @@ __`MultiCookieJar Middleware`__:
 
 ```go
 // goScrapy instance
-goScrapy.MiddlewareManager().Add(
+goScrapy.MiddlewareManager.Add(
 	middlewares.DupeFilter,
 	middlewares.MultiCookieJar,
 )
@@ -315,7 +315,7 @@ goScrapy.MiddlewareManager().Add(
 - ~~Builtin & Custom Middlewares support~~
 - HTML parsing
 - Triggers
-- Unit Tests
+- Unit Tests(work in progress)
 
 ## Contact
 [Discord](https://discord.gg/FPvxETjYPH)
