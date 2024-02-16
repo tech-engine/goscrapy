@@ -15,7 +15,6 @@ type MiddlewareManager struct {
 }
 
 func New(cli *http.Client) *MiddlewareManager {
-	cli.Transport = http.DefaultTransport
 	return &MiddlewareManager{
 		httpClient: cli,
 	}
