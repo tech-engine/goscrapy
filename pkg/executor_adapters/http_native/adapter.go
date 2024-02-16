@@ -58,7 +58,8 @@ func (r HTTPAdapter) Get(res engine.IResponseWriter, url *url.URL) error {
 	}
 
 	res.WriteRequest(r.req)
-	return HTTPRequestAdapterResponse(res, source, err)
+	HTTPRequestAdapterResponse(res, source)
+	return nil
 }
 
 func (r HTTPAdapter) Post(res engine.IResponseWriter, url *url.URL) error {
@@ -72,7 +73,8 @@ func (r HTTPAdapter) Post(res engine.IResponseWriter, url *url.URL) error {
 	}
 
 	res.WriteRequest(r.req)
-	return HTTPRequestAdapterResponse(res, source, err)
+	HTTPRequestAdapterResponse(res, source)
+	return nil
 }
 
 func (r HTTPAdapter) Put(res engine.IResponseWriter, url *url.URL) error {
@@ -86,7 +88,8 @@ func (r HTTPAdapter) Put(res engine.IResponseWriter, url *url.URL) error {
 	}
 
 	res.WriteRequest(r.req)
-	return HTTPRequestAdapterResponse(res, source, err)
+	HTTPRequestAdapterResponse(res, source)
+	return nil
 }
 
 func (r HTTPAdapter) Patch(res engine.IResponseWriter, url *url.URL) error {
@@ -100,7 +103,8 @@ func (r HTTPAdapter) Patch(res engine.IResponseWriter, url *url.URL) error {
 	}
 
 	res.WriteRequest(r.req)
-	return HTTPRequestAdapterResponse(res, source, err)
+	HTTPRequestAdapterResponse(res, source)
+	return nil
 }
 
 func (r HTTPAdapter) Delete(res engine.IResponseWriter, url *url.URL) error {
@@ -114,5 +118,6 @@ func (r HTTPAdapter) Delete(res engine.IResponseWriter, url *url.URL) error {
 	}
 
 	res.WriteRequest(r.req)
-	return HTTPRequestAdapterResponse(res, source, err)
+	HTTPRequestAdapterResponse(res, source)
+	return nil
 }
