@@ -2,7 +2,6 @@ package corespider
 
 import (
 	"context"
-	"log"
 	"net/http"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
@@ -18,110 +17,27 @@ func New[OUT any]() *CoreSpiderBuilder[OUT] {
 
 	c := &CoreSpiderBuilder[OUT]{}
 
-	c.httpClient = &http.Client{}
+	c.HttpClient = &http.Client{}
 
-	c.middlewareManager = middlewaremanager.New(c.httpClient)
+	c.MiddlewareManager = middlewaremanager.New(c.HttpClient)
 
-	c.executorAdapter = httpnative.NewHTTPClientAdapter(
-		c.middlewareManager.HTTPClient(),
+	c.ExecutorAdapter = httpnative.NewHTTPClientAdapter(
+		c.MiddlewareManager.HTTPClient(),
 	)
 
-	c.executor = executor.New(c.executorAdapter)
+	c.Executor = executor.New(c.ExecutorAdapter)
 
-	c.scheduler = scheduler.New(c.executor)
+	c.Scheduler = scheduler.New(c.Executor)
 
-	c.pipelineManager = pipelinemanager.New[OUT]()
+	c.PipelineManager = pipelinemanager.New[OUT]()
 
-	c.engine = engine.New(c.scheduler, c.pipelineManager)
+	c.Engine = engine.New(c.Scheduler, c.PipelineManager)
 
-	c.Core = core.New[OUT](c.engine)
-
-	return c
-}
-
-func (c *CoreSpiderBuilder[OUT]) Engine() IEngineConfigurer[OUT] {
-	return c.engine
-}
-
-func (c *CoreSpiderBuilder[OUT]) WithEngine(engine IEngineConfigurer[OUT]) *CoreSpiderBuilder[OUT] {
-
-	if engine == nil {
-		log.Fatal("corespider.go:WithEngine(engine): engine cannot be nil")
-	}
-
-	c.engine = engine
-
-	return c
-}
-
-func (c *CoreSpiderBuilder[OUT]) Scheduler() ISchedulerConfigurer[OUT] {
-	return c.scheduler
-}
-
-func (c *CoreSpiderBuilder[OUT]) WithScheduler(scheduler ISchedulerConfigurer[OUT]) *CoreSpiderBuilder[OUT] {
-	if scheduler == nil {
-		log.Fatal("corespider.go:WithScheduler(scheduler): scheduler cannot be nil")
-	}
-
-	c.scheduler = scheduler
-
-	return c
-}
-
-// Returns the current pipelinemanager.IPipelineManagerAdder[OUT]
-func (c *CoreSpiderBuilder[OUT]) PipelineManager() IPipelineManagerAdder[OUT] {
-	return c.pipelineManager
-}
-
-// Let's us set our own custom pipelinemanager.IPipelineManagerAdder[OUT]
-func (c *CoreSpiderBuilder[OUT]) WithPipelineManager(p IPipelineManagerAdder[OUT]) *CoreSpiderBuilder[OUT] {
-	c.pipelineManager = p
-	return c
-}
-
-func (c *CoreSpiderBuilder[OUT]) Executer() IExecutorConfigurer[OUT] {
-	return c.executor
-}
-
-func (c *CoreSpiderBuilder[OUT]) WithExecuter(executor IExecutorConfigurer[OUT]) *CoreSpiderBuilder[OUT] {
-	if executor == nil {
-		log.Fatal("corespider.go:WithExecuter(executor): executor cannot be nil")
-	}
-
-	c.executor = executor
-
-	return c
-}
-
-func (c *CoreSpiderBuilder[OUT]) ExecutorAdapter() IExecutorAdapterConfigurer {
-	return c.executorAdapter
-}
-
-func (c *CoreSpiderBuilder[OUT]) WithExecutorAdapter(adapter IExecutorAdapterConfigurer) *CoreSpiderBuilder[OUT] {
-
-	if adapter == nil {
-		log.Fatal("corespider.go:WithExecutorAdapter(adapter): adapter cannot be nil")
-	}
-
-	c.executorAdapter = adapter
-
-	return c
-}
-
-func (c *CoreSpiderBuilder[OUT]) MiddlewareManager() IMiddlewareManager {
-	return c.middlewareManager
-}
-
-func (c *CoreSpiderBuilder[OUT]) WithMiddlewareManager(manager IMiddlewareManager) *CoreSpiderBuilder[OUT] {
-	if manager == nil {
-		log.Fatal("corespider.go:WithMiddlewareManager(manager): manager cannot be nil")
-	}
-
-	c.middlewareManager = manager
+	c.Core = core.New[OUT](c.Engine)
 
 	return c
 }
 
 func (c *CoreSpiderBuilder[OUT]) Start(ctx context.Context) error {
-	return c.engine.Start(ctx)
+	return c.Engine.Start(ctx)
 }
