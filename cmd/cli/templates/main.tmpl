@@ -31,7 +31,7 @@ func main() {
 	coreSpider := corespider.New[[]{{.}}.Record]()
 
     // we can use middlewares like below
-	// coreSpider.MiddlewareManager().Add(
+	// coreSpider.MiddlewareManager.Add(
 	// 	middlewares.DupeFilter,
 	// 	middlewares.MultiCookieJar,
 	// )
@@ -41,10 +41,10 @@ func main() {
     // )
 
     // we can use piplines
-	// coreSpider.PipelineManager().Add(
-	// 	pipelines.Export2CSV[[]{{.}}.Record]("itstimeitsnowornever.csv"),
+	// coreSpider.PipelineManager.Add(
+	// 	pipelines.Export2CSV[[]{{.}}.Record].WithFilename("itstimeitsnowornever.csv"),
     //  pipelineGroup,
-	//  pipelines.Export2JSON[[]{{.}}.Record]("itstimeitsnowornever.json")
+	//  pipelines.Export2JSON[[]{{.}}.Record].WithFilename("itstimeitsnowornever.json")
 	// )
 
 	go func() {
