@@ -24,9 +24,7 @@ func New[OUT any]() *CoreSpiderBuilder[OUT] {
 
 	c.MiddlewareManager = middlewaremanager.New(c.HttpClient)
 
-	c.ExecutorAdapter = httpnative.NewHTTPClientAdapter(
-		c.MiddlewareManager.HTTPClient(),
-	)
+	c.ExecutorAdapter = httpnative.NewHTTPClientAdapter(c.MiddlewareManager.HTTPClient(), 0)
 
 	c.Executor = executor.New(c.ExecutorAdapter)
 
