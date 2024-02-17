@@ -83,23 +83,13 @@ func run(t *testing.T, adapter *HTTPAdapter, method string, body io.ReadCloser, 
 
 	assert.NoError(t, err)
 
-	switch method {
-	case "GET":
-		err = adapter.Get(resp, urlParsed)
-	case "DELETE":
-		err = adapter.Delete(resp, urlParsed)
-	case "POST":
-		adapter.Body(body)
-		err = adapter.Post(resp, urlParsed)
-	case "PUT":
-		adapter.Body(body)
-		err = adapter.Put(resp, urlParsed)
-	case "PATCH":
-		adapter.Body(body)
-		err = adapter.Patch(resp, urlParsed)
-	default:
-		err = adapter.Get(resp, urlParsed)
-	}
+	req := adapter.Acquire()
+
+	req.URL = urlParsed
+
+	req.Method = method
+	req.Body = body
+	err = adapter.Do(resp, req)
 
 	assert.NoError(t, err)
 
@@ -117,7 +107,7 @@ func run(t *testing.T, adapter *HTTPAdapter, method string, body io.ReadCloser, 
 
 func TestAdapterRequest(t *testing.T) {
 
-	adapter := NewHTTPClientAdapter(&http.Client{})
+	adapter := NewHTTPClientAdapter(&http.Client{}, 10)
 	testCases := []testCase{
 		{
 			name:     "GET",
@@ -159,7 +149,7 @@ func TestAdapterRequest(t *testing.T) {
 }
 
 func TestAdapterRequestCtx(t *testing.T) {
-	adapter := NewHTTPClientAdapter(&http.Client{})
+	adapter := NewHTTPClientAdapter(&http.Client{}, 10)
 
 	resp := &testResponseWriter{}
 
@@ -175,10 +165,13 @@ func TestAdapterRequestCtx(t *testing.T) {
 	headers := http.Header{}
 	headers.Add("delay", "3")
 
-	adapter.WithContext(ctx)
-	adapter.Header(headers)
+	req := adapter.Acquire()
 
-	err = adapter.Get(resp, urlParsed)
+	req.URL = urlParsed
+	req = req.WithContext(ctx)
+	req.Header = headers
+
+	err = adapter.Do(resp, req)
 
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
 }
