@@ -1,119 +1,68 @@
 package httpnative
 
 import (
-	"context"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
+	"os"
+	"strconv"
 
+	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 )
 
+const EX_ADAPTER_DEFAULT_REQ_RES_POOL_SIZE = 1e6
+
 // HTTPAdapter implements Executor's ExecAdapter interface
 type HTTPAdapter struct {
-	client *http.Client
-	req    *http.Request
+	client  *http.Client
+	reqpool *rp.Pooler[http.Request]
 }
 
-func NewHTTPClientAdapter(client *http.Client) *HTTPAdapter {
+func NewHTTPClientAdapter(client *http.Client, poolSize uint64) *HTTPAdapter {
 	if client == nil {
-		client = &http.Client{}
+		client = http.DefaultClient
+	}
+
+	if poolSize == 0 {
+		poolSize = EX_ADAPTER_DEFAULT_REQ_RES_POOL_SIZE
+		value, ok := os.LookupEnv("SCHEDULER_DEFAULT_REQ_RES_POOL_SIZE")
+
+		if ok {
+			parsedPoolSize, err := strconv.ParseUint(value, 10, 64)
+			if err == nil {
+				poolSize = parsedPoolSize
+			}
+		}
 	}
 
 	return &HTTPAdapter{
-		client: client,
-		req:    &http.Request{},
+		client:  client,
+		reqpool: rp.NewPooler[http.Request](rp.WithSize[http.Request](poolSize)),
 	}
+}
+
+func (r *HTTPAdapter) Acquire() *http.Request {
+	req := r.reqpool.Acquire()
+	if req == nil {
+		req = &http.Request{}
+	}
+	return req
 }
 
 func (r *HTTPAdapter) WithClient(client *http.Client) {
 	r.client = client
 }
 
-func (r *HTTPAdapter) WithContext(ctx context.Context) {
-	r.req = r.req.WithContext(ctx)
-}
+func (r *HTTPAdapter) Do(res engine.IResponseWriter, req *http.Request) error {
+	defer r.reqpool.Release(req)
 
-func (r *HTTPAdapter) Header(header http.Header) {
-	r.req.Header = header
-}
-
-func (r *HTTPAdapter) Body(body io.ReadCloser) {
-	r.req.Body = body
-}
-
-func (r *HTTPAdapter) Get(res engine.IResponseWriter, url *url.URL) error {
-	r.req.Method = http.MethodGet
-	r.req.URL = url
-
-	source, err := r.client.Do(r.req)
+	source, err := r.client.Do(req)
 
 	if err != nil {
-		return fmt.Errorf("Get: error dispatching request %w", err)
+		return fmt.Errorf("Do: error dispatching request %w", err)
 	}
 
-	res.WriteRequest(r.req)
-	HTTPRequestAdapterResponse(res, source)
-	return nil
-}
-
-func (r *HTTPAdapter) Post(res engine.IResponseWriter, url *url.URL) error {
-	r.req.Method = http.MethodPost
-	r.req.URL = url
-
-	source, err := r.client.Do(r.req)
-
-	if err != nil {
-		return fmt.Errorf("Post: error dispatching request %w", err)
-	}
-
-	res.WriteRequest(r.req)
-	HTTPRequestAdapterResponse(res, source)
-	return nil
-}
-
-func (r *HTTPAdapter) Put(res engine.IResponseWriter, url *url.URL) error {
-	r.req.Method = http.MethodPut
-	r.req.URL = url
-
-	source, err := r.client.Do(r.req)
-
-	if err != nil {
-		return fmt.Errorf("Put: error dispatching request %w", err)
-	}
-
-	res.WriteRequest(r.req)
-	HTTPRequestAdapterResponse(res, source)
-	return nil
-}
-
-func (r *HTTPAdapter) Patch(res engine.IResponseWriter, url *url.URL) error {
-	r.req.Method = http.MethodPatch
-	r.req.URL = url
-
-	source, err := r.client.Do(r.req)
-
-	if err != nil {
-		return fmt.Errorf("Patch: error dispatching request %w", err)
-	}
-
-	res.WriteRequest(r.req)
-	HTTPRequestAdapterResponse(res, source)
-	return nil
-}
-
-func (r *HTTPAdapter) Delete(res engine.IResponseWriter, url *url.URL) error {
-	r.req.Method = http.MethodDelete
-	r.req.URL = url
-
-	source, err := r.client.Do(r.req)
-
-	if err != nil {
-		return fmt.Errorf("Delete: error dispatching request %w", err)
-	}
-
-	res.WriteRequest(r.req)
+	res.WriteRequest(req)
 	HTTPRequestAdapterResponse(res, source)
 	return nil
 }

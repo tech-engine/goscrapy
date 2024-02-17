@@ -17,31 +17,28 @@ func New(adapter IExecutorAdapter) *Executor {
 
 func (e *Executor) Execute(req core.IRequestReader, res engine.IResponseWriter) error {
 
+	request := e.adapter.Acquire()
+
 	if req.ReadContext() != nil {
-		e.adapter.WithContext(req.ReadContext())
+		request.WithContext(req.ReadContext())
 	}
 
 	headers := req.ReadHeader()
 	// we inject a header for cookiejar implementation
 	headers.Add("X-Goscrapy-Cookie-Jar-Key", req.ReadCookieJar())
 
-	e.adapter.Header(headers)
-	e.adapter.Body(req.ReadBody())
+	request.URL = req.ReadUrl()
+	request.Method = "GET"
 
-	switch req.ReadMethod() {
-	case "GET":
-		return e.adapter.Get(res, req.ReadUrl())
-	case "POST":
-		return e.adapter.Post(res, req.ReadUrl())
-	case "DELETE":
-		return e.adapter.Delete(res, req.ReadUrl())
-	case "PATCH":
-		return e.adapter.Patch(res, req.ReadUrl())
-	case "PUT":
-		return e.adapter.Put(res, req.ReadUrl())
-	default:
-		return e.adapter.Get(res, req.ReadUrl())
+	if req.ReadMethod() != "" {
+		request.Method = req.ReadMethod()
 	}
+
+	request.Header = headers
+
+	request.Body = req.ReadBody()
+
+	return e.adapter.Do(res, request)
 }
 
 func (e *Executor) WithAdapter(adapter IExecutorAdapter) {
