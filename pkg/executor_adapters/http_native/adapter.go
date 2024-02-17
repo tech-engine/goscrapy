@@ -16,38 +16,34 @@ type HTTPAdapter struct {
 	req    *http.Request
 }
 
-func NewHTTPClientAdapter(client *http.Client) HTTPAdapter {
+func NewHTTPClientAdapter(client *http.Client) *HTTPAdapter {
 	if client == nil {
 		client = &http.Client{}
 	}
 
-	return HTTPAdapter{
+	return &HTTPAdapter{
 		client: client,
 		req:    &http.Request{},
 	}
 }
 
-func (r HTTPAdapter) WithClient(client *http.Client) {
+func (r *HTTPAdapter) WithClient(client *http.Client) {
 	r.client = client
 }
 
-func (r HTTPAdapter) WithContext(ctx context.Context) {
+func (r *HTTPAdapter) WithContext(ctx context.Context) {
 	r.req = r.req.WithContext(ctx)
 }
 
-func (r HTTPAdapter) Header(header http.Header) {
-	// r.req.Header = http.Header{}
-	// for key, value := range headers {
-	// 	r.req.Header.Add(key, value)
-	// }
+func (r *HTTPAdapter) Header(header http.Header) {
 	r.req.Header = header
 }
 
-func (r HTTPAdapter) Body(body io.ReadCloser) {
+func (r *HTTPAdapter) Body(body io.ReadCloser) {
 	r.req.Body = body
 }
 
-func (r HTTPAdapter) Get(res engine.IResponseWriter, url *url.URL) error {
+func (r *HTTPAdapter) Get(res engine.IResponseWriter, url *url.URL) error {
 	r.req.Method = http.MethodGet
 	r.req.URL = url
 
@@ -62,7 +58,7 @@ func (r HTTPAdapter) Get(res engine.IResponseWriter, url *url.URL) error {
 	return nil
 }
 
-func (r HTTPAdapter) Post(res engine.IResponseWriter, url *url.URL) error {
+func (r *HTTPAdapter) Post(res engine.IResponseWriter, url *url.URL) error {
 	r.req.Method = http.MethodPost
 	r.req.URL = url
 
@@ -77,7 +73,7 @@ func (r HTTPAdapter) Post(res engine.IResponseWriter, url *url.URL) error {
 	return nil
 }
 
-func (r HTTPAdapter) Put(res engine.IResponseWriter, url *url.URL) error {
+func (r *HTTPAdapter) Put(res engine.IResponseWriter, url *url.URL) error {
 	r.req.Method = http.MethodPut
 	r.req.URL = url
 
@@ -92,7 +88,7 @@ func (r HTTPAdapter) Put(res engine.IResponseWriter, url *url.URL) error {
 	return nil
 }
 
-func (r HTTPAdapter) Patch(res engine.IResponseWriter, url *url.URL) error {
+func (r *HTTPAdapter) Patch(res engine.IResponseWriter, url *url.URL) error {
 	r.req.Method = http.MethodPatch
 	r.req.URL = url
 
@@ -107,7 +103,7 @@ func (r HTTPAdapter) Patch(res engine.IResponseWriter, url *url.URL) error {
 	return nil
 }
 
-func (r HTTPAdapter) Delete(res engine.IResponseWriter, url *url.URL) error {
+func (r *HTTPAdapter) Delete(res engine.IResponseWriter, url *url.URL) error {
 	r.req.Method = http.MethodDelete
 	r.req.URL = url
 
