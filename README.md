@@ -69,7 +69,7 @@ PS D:\My-Projects\go\go-test-scrapy> goscrapy startproject scrapejsp
 **GoScrapy** operates around the below three concepts.
 
 - **[Job](#job):** Describes an input to your spider.
-- **[Output](#output):** Represents an output produced by your spider.
+- **[Record](#record):** Represents an output produced by your spider.
 - **[Spider](#spider):** Contains the main logic of your scraper.
 
 
@@ -89,22 +89,14 @@ func (j *Job) Id() string {
 }
 
 // can add your custom receiver functions below, if you want to
-// func (j *Job) SetQuery(query string) {
-// 	j.query = query
-// 	return
-// }
 ```
 
-### Output
-An Output represents an output produced by your spider(via yield). It encapsulates the records obtained from scraping, any potential errors, and a reference to the associated Job. The Output struct, as defined in the __`output.go`__ code, contains methods to retrieve records, error information, and other details.
+### Record
+An Record represents an output produced by your spider(via yield). It encapsulates the records obtained from scraping. In the __`record.go`__ code, contains pointer receiver functions to retrieve record details.
 
 ```go
-// do not modify this file
-type Output struct {
-	records []Record
-	err     error
-	job     *Job
-}
+// Record must satisfy core.IOutput[*Record] interface
+
 ```
 
 ### Spider
@@ -115,7 +107,7 @@ A Spider encapsulate the main logic of your spider from the making a requests, p
 This example illustrates how to utilize the **GoScrapy** framework to scrape data for the api https://jsonplaceholder.typicode.com. The example covers the following files:
 
 - **[spider.go](#spidergo---spider-creation)**
-- **[types.go](#typesgo---data-structure-definition)**
+- **[record.go](#recordgo---data-structure-definition)**
 - **[main.go](#maingo---spider-execution)**
 
 ### spider.go
@@ -134,11 +126,11 @@ import (
 )
 
 type Spider struct {
-	corespider.ICoreSpider[[]Record]
+	corespider.ICoreSpider[*Record]
 	// you custom fields can go here
 }
 
-func NewSpider(core corespider.ICoreSpider[[]Record]) *Spider {
+func NewSpider(core corespider.ICoreSpider[*Record]) *Spider {
 	return &Spider{
 		core,
 	}
@@ -156,7 +148,6 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 	req.Url("URL_HERE").
 	Meta("MY_KEY1", "MY_VALUE").
 	Meta("MY_KEY2", true)
-	// Header(headers)
     
     /* POST
     req.Url(s.baseUrl.String())
@@ -232,13 +223,13 @@ __`Export to JSON Pipeline`__:
 ```go
 // goScrapy instance
 goScrapy.PipelineManager.Add(
-	pipelines.Export2CSV[[]Record](),
-	pipelines.Export2JSON[[]Record](),
+	pipelines.Export2CSV[*Record](),
+	pipelines.Export2JSON[*Record](),
 )
 
-export2Json := pipelines.Export2JSON[[]Record]().WithFilename("test.json")
+export2Json := pipelines.Export2JSON[*Record]().WithFilename("test.json")
 
-export2CSV := pipelines.Export2CSV[[]Record]().WithFilename("test.csv")
+export2CSV := pipelines.Export2CSV[*Record]().WithFilename("test.csv")
 
 // we can also pass in your filename
 goScrapy.PipelineManager.Add(
@@ -249,7 +240,7 @@ goScrapy.PipelineManager.Add(
 // We can also create a pipelines group. All pipelines in a group runs concurrently.
 // A group behaves like a single pipeline. Also pipelines in a group shouldn't be used
 // for data transformation but for independent tasks like data export to a database etc.
-pipelineGroup := pipelinemanager.NewGroup[[]scrapejsp.Record](
+pipelineGroup := pipelinemanager.NewGroup[*Record](
 	//you can add pipelines you want to run concurrenly using pipeline groups
 )
 ```
