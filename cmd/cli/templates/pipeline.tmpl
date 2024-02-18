@@ -26,18 +26,13 @@ func (p *{{.}}[OUT]) Close() {
 }
 
 // your custome pipeline processing code goes here
-func (p *{{.}}[OUT]) ProcessItem(item pm.IPipelineItem, original OR) error {
+func (p *{{.}}[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
 
 	// original is the output yield from spider
-	// original.IsEmpty()   	- check if data is empty
 	// original.Job()       	- access Job
-	// original.Records()   	- access []Record
+	// original.Record()   		- access Record
 	// original.RecordKeys()  	- access Record keys in a slice
-	// original.RecordsFlat()	- access []Record in [][]any format
-
-	if original.IsEmpty() {
-		return nil
-	}
+	// original.RecordFlat()	- access Record in []any format
 
 	return nil
 }
