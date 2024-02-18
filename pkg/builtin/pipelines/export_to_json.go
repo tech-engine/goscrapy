@@ -66,14 +66,10 @@ func (p *export2JSON[OUT]) Close() {
 
 func (p *export2JSON[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
 
-	if original.IsEmpty() {
-		return nil
-	}
-
 	jsonEncoder := json.NewEncoder(p.buff)
 
 	// Encode and write the JSON data
-	if err := jsonEncoder.Encode(original.Records()); err != nil {
+	if err := jsonEncoder.Encode(original.Record()); err != nil {
 		return err
 	}
 

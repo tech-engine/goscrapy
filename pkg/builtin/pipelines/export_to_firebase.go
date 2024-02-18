@@ -56,11 +56,7 @@ func (p *export2FIREBASE[OUT]) Close() {
 // your custom pipeline processing code goes here
 func (p *export2FIREBASE[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
 
-	if original.IsEmpty() {
-		return nil
-	}
-
-	if _, err := p.ref.Push(p.ctx, original.Records()); err != nil {
+	if _, err := p.ref.Push(p.ctx, original.Record()); err != nil {
 		return fmt.Errorf("Export2FIREBASE: error inserting data to DB %w", err)
 	}
 

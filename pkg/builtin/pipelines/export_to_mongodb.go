@@ -58,21 +58,14 @@ func (p *export2MONGODB[OUT]) Close() {
 
 func (p *export2MONGODB[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
 
-	if original.IsEmpty() {
-		return nil
+	doc := primitive.D{}
+	recordFlat := original.RecordFlat()
+
+	for i, key := range original.RecordKeys() {
+		doc = append(doc, primitive.E{Key: key, Value: recordFlat[i]})
 	}
 
-	documents := make([]any, 0, len(original.RecordsFlat()))
-
-	for _, v := range original.RecordsFlat() {
-		doc := primitive.D{}
-		for i, key := range original.RecordKeys() {
-			doc = append(doc, primitive.E{Key: key, Value: v[i]})
-		}
-		documents = append(documents, doc)
-	}
-
-	_, err := p.collection.InsertMany(p.ctx, documents)
+	_, err := p.collection.InsertMany(p.ctx, []any{doc})
 
 	if err != nil {
 		return fmt.Errorf("Export2MONGODB: error inserting data to DB %w", err)

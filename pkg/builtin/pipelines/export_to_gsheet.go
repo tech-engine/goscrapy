@@ -71,12 +71,9 @@ func (p *export2GSHEET[OUT]) Close() {
 
 func (p *export2GSHEET[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
 
-	if original.IsEmpty() {
-		return nil
-	}
-
+	records := original.RecordFlat()
 	row := &sheets.ValueRange{
-		Values: original.RecordsFlat(),
+		Values: [][]any{records},
 	}
 
 	response, err := p.service.Spreadsheets.Values.Append(p.spreadSheetId, p.sheetName, row).

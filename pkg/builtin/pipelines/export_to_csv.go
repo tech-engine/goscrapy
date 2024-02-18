@@ -54,10 +54,6 @@ func (p *export2CSV[OUT]) Close() {
 
 func (p *export2CSV[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
 
-	if original.IsEmpty() {
-		return nil
-	}
-
 	fileInfo, err := p.file.Stat()
 
 	if err != nil {
@@ -66,7 +62,7 @@ func (p *export2CSV[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutp
 
 	size := fileInfo.Size()
 
-	data := original.Records()
+	data := []OUT{original.Record()}
 
 	if size > 0 {
 		err = gocsv.MarshalWithoutHeaders(data, p.file)

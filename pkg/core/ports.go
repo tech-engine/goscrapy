@@ -57,12 +57,10 @@ type IJob interface {
 }
 
 type IOutput[OUT any] interface {
-	Records() OUT
+	Record() OUT
 	RecordKeys() []string
-	RecordsFlat() [][]any
-	Error() error
+	RecordFlat() []any
 	Job() IJob
-	IsEmpty() bool
 }
 
 type ResponseCallback func(context.Context, IResponseReader)
