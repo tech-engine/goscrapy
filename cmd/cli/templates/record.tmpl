@@ -17,12 +17,12 @@ type Record struct {
 }
 
 // modify below code only if you know what you are doing
-func (o *Record) Record() *Record {
-	return o
+func (r *Record) Record() *Record {
+	return r
 }
 
-func (o *Record) RecordKeys() []string {
-	dataType := reflect.TypeOf(Record{})
+func (r *Record) RecordKeys() []string {
+	dataType := reflect.TypeOf(*r)
 	if dataType.Kind() != reflect.Struct {
 		panic("Record is not a struct")
 	}
@@ -39,14 +39,15 @@ func (o *Record) RecordKeys() []string {
 	return keys
 }
 
-func (o *Record) RecordFlat() []any {
-	inputType := reflect.TypeOf(o)
+func (r *Record) RecordFlat() []any {
+
+	inputType := reflect.TypeOf(*r)
 
 	if inputType.Kind() != reflect.Struct {
 		panic("Record is not a struct")
 	}
 
-	inputValue := reflect.ValueOf(o)
+	inputValue := reflect.ValueOf(*r)
 
 	slice := make([]any, inputType.NumField())
 
@@ -56,6 +57,6 @@ func (o *Record) RecordFlat() []any {
 	return slice
 }
 
-func (o *Record) Job() core.IJob {
-	return o.J
+func (r *Record) Job() core.IJob {
+	return r.J
 }
