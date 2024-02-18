@@ -1,0 +1,61 @@
+package {{.}}
+
+import (
+	"reflect"
+	"github.com/tech-engine/goscrapy/pkg/core"
+)
+
+/*  
+    json and csv struct field tags are required, if you want the Record to be exported 
+    or processed by builtin pipelines
+*/
+
+type Record struct {
+	J *Job `json:"-" csv:"-"` // JobId is required
+	// add you custom fields here
+	Title string `json:"title" csv:"title"`
+}
+
+// do not modify below code
+func (o *Record) Record() *Record {
+	return o
+}
+
+func (o *Record) RecordKeys() []string {
+	dataType := reflect.TypeOf(Record{})
+	if dataType.Kind() != reflect.Struct {
+		panic("Record is not a struct")
+	}
+
+	numFields := dataType.NumField()
+	keys := make([]string, numFields)
+
+	for i := 0; i < numFields; i++ {
+		field := dataType.Field(i)
+		csvTag := field.Tag.Get("csv")
+		keys[i] = csvTag
+	}
+
+	return keys
+}
+
+func (o *Record) RecordFlat() []any {
+	inputType := reflect.TypeOf(o)
+
+	if inputType.Kind() != reflect.Struct {
+		panic("Record is not a struct")
+	}
+
+	inputValue := reflect.ValueOf(o)
+
+	slice := make([]any, inputType.NumField())
+
+	for i := 0; i < inputType.NumField(); i++ {
+		slice[i] = inputValue.Field(i).Interface()
+	}
+	return slice
+}
+
+func (o *Record) Job() core.IJob {
+	return o.J
+}

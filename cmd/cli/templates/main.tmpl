@@ -28,7 +28,7 @@ func main() {
 	wg.Add(1)
 
 	// get core spider
-	coreSpider := corespider.New[[]{{.}}.Record]()
+	coreSpider := corespider.New[*{{.}}.Record]()
 
     // we can use middlewares like below
 	// coreSpider.MiddlewareManager.Add(
@@ -36,15 +36,15 @@ func main() {
 	// 	middlewares.MultiCookieJar,
 	// )
 
-	// pipelineGroup := pipelinemanager.NewGroup[[]{{.}}.Record](
+	// pipelineGroup := pipelinemanager.NewGroup[*{{.}}.Record](
     //  you can add pipelines you want to run concurrenly using pipeline groups
     // )
 
     // we can use piplines
 	// coreSpider.PipelineManager.Add(
-	// 	pipelines.Export2CSV[[]{{.}}.Record].WithFilename("itstimeitsnowornever.csv"),
+	// 	pipelines.Export2CSV[*{{.}}.Record].WithFilename("itstimeitsnowornever.csv"),
     //  pipelineGroup,
-	//  pipelines.Export2JSON[[]{{.}}.Record].WithFilename("itstimeitsnowornever.json")
+	//  pipelines.Export2JSON[*{{.}}.Record].WithFilename("itstimeitsnowornever.json")
 	// )
 
 	go func() {

@@ -10,10 +10,10 @@ import (
 )
 
 type Spider struct {
-	corespider.ICoreSpider[[]Record]
+	corespider.ICoreSpider[*Record]
 }
 
-func NewSpider(core corespider.ICoreSpider[[]Record]) *Spider {
+func NewSpider(core corespider.ICoreSpider[*Record]) *Spider {
 	return &Spider{
 		core,
 	}
@@ -35,7 +35,6 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
     /* POST
     req.Url(s.baseUrl.String())
     req.Method("POST")
-	req.Header(headers)
     req.Body(<BODY_HERE>)
     */
     
@@ -55,5 +54,12 @@ func (s *Spider) parse(ctx context.Context, response core.IResponseReader) {
 	// response.Meta("MY_KEY1")
 	
     // yielding output pushes output to be processed by pipelines, also check output.go for the fields
-    // s.Yield(output)
+    var data Record
+
+	err := json.Unmarshal(res.Bytes(), &data)
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	// s.Yield(&data)
 }
