@@ -28,7 +28,7 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
     var headers http.Header
 
     // GET is the request method, method chaining possible
-	req.Url(<URL_HERE>).
+	req.Url("<URL_HERE>").
 	Meta("MY_KEY1", "MY_VALUE").
 	Meta("MY_KEY2", true).
 	Header(headers)
