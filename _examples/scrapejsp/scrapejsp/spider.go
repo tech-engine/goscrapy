@@ -33,20 +33,15 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 func (s *Spider) Close(ctx context.Context) {
 }
 
-func (s *Spider) parse(ctx context.Context, response core.IResponseReader) {
-	fmt.Printf("status: %d", res.StatusCode())
+func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
+	fmt.Printf("status: %d", resp.StatusCode())
 
 	var data Record
-	err := json.Unmarshal(res.Bytes(), &data)
+	err := json.Unmarshal(resp.Bytes(), &data)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	// job, _ := res.Meta("JOB")
-	output := &Output{
-		records: []Record{data},
-	}
-
 	// to push to pipelines
-	s.Yield(output)
+	s.Yield(&data)
 }
