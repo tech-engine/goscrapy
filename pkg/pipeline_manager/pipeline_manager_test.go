@@ -27,7 +27,7 @@ func (o *dummyRecord) Record() *dummyRecord {
 }
 
 func (o *dummyRecord) RecordKeys() []string {
-	dataType := reflect.TypeOf(dummyRecord{})
+	dataType := reflect.TypeOf(*o)
 	if dataType.Kind() != reflect.Struct {
 		panic("Record is not a struct")
 	}
@@ -46,9 +46,7 @@ func (o *dummyRecord) RecordKeys() []string {
 
 func (o *dummyRecord) RecordFlat() []any {
 
-	var inputType reflect.Type
-
-	inputType = reflect.TypeOf(dummyRecord{})
+	inputType := reflect.TypeOf(*o)
 
 	if inputType.Kind() != reflect.Struct {
 		panic("Record is not a struct")
