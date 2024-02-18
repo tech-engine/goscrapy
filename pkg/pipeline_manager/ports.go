@@ -12,9 +12,8 @@ type IPipelineItem interface {
 	Get(string) (any, bool)
 	Set(string, any) error
 	Del(string)
-	Clear()
 	Keys() []any
-	Len() int
+	Clear()
 }
 
 type IPipeline[OUT any] interface {
