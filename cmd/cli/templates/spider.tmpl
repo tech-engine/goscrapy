@@ -2,8 +2,9 @@ package {{.}}
 
 import (
 	"context"
-	"errors"
 	"net/url"
+	"encoding/json"
+	"log"
 
 	"github.com/tech-engine/goscrapy/cmd/corespider"
 	"github.com/tech-engine/goscrapy/pkg/core"
@@ -27,13 +28,13 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
     var headers http.Header
 
     // GET is the request method, method chaining possible
-	req.Url(s.baseUrl.String()).
+	req.Url(<URL_HERE>).
 	Meta("MY_KEY1", "MY_VALUE").
 	Meta("MY_KEY2", true).
 	Header(headers)
     
     /* POST
-    req.Url(s.baseUrl.String())
+    req.Url(<URL_HERE>)
     req.Method("POST")
     req.Body(<BODY_HERE>)
     */
@@ -46,7 +47,7 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 func (s *Spider) Close(ctx context.Context) {
 }
 
-func (s *Spider) parse(ctx context.Context, response core.IResponseReader) {
+func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
     // response.Body()
     // response.StatusCode()
     // response.Header()
@@ -56,7 +57,7 @@ func (s *Spider) parse(ctx context.Context, response core.IResponseReader) {
     // yielding output pushes output to be processed by pipelines, also check output.go for the fields
     var data Record
 
-	err := json.Unmarshal(res.Bytes(), &data)
+	err := json.Unmarshal(resp.Bytes(), &data)
 	if err != nil {
 		log.Panicln(err)
 	}
