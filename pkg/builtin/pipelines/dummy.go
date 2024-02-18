@@ -14,17 +14,11 @@ func (j *dummyJob) Id() string {
 	return "dummyJob"
 }
 
-type dummyOutput struct {
-	records []dummyRecord
-	err     error
-	job     *dummyJob
+func (o *dummyRecord) Record() *dummyRecord {
+	return o
 }
 
-func (o *dummyOutput) Records() []dummyRecord {
-	return o.records
-}
-
-func (o *dummyOutput) RecordKeys() []string {
+func (o *dummyRecord) RecordKeys() []string {
 	dataType := reflect.TypeOf(dummyRecord{})
 	if dataType.Kind() != reflect.Struct {
 		panic("Record is not a struct")
@@ -42,49 +36,30 @@ func (o *dummyOutput) RecordKeys() []string {
 	return keys
 }
 
-func (o *dummyOutput) RecordsFlat() [][]any {
-	records := make([][]any, 0, len(o.records))
+func (o *dummyRecord) RecordFlat() []any {
 
-	var inputType reflect.Type
+	inputType := reflect.TypeOf(o)
 
-	for i, record := range o.records {
-		if i == 0 {
-			inputType = reflect.TypeOf(record)
-
-			if inputType.Kind() != reflect.Struct {
-				panic("Record is not a struct")
-			}
-		}
-
-		inputValue := reflect.ValueOf(record)
-
-		slice := make([]any, inputType.NumField())
-
-		for i := 0; i < inputType.NumField(); i++ {
-			slice[i] = inputValue.Field(i).Interface()
-		}
-
-		records = append(records, slice)
+	if inputType.Kind() != reflect.Struct {
+		panic("Record is not a struct")
 	}
-	return records
-}
 
-func (o *dummyOutput) Error() error {
-	return o.err
-}
+	inputValue := reflect.ValueOf(o)
 
-func (o *dummyOutput) Job() core.IJob {
-	return o.job
-}
+	slice := make([]any, inputType.NumField())
 
-func (o *dummyOutput) IsEmpty() bool {
-	if o == nil || o.records == nil {
-		return true
+	for i := 0; i < inputType.NumField(); i++ {
+		slice[i] = inputValue.Field(i).Interface()
 	}
-	return len(o.records) <= 0
+	return slice
+}
+
+func (o *dummyRecord) Job() core.IJob {
+	return o.J
 }
 
 type dummyRecord struct {
-	Id   string `json:"id" csv:"id"`
-	Name string `json:"name" csv:"name"`
+	Id   string    `json:"id" csv:"id"`
+	Name string    `json:"name" csv:"name"`
+	J    *dummyJob `json:"-" csv:"-"`
 }

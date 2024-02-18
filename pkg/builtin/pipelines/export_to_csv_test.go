@@ -17,7 +17,7 @@ func TestExport2CSV(t *testing.T) {
 
 	defer os.Remove(f.Name())
 
-	pipeline := Export2CSV[[]dummyRecord]()
+	pipeline := Export2CSV[*dummyRecord]()
 	pipeline.WithFile(f)
 	defer pipeline.Close()
 
@@ -25,14 +25,9 @@ func TestExport2CSV(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	records := []dummyRecord{
-		{Id: "1", Name: "rick"},
-		{Id: "2", Name: "morty"},
-	}
+	record := &dummyRecord{Id: "1", Name: "rick"}
 
-	err = pipeline.ProcessItem(nil, &dummyOutput{
-		records: records,
-	})
+	err = pipeline.ProcessItem(nil, record)
 
 	assert.NoError(t, err)
 
@@ -44,18 +39,10 @@ func TestExport2CSV(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	csvRecords = csvRecords[1:]
-
-	assert.Equal(t, convertToSliceOfStrings(records), csvRecords)
+	assert.Equal(t, convertToSliceOfStrings(record), csvRecords[1])
 
 }
 
-func convertToSliceOfStrings(records []dummyRecord) [][]string {
-	result := make([][]string, len(records))
-
-	for i, record := range records {
-		result[i] = []string{record.Id, record.Name}
-	}
-
-	return result
+func convertToSliceOfStrings(record *dummyRecord) []string {
+	return []string{record.Id, record.Name}
 }

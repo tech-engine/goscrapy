@@ -17,7 +17,7 @@ func TestExport2JSON(t *testing.T) {
 
 	defer os.Remove(f.Name())
 
-	pipeline := Export2JSON[[]dummyRecord]()
+	pipeline := Export2JSON[*dummyRecord]()
 	defer pipeline.Close()
 
 	pipeline.WithWriteCloser(f)
@@ -27,14 +27,9 @@ func TestExport2JSON(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	records := []dummyRecord{
-		{Id: "1", Name: "rick"},
-		{Id: "2", Name: "morty"},
-	}
+	record := &dummyRecord{Id: "1", Name: "rick"}
 
-	err = pipeline.ProcessItem(nil, &dummyOutput{
-		records: records,
-	})
+	err = pipeline.ProcessItem(nil, record)
 
 	assert.NoError(t, err)
 
@@ -42,7 +37,7 @@ func TestExport2JSON(t *testing.T) {
 
 	d := json.NewDecoder(f)
 
-	var out = make([]dummyRecord, 2)
+	var out dummyRecord
 	err = d.Decode(&out)
 
 	assert.NoError(t, err)
