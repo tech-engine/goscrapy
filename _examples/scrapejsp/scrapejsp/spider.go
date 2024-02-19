@@ -11,10 +11,10 @@ import (
 )
 
 type Spider struct {
-	corespider.ICoreSpider[[]Record]
+	corespider.ICoreSpider[*Record]
 }
 
-func NewSpider(core corespider.ICoreSpider[[]Record]) *Spider {
+func NewSpider(core corespider.ICoreSpider[*Record]) *Spider {
 	return &Spider{
 		core,
 	}
