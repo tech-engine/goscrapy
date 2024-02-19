@@ -3,7 +3,7 @@ package scrapejsp
 // id field is compulsory in a Job defination. You can add your custom to Job
 type Job struct {
 	id    string
-	query string
+	// query string
 }
 
 // do not delete/edit
@@ -24,7 +24,7 @@ func (j *Job) Reset() {
 }
 
 // add your custom receiver functions below
-func (j *Job) SetQuery(query string) {
-	j.query = query
-	return
-}
+// func (j *Job) SetQuery(query string) {
+// 	j.query = query
+// 	return
+// }

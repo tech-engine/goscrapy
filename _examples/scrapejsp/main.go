@@ -13,7 +13,6 @@ import (
 	// replace with your own project name
 
 	"github.com/tech-engine/goscrapy/cmd/corespider"
-	"github.com/tech-engine/goscrapy/pkg/builtin/middlewares"
 	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines"
 )
 
@@ -32,25 +31,25 @@ func main() {
 	wg.Add(1)
 
 	// get core spider
-	coreSpider := corespider.New[[]ggg.Record]()
+	coreSpider := corespider.New[*scrapejsp.Record]()
 
 	// we can use middlewares like below
-	coreSpider.MiddlewareManager().Add(
-		middlewares.DupeFilter,
-		middlewares.MultiCookieJar,
-	)
-
-	// pipelineGroup := pipelinemanager.NewGroup[[]mytestspiderRecord](
-	//  you can add pipelines you want to run concurrenly using pipeline groups
+	// coreSpider.MiddlewareManager.Add(
+	// 	middlewares.DupeFilter,
+	// 	middlewares.MultiCookieJar,
 	// )
-	exportJson := pipelines.Export2JSON[[]scrapejsp.Record]()
-	exportJson.WithFilename("test.json")
 
+	export2Csv := pipelines.Export2CSV[*scrapejsp.Record]()
+	export2Csv.WithFilename("itstimeitsnowornever.csv")
+
+	// use export 2 json pipeline
+	// export2Json := pipelines.Export2JSON[*scrapejsp.Record]()
+	// export2Json.WithImmediate()
+	// export2Json.WithFilename("itstimeitsnowornever.json")
 	// we can use piplines
-	coreSpider.PipelineManager().Add(
-		pipelines.Export2CSV[[]scrapejsp.Record](),
-		// pipelineGroup,
-		exportJson,
+	coreSpider.PipelineManager.Add(
+		export2Csv,
+		// export2Json,
 	)
 
 	go func() {
