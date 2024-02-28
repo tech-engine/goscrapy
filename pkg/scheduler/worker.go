@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"io"
 	"sync"
 
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
@@ -81,6 +82,8 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 	// we do some cleanup here on the response object
 	defer func() {
 		w.resetAndRelease(work)
+		// discard unread body
+		io.Copy(io.Discard, res.body)
 		res.body.Close()
 		res.Reset()
 		w.responsePool.Release(res)
