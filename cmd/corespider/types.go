@@ -14,5 +14,5 @@ type CoreSpiderBuilder[OUT any] struct {
 	Executor          IExecutorConfigurer[OUT]
 	ExecutorAdapter   IExecutorAdapterConfigurer
 	MiddlewareManager IMiddlewareManager
-	HttpClient        *http.Client
+	httpClient        *http.Client
 }
