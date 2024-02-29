@@ -14,20 +14,8 @@ import (
 )
 
 func New[OUT any]() *CoreSpiderBuilder[OUT] {
-	return &CoreSpiderBuilder[OUT]{
-		
-	}
-}
-
-func (c *CoreSpiderBuilder[OUT]) WithClient(cli *http.Client) *CoreSpiderBuilder[OUT] {
-	c.httpClient = cli
-	return c
-}
-
-func (c *CoreSpiderBuilder[OUT]) Start(ctx context.Context) error {
-
-	if c.httpClient == nil {
-		c.httpClient = DefaultClient()
+	c := &CoreSpiderBuilder[OUT]{
+		httpClient: DefaultClient(),
 	}
 
 	c.MiddlewareManager = middlewaremanager.New(c.httpClient)
@@ -42,7 +30,15 @@ func (c *CoreSpiderBuilder[OUT]) Start(ctx context.Context) error {
 
 	c.Engine = engine.New(c.Scheduler, c.PipelineManager)
 
-	c.Core = core.New[OUT](c.Engine)
+	c.Core = core.New(c.Engine)
+	return c
+}
 
+func (c *CoreSpiderBuilder[OUT]) WithClient(cli *http.Client) *CoreSpiderBuilder[OUT] {
+	c.httpClient = cli
+	return c
+}
+
+func (c *CoreSpiderBuilder[OUT]) Start(ctx context.Context) error {
 	return c.Engine.Start(ctx)
 }
