@@ -109,8 +109,9 @@ func WithProxies(proxies ...string) types.OptFunc[clientOpts] {
 
 		for _, proxy := range proxies {
 			u, err := url.Parse(strings.TrimSpace(proxy))
-			if err == nil {
+			if err != nil {
 				log.Panic(err)
+				return
 			}
 			proxyUrls = append(proxyUrls, u)
 		}
