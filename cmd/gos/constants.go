@@ -1,4 +1,4 @@
-package corespider
+package gos
 
 const MIDDLEWARE_DEFAULT_HTTP_MAX_IDLE_CONN = 100
 

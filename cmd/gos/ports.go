@@ -1,4 +1,4 @@
-package corespider
+package gos
 
 import (
 	"net/http"
