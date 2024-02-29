@@ -1,4 +1,4 @@
-package corespider
+package gos
 
 import (
 	"context"
@@ -13,8 +13,8 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/scheduler"
 )
 
-func New[OUT any]() *CoreSpiderBuilder[OUT] {
-	c := &CoreSpiderBuilder[OUT]{
+func New[OUT any]() *gos[OUT] {
+	c := &gos[OUT]{
 		httpClient: DefaultClient(),
 	}
 
@@ -34,11 +34,11 @@ func New[OUT any]() *CoreSpiderBuilder[OUT] {
 	return c
 }
 
-func (c *CoreSpiderBuilder[OUT]) WithClient(cli *http.Client) *CoreSpiderBuilder[OUT] {
+func (c *gos[OUT]) WithClient(cli *http.Client) *gos[OUT] {
 	c.httpClient = cli
 	return c
 }
 
-func (c *CoreSpiderBuilder[OUT]) Start(ctx context.Context) error {
+func (c *gos[OUT]) Start(ctx context.Context) error {
 	return c.Engine.Start(ctx)
 }

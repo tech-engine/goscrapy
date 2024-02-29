@@ -1,4 +1,4 @@
-package corespider
+package gos
 
 import (
 	"net/http"
@@ -6,7 +6,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-type CoreSpiderBuilder[OUT any] struct {
+type gos[OUT any] struct {
 	*core.Core[OUT]
 	Engine            IEngineConfigurer[OUT]
 	PipelineManager   IPipelineManagerAdder[OUT]
