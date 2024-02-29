@@ -103,7 +103,7 @@ func WithProxyFn(fn func(*http.Request) (*url.URL, error)) types.OptFunc[clientO
 	}
 }
 
-func WithProxies(proxies []string) types.OptFunc[clientOpts] {
+func WithProxies(proxies ...string) types.OptFunc[clientOpts] {
 	return func(opts *clientOpts) {
 		proxyUrls := make([]*url.URL, 0, len(proxies))
 
