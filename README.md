@@ -110,16 +110,16 @@ import (
 	"errors"
 	"net/url"
 
-	"github.com/tech-engine/goscrapy/cmd/corespider"
+	"github.com/tech-engine/goscrapy/cmd/gos"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
 type Spider struct {
-	corespider.ICoreSpider[*Record]
+	gos.ICoreSpider[*Record]
 	// you custom fields can go here
 }
 
-func NewSpider(core corespider.ICoreSpider[*Record]) *Spider {
+func NewSpider(core gos.ICoreSpider[*Record]) *Spider {
 	return &Spider{
 		core,
 	}
@@ -180,7 +180,63 @@ type Record struct {
 ### main.go
 In your __`main.go`__ file, set up and execute your spider using the **GoScrapy** framework by following these steps:
 
-For details, please refer to the [sample code here](./_examples/scrapejsp/main.go).
+For detailed code, please refer to the [sample code here](./_examples/scrapejsp/main.go).
+
+```go
+package main
+
+import (
+	"context"
+	"errors"
+	"net/url"
+
+	"github.com/tech-engine/goscrapy/cmd/gos"
+	"github.com/tech-engine/goscrapy/pkg/core"
+)
+
+func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	// create a new gos(goscrapy) - uses the default in built http client
+	gos := gos.New[*scrapejsp.Record]()
+
+	// use you own client
+	// gos := gos.New[*scrapejsp.Record]().WithClient(myOwnHttpClient)
+
+	// cofigure the default client to use proxies
+	// proxies := gos.WithProxies("proxy_url_1", "proxy_url_2", ...)
+	// gos := gos.New[*scrapejsp.Record]().WithClient(gos.DefaultClient(proxies))
+
+	// use middlewares
+	// use pipelines
+	
+	// need to start it a separate go routine
+	go func() {
+		defer wg.Done()
+
+		err := gos.Start(ctx)
+
+		if err != nil && errors.Is(err, context.Canceled) {
+			return
+		}
+
+		fmt.Printf("failed: %q", err)
+	}()
+
+	spider := scrapejsp.NewSpider(gos)
+
+	// start the scraper with a job, currently nil is passed but you can pass your job here
+	spider.StartRequest(ctx, nil)
+
+	OnTerminate(func() {
+		fmt.Println("exit signal received: shutting down gracefully")
+		cancel()
+		wg.Wait()
+	})
+}
+```
 
 ## Pipelines 
 Pipelines help in managing, transforming, and fine-tuning the scraped data.
@@ -211,7 +267,7 @@ export2Json := pipelines.Export2JSON[*testspider.Record]()
 export2Json.WithImmediate() // immediately flushes buffer upon processing each record
 export2Json.WithFilename("itstimeitsnowornever.json")
 // we can use piplines
-goScrapy.PipelineManager.Add(
+gos.PipelineManager.Add(
 	export2Csv,
 	export2Json,
 )
@@ -223,7 +279,7 @@ pipelineGroup := pipelinemanager.NewGroup[*Record](
 	//you can add pipelines you want to run concurrenly using pipeline groups
 )
 
-goScrapy.PipelineManager.Add(pipelineGroup)
+gos.PipelineManager.Add(pipelineGroup)
 ```
 
 ### Use custom Pipelines
@@ -267,7 +323,7 @@ __`MultiCookieJar Middleware`__:
 
 ```go
 // goScrapy instance
-goScrapy.MiddlewareManager.Add(
+gos.MiddlewareManager.Add(
 	middlewares.DupeFilter,
 	middlewares.MultiCookieJar,
 )
