@@ -6,15 +6,15 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/tech-engine/goscrapy/cmd/corespider"
+	"github.com/tech-engine/goscrapy/cmd/gos"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
 type Spider struct {
-	corespider.ICoreSpider[*Record]
+	gos.ICoreSpider[*Record]
 }
 
-func NewSpider(core corespider.ICoreSpider[*Record]) *Spider {
+func NewSpider(core gos.ICoreSpider[*Record]) *Spider {
 	return &Spider{
 		core,
 	}
