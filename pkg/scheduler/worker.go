@@ -17,7 +17,6 @@ type Worker struct {
 	schedulerWorkPool *rp.Pooler[schedulerWork]
 	responsePool      *rp.Pooler[response]
 	requestPool       *rp.Pooler[request]
-	quit              chan struct{}
 }
 
 func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, schedulerWorkPool *rp.Pooler[schedulerWork], requestPool *rp.Pooler[request], respPoolSize uint64) *Worker {
@@ -29,7 +28,7 @@ func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, scheduler
 		workQueue:         make(WorkQueue),
 		schedulerWorkPool: schedulerWorkPool,
 		requestPool:       requestPool,
-		responsePool:      rp.NewPooler[response](rp.WithSize[response](respPoolSize)),
+		responsePool:      rp.NewPooler(rp.WithSize[response](respPoolSize)),
 	}
 }
 

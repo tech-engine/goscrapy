@@ -32,7 +32,7 @@ func New[OUT any](optFuncs ...types.OptFunc[opts]) *PipelineManager[OUT] {
 		opts:        opts,
 		outputQueue: make(chan core.IOutput[OUT], opts.outputQueueBuffSize),
 		pipelines:   make([]IPipeline[OUT], 0),
-		itemPool:    rp.NewPooler[cmap.CMap[string, any]](rp.WithSize[cmap.CMap[string, any]](opts.itemPoolSize)),
+		itemPool:    rp.NewPooler(rp.WithSize[cmap.CMap[string, any]](opts.itemPoolSize)),
 	}
 }
 

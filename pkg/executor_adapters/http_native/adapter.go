@@ -37,7 +37,7 @@ func NewHTTPClientAdapter(client *http.Client, poolSize uint64) *HTTPAdapter {
 
 	return &HTTPAdapter{
 		client:  client,
-		reqpool: rp.NewPooler[http.Request](rp.WithSize[http.Request](poolSize)),
+		reqpool: rp.NewPooler(rp.WithSize[http.Request](poolSize)),
 	}
 }
 

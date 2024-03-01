@@ -33,8 +33,8 @@ func New(executor IExecutor, optFuncs ...types.OptFunc[opts]) *scheduler {
 	return &scheduler{
 		opts:              opts,
 		executor:          executor,
-		schedulerWorkPool: rp.NewPooler[schedulerWork](rp.WithSize[schedulerWork](opts.reqResPoolSize)),
-		requestPool:       rp.NewPooler[request](rp.WithSize[request](opts.reqResPoolSize)),
+		schedulerWorkPool: rp.NewPooler(rp.WithSize[schedulerWork](opts.reqResPoolSize)),
+		requestPool:       rp.NewPooler(rp.WithSize[request](opts.reqResPoolSize)),
 		workerQueue:       make(WorkerQueue, opts.numWorkers),
 		workQueue:         make(WorkQueue, opts.workQueueSize),
 	}
