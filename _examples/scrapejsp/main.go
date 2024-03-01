@@ -12,7 +12,7 @@ import (
 
 	// replace with your own project name
 
-	"github.com/tech-engine/goscrapy/cmd/corespider"
+	"github.com/tech-engine/goscrapy/cmd/gos"
 	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines"
 )
 
@@ -26,15 +26,23 @@ func OnTerminate(fn func()) {
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
-	// 2006-01-02-15-04-05
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 
 	// get core spider
-	coreSpider := corespider.New[*scrapejsp.Record]()
+	gos := gos.New[*scrapejsp.Record]()
+
+	// use proxies
+	// proxies := gos.WithProxies("proxy_url1", "proxy_url2", ...)
+
+	// get core spider
+	// gos := gos.New[*scrapejsp.Record]().WithClient(
+	// 	gos.DefaultClient(proxies),
+	// )
 
 	// we can use middlewares like below
-	// coreSpider.MiddlewareManager.Add(
+	// gos.MiddlewareManager.Add(
 	// 	middlewares.DupeFilter,
 	// 	middlewares.MultiCookieJar,
 	// )
@@ -47,7 +55,7 @@ func main() {
 	// export2Json.WithImmediate()
 	// export2Json.WithFilename("itstimeitsnowornever.json")
 	// we can use piplines
-	coreSpider.PipelineManager.Add(
+	gos.PipelineManager.Add(
 		export2Csv,
 		// export2Json,
 	)
@@ -55,7 +63,7 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		err := coreSpider.Start(ctx)
+		err := gos.Start(ctx)
 
 		if err != nil && errors.Is(err, context.Canceled) {
 			return
@@ -64,7 +72,7 @@ func main() {
 		fmt.Printf("failed: %q", err)
 	}()
 
-	spider := scrapejsp.NewSpider(coreSpider)
+	spider := scrapejsp.NewSpider(gos)
 
 	// start the scraper with a job, currently nil is passed but you can pass your job here
 	spider.StartRequest(ctx, nil)
