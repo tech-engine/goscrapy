@@ -77,8 +77,8 @@ func (g *Group[OUT]) WithIgnoreError() {
 	g.ignoreErrors = true
 }
 
-func (g *Group[OUT]) Add(p IPipeline[OUT]) {
-	g.nodes = append(g.nodes, p)
+func (g *Group[OUT]) Add(p ...IPipeline[OUT]) {
+	g.nodes = append(g.nodes, p...)
 }
 
 func (g *Group[OUT]) ProcessItem(pi IPipelineItem, out core.IOutput[OUT]) error {
