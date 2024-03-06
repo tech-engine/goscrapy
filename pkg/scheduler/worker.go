@@ -81,9 +81,13 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 	// we do some cleanup here on the response object
 	defer func() {
 		w.resetAndRelease(work)
+
 		// discard unread body
-		io.Copy(io.Discard, res.body)
-		res.body.Close()
+		if res.body != nil {
+			io.Copy(io.Discard, res.body)
+			res.body.Close()
+		}
+
 		res.Reset()
 		w.responsePool.Release(res)
 	}()
