@@ -8,6 +8,8 @@
 
 ## Getting Started
 
+Goscrapy is tested with **go v1.21**
+
 ### 1: Project Initialization
 
 ```sh
@@ -27,12 +29,11 @@ go install github.com/tech-engine/goscrapy@latest
 goscrapy -v
 ```
 ### 4. Create a New Project
-Create a new **GoScrapy** project:
 
 ```sh
 goscrapy startproject scrapejsp
 ```
-This will create a new project directory with the all necessary files to begin working with **GoScrapy**.
+This will create a new project directory with all the files necessary to begin working with **GoScrapy**.
 
 ```sh
 \iyuioy\go\go-test-scrapy> goscrapy startproject scrapejsp
@@ -74,7 +75,7 @@ func main() {
 	// create a new gos(goscrapy)
 	gos := gos.New[*scrapejsp.Record]()
 
-	// export 2 json pipeline
+	// Export2JSON pipeline usage
 	export2Json := pipelines.Export2JSON[*testspider.Record]()
 	export2Json.WithImmediate()
 	export2Json.WithFilename("itstimeitsnowornever.json")
@@ -108,7 +109,7 @@ func main() {
 ```
 
 ## Wiki
-Please follow our [wiki](https://github.com/tech-engine/goscrapy/wiki/Goscrapy-Wiki-Docs) docs for details.
+Please follow the [wiki](https://github.com/tech-engine/goscrapy/wiki) docs for details.
 
 ### Note
 
