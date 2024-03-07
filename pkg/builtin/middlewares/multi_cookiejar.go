@@ -3,7 +3,6 @@ package middlewares
 import (
 	"net/http"
 	"net/http/cookiejar"
-	"strings"
 	"sync"
 
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
@@ -40,9 +39,8 @@ func MultiCookieJar(next http.RoundTripper) http.RoundTripper {
 	mCookieJar := NewMultiCookieJar()
 	return middlewaremanager.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
 		// Header keys are received as the client sends them and not normalized.
-		cookieJarKey := strings.Trim(req.Header.Get("X-Goscrapy-Cookie-Jar-Key"), " ")
 
-		jar := mCookieJar.GetCookieJar(cookieJarKey)
+		jar := mCookieJar.GetCookieJar(req.Header.Get("X-Goscrapy-Cookie-Jar-Key"))
 
 		reqCookies := jar.Cookies(req.URL)
 
