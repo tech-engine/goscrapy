@@ -12,7 +12,6 @@ import (
 	"{{.}}/{{.}}"
 
 	"github.com/tech-engine/goscrapy/cmd/gos"
-	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines"
 )
 // sample terminate function to demostrate spider termination.
 func OnTerminate(fn func()) {
@@ -28,7 +27,7 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	// instantiate core spider
+	// get core spider
 	gos := gos.New[*{{.}}.Record]()
 
 	// use proxies
@@ -38,31 +37,29 @@ func main() {
 	// 	gos.DefaultClient(proxies),
 	// )
 
-    // we can use middlewares like below
-	// gos.MiddlewareManager.Add(
-	// 	middlewares.DupeFilter,
-	// 	middlewares.MultiCookieJar,
+	// use middlewares
+	gos.MiddlewareManager.Add({{.}}.MIDDLEWARES...)
+
+	// use pipelines
+	gos.PipelineManager.Add({{.}}.PIPELINES...)
+
+	// export2Csv := pipelines.Export2CSV[*{{.}}.Record](pipelines.Export2CSVOpts{
+	// 	Filename: "itstimeitsnowornever.csv",
+	// })
+
+	// // use export 2 json pipeline
+	// export2Json := pipelines.Export2JSON[*{{.}}.Record](pipelines.Export2JSONOpts{
+	// 	Filename:  "itstimeitsnowornever.json",
+	// 	Immediate: true,
+	// })
+
+	// add pipeline to group
+	// pipelineGroup := pm.NewGroup[*{{.}}.Record]()
+	// pipelineGroup.Add(export2Csv)
+	// pipelineGroup.Add(export2Json)
+	// gos.PipelineManager.Add(
+	// 	pipelineGroup,
 	// )
-
-	// pipelineGroup := pipelinemanager.NewGroup[*{{.}}.Record](
-    //  you can add pipelines you want to run concurrenly using pipeline groups
-    // )
-
-	// use export 2 csv pipeline
-	export2Csv := pipelines.Export2CSV[*{{.}}.Record]()
-	export2Csv.WithFilename("itstimeitsnowornever.csv")
-
-	// use export 2 json pipeline
-	export2Json := pipelines.Export2JSON[*{{.}}.Record]()
-	export2Json.WithImmediate()
-	export2Json.WithFilename("itstimeitsnowornever.json")
-	
-	// we can use piplines
-	gos.PipelineManager.Add(
-		export2Csv,
-		//  pipelineGroup,
-		export2Json,
-	)
 
 	go func() {
 		defer wg.Done()
