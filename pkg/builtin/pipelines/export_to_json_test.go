@@ -17,11 +17,12 @@ func TestExport2JSON(t *testing.T) {
 
 	defer os.Remove(f.Name())
 
-	pipeline := Export2JSON[*dummyRecord]()
-	defer pipeline.Close()
+	pipeline := Export2JSON[*dummyRecord](Export2JSONOpts{
+		File:      f,
+		Immediate: true,
+	})
 
-	pipeline.WithWriteCloser(f)
-	pipeline.WithImmediate()
+	defer pipeline.Close()
 
 	err = pipeline.Open(context.Background())
 

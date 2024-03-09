@@ -13,6 +13,14 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Immediate: export2JSON internally creates a bufio.Writer from provided io.Writer.
+// Immediate=true, flushes bufio.Writer immediately after processing.
+type Export2JSONOpts struct {
+	Filename  string
+	File      io.WriteCloser
+	Immediate bool
+}
+
 type export2JSON[OUT any] struct {
 	filename       string
 	file           io.WriteCloser
@@ -20,25 +28,26 @@ type export2JSON[OUT any] struct {
 	immediateFlush bool
 }
 
-func Export2JSON[OUT any]() *export2JSON[OUT] {
-	return &export2JSON[OUT]{
+func Export2JSON[OUT any](opts ...Export2JSONOpts) *export2JSON[OUT] {
+	e := &export2JSON[OUT]{
 		filename: fmt.Sprintf("JOB_%s.json", time.Now().UTC().Format("2006-01-02-15-04-05")),
 	}
-}
 
-// export2JSON internally creates a bufio.Writer from provided io.WWriter
-func (p *export2JSON[OUT]) WithWriteCloser(w io.WriteCloser) {
-	p.file = w
-}
+	if len(opts) > 0 {
+		opt := opts[0]
 
-func (p *export2JSON[OUT]) WithFilename(n string) *export2JSON[OUT] {
-	p.filename = n
-	return p
-}
+		if opt.Filename != "" {
+			e.filename = opt.Filename
+		}
 
-// WithImmediate set immediateFlush=true, which flushes bufio.Writer immediately after processing
-func (p *export2JSON[OUT]) WithImmediate() {
-	p.immediateFlush = true
+		if opt.File != nil {
+			e.file = opt.File
+		}
+
+		e.immediateFlush = opt.Immediate
+	}
+
+	return e
 }
 
 func (p *export2JSON[OUT]) Open(ctx context.Context) error {
