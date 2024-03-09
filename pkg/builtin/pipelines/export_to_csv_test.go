@@ -17,8 +17,10 @@ func TestExport2CSV(t *testing.T) {
 
 	defer os.Remove(f.Name())
 
-	pipeline := Export2CSV[*dummyRecord]()
-	pipeline.WithFile(f)
+	pipeline := Export2CSV[*dummyRecord](Export2CSVOpts{
+		File: f,
+	})
+
 	defer pipeline.Close()
 
 	err = pipeline.Open(context.Background())

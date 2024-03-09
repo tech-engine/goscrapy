@@ -12,24 +12,34 @@ import (
 	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 )
 
+// Export2CSV configuration struct.
+// File Field will take precedence over Filename field.
+type Export2CSVOpts struct {
+	Filename string
+	File     *os.File
+}
+
 type export2CSV[OUT any] struct {
 	filename string
 	file     *os.File
 }
 
-func Export2CSV[OUT any]() *export2CSV[OUT] {
-	return &export2CSV[OUT]{
+func Export2CSV[OUT any](opts ...Export2CSVOpts) *export2CSV[OUT] {
+	e := &export2CSV[OUT]{
 		filename: fmt.Sprintf("JOB_%s.csv", time.Now().UTC().Format("2006-01-02-15-04-05")),
 	}
-}
 
-func (p *export2CSV[OUT]) WithFile(f *os.File) {
-	p.file = f
-}
+	if len(opts) > 0 {
+		if opts[0].Filename != "" {
+			e.filename = opts[0].Filename
+		}
 
-func (p *export2CSV[OUT]) WithFilename(n string) *export2CSV[OUT] {
-	p.filename = n
-	return p
+		if opts[0].File != nil {
+			e.file = opts[0].File
+		}
+	}
+
+	return e
 }
 
 func (p *export2CSV[OUT]) Open(ctx context.Context) error {
