@@ -20,13 +20,13 @@ func TestRetry(t *testing.T) {
 	)
 
 	client := &http.Client{
-		Transport: Retry(
-			WithMaxRetries(expectedRetryCnt),
-			WithCb(func(r *http.Request, retry uint8) bool {
+		Transport: Retry(RetryOpts{
+			MaxRetries: expectedRetryCnt,
+			Cb: func(r *http.Request, retry uint8) bool {
 				actualRetryCnt = retry
 				return true
-			}),
-		)(http.DefaultTransport),
+			},
+		})(http.DefaultTransport),
 	}
 
 	testServer := httptest.NewServer(http.HandlerFunc(retry500Handler))
@@ -54,13 +54,13 @@ func TestRetryWithCb(t *testing.T) {
 	)
 
 	client := &http.Client{
-		Transport: Retry(
-			WithMaxRetries(retryCnt),
-			WithCb(func(r *http.Request, retry uint8) bool {
+		Transport: Retry(RetryOpts{
+			MaxRetries: retryCnt,
+			Cb: func(r *http.Request, retry uint8) bool {
 				actualRetryCnt = retry
 				return retry <= 1
-			}),
-		)(http.DefaultTransport),
+			},
+		})(http.DefaultTransport),
 	}
 
 	testServer := httptest.NewServer(http.HandlerFunc(retry500Handler))
@@ -88,14 +88,14 @@ func TestRetryWithHttpCodes(t *testing.T) {
 	)
 
 	client := &http.Client{
-		Transport: Retry(
-			WithMaxRetries(retryCnt),
-			WithHttpCodes([]int{467}),
-			WithCb(func(r *http.Request, retry uint8) bool {
+		Transport: Retry(RetryOpts{
+			MaxRetries: retryCnt,
+			Codes:      []int{467},
+			Cb: func(r *http.Request, retry uint8) bool {
 				actualRetryCnt = retry
 				return true
-			}),
-		)(http.DefaultTransport),
+			},
+		})(http.DefaultTransport),
 	}
 
 	testServer := httptest.NewServer(http.HandlerFunc(retry500Handler))

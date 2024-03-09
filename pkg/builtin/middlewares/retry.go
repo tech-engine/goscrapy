@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 )
 
@@ -19,42 +18,18 @@ var MIDDLEWARE_HTTP_RETRY_CODES = []int{500, 502, 503, 504, 522, 524, 408, 429}
 
 type RetryCb func(*http.Request, uint8) bool
 
-type retryOpts struct {
-	maxRetries uint8
-	codes      []int
-	baseDelay  time.Duration
-	cb         RetryCb
+type RetryOpts struct {
+	MaxRetries uint8
+	Codes      []int
+	BaseDelay  time.Duration
+	Cb         RetryCb
 }
 
-func WithMaxRetries(max uint8) types.OptFunc[retryOpts] {
-	return func(opts *retryOpts) {
-		opts.maxRetries = max
-	}
-}
-
-func WithHttpCodes(codes []int) types.OptFunc[retryOpts] {
-	return func(opts *retryOpts) {
-		opts.codes = codes
-	}
-}
-
-func WithBaseDelay(dur time.Duration) types.OptFunc[retryOpts] {
-	return func(opts *retryOpts) {
-		opts.baseDelay = dur
-	}
-}
-
-func WithCb(cb RetryCb) types.OptFunc[retryOpts] {
-	return func(opts *retryOpts) {
-		opts.cb = cb
-	}
-}
-
-func DefaultRetryOpts() *retryOpts {
-	opts := &retryOpts{
-		maxRetries: MIDDLEWARE_HTTP_RETRY_MAX_RETRIES,
-		codes:      MIDDLEWARE_HTTP_RETRY_CODES,
-		baseDelay:  1 * time.Second,
+func defaultOpts() *RetryOpts {
+	opts := &RetryOpts{
+		MaxRetries: MIDDLEWARE_HTTP_RETRY_MAX_RETRIES,
+		Codes:      MIDDLEWARE_HTTP_RETRY_CODES,
+		BaseDelay:  1 * time.Second,
 	}
 
 	value, ok := os.LookupEnv("MIDDLEWARE_HTTP_RETRY_MAX_RETRIES")
@@ -62,7 +37,7 @@ func DefaultRetryOpts() *retryOpts {
 	if ok {
 		maxRetries, err := strconv.Atoi(value)
 		if err == nil {
-			opts.maxRetries = uint8(maxRetries)
+			opts.MaxRetries = uint8(maxRetries)
 		}
 	}
 
@@ -79,7 +54,7 @@ func DefaultRetryOpts() *retryOpts {
 		}
 
 		if len(codes) > 0 {
-			opts.codes = codes[:]
+			opts.Codes = codes[:]
 		}
 
 	}
@@ -89,19 +64,31 @@ func DefaultRetryOpts() *retryOpts {
 	if ok {
 		baseDelay, err := time.ParseDuration(value)
 		if err == nil {
-			opts.baseDelay = baseDelay
+			opts.BaseDelay = baseDelay
 		}
 	}
 
 	return opts
 }
 
-func Retry(optFns ...types.OptFunc[retryOpts]) func(http.RoundTripper) http.RoundTripper {
+func Retry(opts RetryOpts) func(http.RoundTripper) http.RoundTripper {
 
-	retryOpts := DefaultRetryOpts()
+	retryOpts := defaultOpts()
 
-	for _, optFn := range optFns {
-		optFn(retryOpts)
+	if opts.MaxRetries > 0 {
+		retryOpts.MaxRetries = opts.MaxRetries
+	}
+
+	if opts.Codes != nil {
+		retryOpts.Codes = opts.Codes[:]
+	}
+
+	if opts.BaseDelay > 0 {
+		retryOpts.BaseDelay = opts.BaseDelay
+	}
+
+	if opts.Cb != nil {
+		retryOpts.Cb = opts.Cb
 	}
 
 	return func(next http.RoundTripper) http.RoundTripper {
@@ -110,7 +97,7 @@ func Retry(optFns ...types.OptFunc[retryOpts]) func(http.RoundTripper) http.Roun
 			var (
 				resp    *http.Response
 				err     error
-				retries uint8 = retryOpts.maxRetries
+				retries uint8 = retryOpts.MaxRetries
 				i       uint8
 			)
 
@@ -124,13 +111,13 @@ func Retry(optFns ...types.OptFunc[retryOpts]) func(http.RoundTripper) http.Roun
 
 			retries += 1
 
-			timer := time.NewTimer(retryOpts.baseDelay)
+			timer := time.NewTimer(retryOpts.BaseDelay)
 
 			for i = 0; i < retries; i++ {
 				resp, err = next.RoundTrip(req)
 
 				// call retry callback, if present
-				if i > 0 && retryOpts.cb != nil && !retryOpts.cb(req, i) {
+				if i > 0 && retryOpts.Cb != nil && !retryOpts.Cb(req, i) {
 					break
 				}
 
@@ -138,19 +125,19 @@ func Retry(optFns ...types.OptFunc[retryOpts]) func(http.RoundTripper) http.Roun
 					select {
 					case <-timer.C:
 						// calculate next delay
-						timer.Reset(time.Duration(math.Pow(2, float64(i))) * retryOpts.baseDelay)
+						timer.Reset(time.Duration(math.Pow(2, float64(i))) * retryOpts.BaseDelay)
 						continue
 					}
 				}
 
-				if !slices.Contains(retryOpts.codes, resp.StatusCode) {
+				if !slices.Contains(retryOpts.Codes, resp.StatusCode) {
 					break
 				}
 
 				select {
 				case <-timer.C:
 					// calculate next delay
-					timer.Reset(time.Duration(math.Pow(2, float64(i))) * retryOpts.baseDelay)
+					timer.Reset(time.Duration(math.Pow(2, float64(i))) * retryOpts.BaseDelay)
 				}
 			}
 
