@@ -54,8 +54,10 @@ func MultiCookieJar(next http.RoundTripper) http.RoundTripper {
 		// It is in this step Headers are normalized and sent out.
 		resp, err := next.RoundTrip(req)
 
-		// update cookies
-		jar.SetCookies(req.URL, resp.Cookies())
+		if resp != nil {
+			// update cookies
+			jar.SetCookies(req.URL, resp.Cookies())
+		}
 
 		return resp, err
 	})
