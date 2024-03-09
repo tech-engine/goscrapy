@@ -71,24 +71,27 @@ func defaultOpts() *RetryOpts {
 	return opts
 }
 
-func Retry(opts RetryOpts) func(http.RoundTripper) http.RoundTripper {
+func Retry(opts ...RetryOpts) func(http.RoundTripper) http.RoundTripper {
 
 	retryOpts := defaultOpts()
 
-	if opts.MaxRetries > 0 {
-		retryOpts.MaxRetries = opts.MaxRetries
-	}
+	// overwrite defaults
+	if len(opts) > 0 {
+		if opts[0].MaxRetries > 0 {
+			retryOpts.MaxRetries = opts[0].MaxRetries
+		}
 
-	if opts.Codes != nil {
-		retryOpts.Codes = opts.Codes[:]
-	}
+		if opts[0].Codes != nil {
+			retryOpts.Codes = opts[0].Codes[:]
+		}
 
-	if opts.BaseDelay > 0 {
-		retryOpts.BaseDelay = opts.BaseDelay
-	}
+		if opts[0].BaseDelay > 0 {
+			retryOpts.BaseDelay = opts[0].BaseDelay
+		}
 
-	if opts.Cb != nil {
-		retryOpts.Cb = opts.Cb
+		if opts[0].Cb != nil {
+			retryOpts.Cb = opts[0].Cb
+		}
 	}
 
 	return func(next http.RoundTripper) http.RoundTripper {
