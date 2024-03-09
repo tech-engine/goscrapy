@@ -72,16 +72,13 @@ func main() {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	// create a new gos(goscrapy)
 	gos := gos.New[*scrapejsp.Record]()
 
-	// Export2JSON pipeline usage
-	export2Json := pipelines.Export2JSON[*testspider.Record]()
-	export2Json.WithImmediate()
-	export2Json.WithFilename("itstimeitsnowornever.json")
+	// use middlewares
+	gos.MiddlewareManager.Add(scrapejsp.MIDDLEWARES...)
 
-	// use piplines
-	gos.PipelineManager.Add(export2Json)
+	// use pipelines
+	gos.PipelineManager.Add(scrapejsp.PIPELINES...)
 	
 	go func() {
 		defer wg.Done()
