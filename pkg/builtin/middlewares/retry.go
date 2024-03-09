@@ -25,7 +25,7 @@ type RetryOpts struct {
 	Cb         RetryCb
 }
 
-func defaultOpts() *RetryOpts {
+func defaultRetryOpts() *RetryOpts {
 	opts := &RetryOpts{
 		MaxRetries: MIDDLEWARE_HTTP_RETRY_MAX_RETRIES,
 		Codes:      MIDDLEWARE_HTTP_RETRY_CODES,
@@ -73,7 +73,7 @@ func defaultOpts() *RetryOpts {
 
 func Retry(opts ...RetryOpts) func(http.RoundTripper) http.RoundTripper {
 
-	retryOpts := defaultOpts()
+	retryOpts := defaultRetryOpts()
 
 	// overwrite defaults
 	if len(opts) > 0 {
