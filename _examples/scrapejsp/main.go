@@ -13,7 +13,6 @@ import (
 	// replace with your own project name
 
 	"github.com/tech-engine/goscrapy/cmd/gos"
-	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines"
 )
 
 // sample terminate function to demostrate spider termination.
@@ -41,24 +40,29 @@ func main() {
 	// 	gos.DefaultClient(proxies),
 	// )
 
-	// we can use middlewares like below
-	// gos.MiddlewareManager.Add(
-	// 	middlewares.DupeFilter,
-	// 	middlewares.MultiCookieJar,
+	// use middlewares
+	gos.MiddlewareManager.Add(scrapejsp.MIDDLEWARES...)
+
+	// use pipelines
+	gos.PipelineManager.Add(scrapejsp.PIPELINES...)
+
+	// export2Csv := pipelines.Export2CSV[*scrapejsp.Record](pipelines.Export2CSVOpts{
+	// 	Filename: "itstimeitsnowornever.csv",
+	// })
+
+	// // use export 2 json pipeline
+	// export2Json := pipelines.Export2JSON[*scrapejsp.Record](pipelines.Export2JSONOpts{
+	// 	Filename:  "itstimeitsnowornever.json",
+	// 	Immediate: true,
+	// })
+
+	// add pipeline to group
+	// pipelineGroup := pm.NewGroup[*scrapejsp.Record]()
+	// pipelineGroup.Add(export2Csv)
+	// pipelineGroup.Add(export2Json)
+	// gos.PipelineManager.Add(
+	// 	pipelineGroup,
 	// )
-
-	export2Csv := pipelines.Export2CSV[*scrapejsp.Record]()
-	export2Csv.WithFilename("itstimeitsnowornever.csv")
-
-	// use export 2 json pipeline
-	// export2Json := pipelines.Export2JSON[*scrapejsp.Record]()
-	// export2Json.WithImmediate()
-	// export2Json.WithFilename("itstimeitsnowornever.json")
-	// we can use piplines
-	gos.PipelineManager.Add(
-		export2Csv,
-		// export2Json,
-	)
 
 	go func() {
 		defer wg.Done()

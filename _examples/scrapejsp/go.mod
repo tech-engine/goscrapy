@@ -2,7 +2,7 @@ module scrapejsp
 
 go 1.21.0
 
-require github.com/tech-engine/goscrapy v0.10.1
+require github.com/tech-engine/goscrapy v0.12.0
 
 require (
 	cloud.google.com/go v0.110.6 // indirect

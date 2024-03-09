@@ -109,6 +109,8 @@ github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/tech-engine/goscrapy v0.10.1 h1:X3eyczZbbmstHZ425UMZc9IUQrPPIpRFH+4M+ll/ChE=
 github.com/tech-engine/goscrapy v0.10.1/go.mod h1:5YY0TBnWskX8S78WQzinkYn5oRBqPcdwmg033YNxTtM=
+github.com/tech-engine/goscrapy v0.12.0 h1:sil/lKN8vVSW1dLtGhT9mQPtz5P4r5V4LWtnNXt30RQ=
+github.com/tech-engine/goscrapy v0.12.0/go.mod h1:5YY0TBnWskX8S78WQzinkYn5oRBqPcdwmg033YNxTtM=
 github.com/xdg-go/pbkdf2 v1.0.0 h1:Su7DPu48wXMwC3bs7MCNG+z4FhcyEuz5dlvchbq0B0c=
 github.com/xdg-go/pbkdf2 v1.0.0/go.mod h1:jrpuAogTd400dnrH08LKmI/xc1MbPOebTwRqcT5RDeI=
 github.com/xdg-go/scram v1.1.2 h1:FHX5I5B4i4hKRVRBCFRxq1iQRej7WO3hhBuJf+UUySY=
