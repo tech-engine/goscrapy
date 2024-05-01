@@ -75,7 +75,7 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	spider, errCh := scrapejsp.NewSpider(ctx)
+	spider, errCh := scrapejsp.New(ctx)
 	
 	go func() {
 		defer wg.Done()
