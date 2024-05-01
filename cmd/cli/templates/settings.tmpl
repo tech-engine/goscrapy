@@ -19,9 +19,24 @@ var export2CSV = pipelines.Export2CSV[*Record](pipelines.Export2CSVOpts{
 	Filename: "itstimeitsnowornever.csv",
 })
 
+// use export 2 json pipeline
+// var export2Json = pipelines.Export2JSON[*Record](pipelines.Export2JSONOpts{
+// 	Filename:  "itstimeitsnowornever.json",
+// 	Immediate: true,
+// })
+
+// add pipeline to group
+//func myCustomPipelineGroup() *pm.Group[*Record] {
+//	pipelineGroup := pm.NewGroup[*Record]()
+//	pipelineGroup.Add(export2CSV)
+//	// pipelineGroup.Add(export2Json)
+//	return pipelineGroup
+//}
+
 // Pipelines here
 // Executed in the order they appear.
 var PIPELINES = []pm.IPipeline[*Record]{
 	export2CSV,
 	// export2Json,
+	// myCustomPipelineGroup(),
 }

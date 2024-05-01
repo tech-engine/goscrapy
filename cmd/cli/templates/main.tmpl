@@ -10,8 +10,6 @@ import (
 	"syscall"
 	// replace with your own project name
 	"{{.}}/{{.}}"
-
-	"github.com/tech-engine/goscrapy/cmd/gos"
 )
 // sample terminate function to demostrate spider termination.
 func OnTerminate(fn func()) {
@@ -27,44 +25,11 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	// get core spider
-	gos := gos.New[*{{.}}.Record]()
-
-	// use proxies
-	// proxies := gos.WithProxies("proxy_url1", "proxy_url2", ...)
-	
-	// gos := gos.New[*scrapejsp.Record]().WithClient(
-	// 	gos.DefaultClient(proxies),
-	// )
-
-	// use middlewares
-	gos.MiddlewareManager.Add({{.}}.MIDDLEWARES...)
-
-	// use pipelines
-	gos.PipelineManager.Add({{.}}.PIPELINES...)
-
-	// export2Csv := pipelines.Export2CSV[*{{.}}.Record](pipelines.Export2CSVOpts{
-	// 	Filename: "itstimeitsnowornever.csv",
-	// })
-
-	// // use export 2 json pipeline
-	// export2Json := pipelines.Export2JSON[*{{.}}.Record](pipelines.Export2JSONOpts{
-	// 	Filename:  "itstimeitsnowornever.json",
-	// 	Immediate: true,
-	// })
-
-	// add pipeline to group
-	// pipelineGroup := pm.NewGroup[*{{.}}.Record]()
-	// pipelineGroup.Add(export2Csv)
-	// pipelineGroup.Add(export2Json)
-	// gos.PipelineManager.Add(
-	// 	pipelineGroup,
-	// )
-
+	spider, errCh := scrapejsp.NewSpider(ctx)
 	go func() {
 		defer wg.Done()
 
-		err := gos.Start(ctx)
+		err := <-errCh
 
 		if err != nil && errors.Is(err, context.Canceled) {
 			return
@@ -72,8 +37,6 @@ func main() {
 
 		fmt.Printf("failed: %q", err)
 	}()
-
-	spider := {{.}}.NewSpider(gos)
 
 	// start the scraper with a job, currently nil is passed but you can pass your job here
 	spider.StartRequest(ctx, nil)
