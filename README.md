@@ -61,10 +61,12 @@ package main
 import (
 	"context"
 	"errors"
-	"net/url"
-
-	"github.com/tech-engine/goscrapy/cmd/gos"
-	"github.com/tech-engine/goscrapy/pkg/core"
+	"fmt"
+	"os"
+	"os/signal"
+	"scrapejsp/scrapejsp"
+	"sync"
+	"syscall"
 )
 
 func main() {
@@ -72,18 +74,13 @@ func main() {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	gos := gos.New[*scrapejsp.Record]()
 
-	// use middlewares
-	gos.MiddlewareManager.Add(scrapejsp.MIDDLEWARES...)
-
-	// use pipelines
-	gos.PipelineManager.Add(scrapejsp.PIPELINES...)
+	spider, errCh := scrapejsp.NewSpider(ctx)
 	
 	go func() {
 		defer wg.Done()
 
-		err := gos.Start(ctx)
+		err := <-errCh
 
 		if err != nil && errors.Is(err, context.Canceled) {
 			return
@@ -91,8 +88,6 @@ func main() {
 
 		fmt.Printf("failed: %q", err)
 	}()
-
-	spider := scrapejsp.NewSpider(gos)
 
 	// trigger the Start Request
 	spider.StartRequest(ctx, nil)
