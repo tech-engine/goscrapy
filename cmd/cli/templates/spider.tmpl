@@ -14,7 +14,7 @@ type Spider struct {
 	gos.ICoreSpider[*Record]
 }
 
-func NewSpider(ctx context.Context) (*Spider, <-chan error) {
+func New(ctx context.Context) (*Spider, <-chan error) {
 
 	// use proxies
 	// proxies := core.WithProxies("proxy_url1", "proxy_url2", ...)
