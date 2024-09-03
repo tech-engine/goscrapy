@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"github.com/tech-engine/goscrapy/internal/fsm"
+	"github.com/tech-engine/goscrapy/pkg/core"
+	"golang.org/x/net/html"
 )
 
 func NewResponse() *response {
@@ -19,6 +21,7 @@ type response struct {
 	cookies    []*http.Cookie
 	request    *http.Request
 	meta       *fsm.FixedSizeMap[string, any]
+	nodes      core.ISelector
 }
 
 // response implementing core.ResponseReader
@@ -86,4 +89,41 @@ func (r *response) WriteCookies(cookies []*http.Cookie) {
 
 func (r *response) WriteMeta(meta *fsm.FixedSizeMap[string, any]) {
 	r.meta = meta
+}
+
+func (r *response) Css(selector string) core.ISelector {
+
+	if r.nodes == nil {
+		if nodes, err := NewSelector(r.body); err != nil {
+			r.nodes = nodes
+		}
+	}
+
+	return r.nodes.Css(selector)
+}
+
+func (r *response) Xpath(xpath string) core.ISelector {
+
+	if r.nodes == nil {
+		if nodes, err := NewSelector(r.body); err != nil {
+			r.nodes = nodes
+		}
+	}
+	return r.nodes.Xpath(xpath)
+}
+
+func (r *response) Text(def ...string) []string {
+	return r.nodes.Text(def...)
+}
+
+func (r *response) Attr(attrName string) []string {
+	return r.nodes.Attr(attrName)
+}
+
+func (r *response) Get() *html.Node {
+	return r.nodes.Get()
+}
+
+func (r *response) GetAll() []*html.Node {
+	return r.nodes.GetAll()
 }
