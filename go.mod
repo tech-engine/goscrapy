@@ -15,6 +15,8 @@ require (
 	google.golang.org/api v0.136.0
 )
 
+require github.com/antchfx/xpath v1.3.1 // indirect
+
 require (
 	cloud.google.com/go v0.110.6 // indirect
 	cloud.google.com/go/compute v1.23.0 // indirect
@@ -23,6 +25,8 @@ require (
 	cloud.google.com/go/iam v1.1.1 // indirect
 	cloud.google.com/go/longrunning v0.5.1 // indirect
 	cloud.google.com/go/storage v1.33.0 // indirect
+	github.com/andybalholm/cascadia v1.3.2
+	github.com/antchfx/htmlquery v1.3.2
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect

@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/tech-engine/goscrapy/internal/fsm"
+	"golang.org/x/net/html"
 )
 
 type IEngine[OUT any] interface {
@@ -50,6 +51,7 @@ type IResponseReader interface {
 	Cookies() []*http.Cookie
 	Request() *http.Request
 	Meta(string) (any, bool)
+	ISelector
 }
 
 type IJob interface {
@@ -64,3 +66,15 @@ type IOutput[OUT any] interface {
 }
 
 type ResponseCallback func(context.Context, IResponseReader)
+type ISelectorGetter interface {
+	Get() *html.Node
+	GetAll() []*html.Node
+	Text(...string) []string
+	Attr(string) []string
+}
+
+type ISelector interface {
+	Css(string) ISelector
+	Xpath(string) ISelector
+	ISelectorGetter
+}
