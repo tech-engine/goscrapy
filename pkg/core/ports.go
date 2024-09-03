@@ -76,9 +76,5 @@ type ISelectorGetter interface {
 type ISelector interface {
 	Css(string) ISelector
 	Xpath(string) ISelector
-	// ISelectorGetter
-	Get() *html.Node
-	GetAll() []*html.Node
-	Text(...string) []string
-	Attr(string) []string
+	ISelectorGetter
 }
