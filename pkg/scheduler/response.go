@@ -21,7 +21,7 @@ type response struct {
 	cookies    []*http.Cookie
 	request    *http.Request
 	meta       *fsm.FixedSizeMap[string, any]
-	nodes      core.ISelector
+	nodes      Selectors
 }
 
 // response implementing core.ResponseReader
@@ -64,6 +64,7 @@ func (r *response) Reset() {
 	// because we there isn't guarantee that we will have the same pair for req-res from the pools,
 	// we must set it meta=nil upon releasing req-res to their respective pools, otherwise we will have corrupt data.
 	r.meta = nil
+	r.nodes = nil
 }
 
 // response implementing engine.ResponseWriter
@@ -94,7 +95,7 @@ func (r *response) WriteMeta(meta *fsm.FixedSizeMap[string, any]) {
 func (r *response) Css(selector string) core.ISelector {
 
 	if r.nodes == nil {
-		if nodes, err := NewSelector(r.body); err != nil {
+		if nodes, err := NewSelector(r.body); err == nil {
 			r.nodes = nodes
 		}
 	}
@@ -105,7 +106,7 @@ func (r *response) Css(selector string) core.ISelector {
 func (r *response) Xpath(xpath string) core.ISelector {
 
 	if r.nodes == nil {
-		if nodes, err := NewSelector(r.body); err != nil {
+		if nodes, err := NewSelector(r.body); err == nil {
 			r.nodes = nodes
 		}
 	}

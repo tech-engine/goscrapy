@@ -12,7 +12,7 @@ import (
 
 type Selectors []*html.Node
 
-func NewSelector(r io.Reader) (core.ISelector, error) {
+func NewSelector(r io.Reader) (Selectors, error) {
 	root, err := html.Parse(r)
 	if err != nil {
 		return nil, err
