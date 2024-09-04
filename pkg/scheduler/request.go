@@ -127,7 +127,11 @@ func (r *request) WithContext(ctx context.Context) core.IRequestWriter {
 func (r *request) Reset() {
 	r.method = ""
 	r.url = nil
-	r.header = nil
+	if r.header != nil {
+		for key := range r.header {
+			r.header.Del(key)
+		}
+	}
 	r.body = nil
 	r.cookieJarKey = ""
 	if r.meta != nil {
