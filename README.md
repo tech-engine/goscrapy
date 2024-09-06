@@ -116,8 +116,9 @@ Please follow the [wiki](https://github.com/tech-engine/goscrapy/wiki) docs for 
 - ~~Cookie management~~
 - ~~Builtin & Custom Middlewares support~~
 - ~~Css & Xpath Selectors~~
+- Logging
 - Triggers
-- Unit Tests(work in progress)
+- Tests(work in progress)
 
 ## Get in touch
 [Discord](https://discord.gg/FPvxETjYPH)
