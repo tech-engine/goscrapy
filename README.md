@@ -13,7 +13,7 @@ Goscrapy is tested with **go v1.21**
 ### 1: Project Initialization
 
 ```sh
-go mod init scrapejsp
+go mod init books_to_scrape
 ```
 
 ### 2. Install goscrapy cli
@@ -31,29 +31,29 @@ goscrapy -v
 ### 4. Create a New Project
 
 ```sh
-goscrapy startproject scrapejsp
+goscrapy startproject books_to_scrape
 ```
 This will create a new project directory with all the files necessary to begin working with **GoScrapy**.
 
 ```sh
-\iyuioy\go\go-test-scrapy> goscrapy startproject scrapejsp
+\iyuioy\go\go-test-scrapy> goscrapy startproject books_to_scrape
 
 🚀 GoScrapy generating project files. Please wait!
 
-✔️  scrapejsp\constants.go
-✔️  scrapejsp\errors.go
-✔️  scrapejsp\job.go
+✔️  books_to_scrape\constants.go
+✔️  books_to_scrape\errors.go
+✔️  books_to_scrape\job.go
 ✔️  main.go
-✔️  scrapejsp\record.go
-✔️  scrapejsp\spider.go
+✔️  books_to_scrape\record.go
+✔️  books_to_scrape\spider.go
 
-✨ Congrates. scrapejsp created successfully.
+✨ Congrates. books_to_scrape created successfully.
 ```
 
 ### main.go
 In your __`main.go`__ file, set up and execute your spider.
 
-For detailed code, please refer to the [sample code here](./_examples/scrapejsp/main.go).
+For detailed code, please refer to the [sample code here](./_examples/books.toscrape.com/main.go).
 
 ```go
 package main
@@ -64,7 +64,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"scrapejsp/scrapejsp"
+	"books_to_scrape/books_to_scrape"
 	"sync"
 	"syscall"
 )
@@ -75,7 +75,7 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	spider, errCh := scrapejsp.New(ctx)
+	spider, errCh := books_to_scrape.New(ctx)
 	
 	go func() {
 		defer wg.Done()
@@ -115,9 +115,9 @@ Please follow the [wiki](https://github.com/tech-engine/goscrapy/wiki) docs for 
 
 - ~~Cookie management~~
 - ~~Builtin & Custom Middlewares support~~
-- HTML parsing
+- ~~Css & Xpath Selectors~~
 - Triggers
 - Unit Tests(work in progress)
 
-## Contact
+## Get in touch
 [Discord](https://discord.gg/FPvxETjYPH)
