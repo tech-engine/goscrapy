@@ -10,6 +10,24 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
+type safeDummyRecord struct {
+	mu      sync.Mutex
+	id, age int
+}
+
+func (s *safeDummyRecord) Set(id, age int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.id = id
+	s.age = age
+}
+
+func (s *safeDummyRecord) GetVal() [2]int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return [2]int{s.id, s.age}
+}
+
 type dummyRecord struct {
 	Id, Age int
 }
@@ -90,12 +108,13 @@ func (p *doublePipeline[OUT]) ProcessItem(item IPipelineItem, original core.IOut
 
 // dummy pipeline 2
 type dummyPipeline2[OUT any] struct {
-	FId  int
-	FAge int
+	safeRecord safeDummyRecord
 }
 
 func newDummyPipeline2[OUT any]() *dummyPipeline2[OUT] {
-	return &dummyPipeline2[OUT]{}
+	return &dummyPipeline2[OUT]{
+		safeRecord: safeDummyRecord{},
+	}
 }
 
 func (p *dummyPipeline2[OUT]) Open(ctx context.Context) error {
@@ -108,9 +127,8 @@ func (p *dummyPipeline2[OUT]) Close() {
 func (p *dummyPipeline2[OUT]) ProcessItem(item IPipelineItem, original core.IOutput[OUT]) error {
 	id, _ := item.Get("id")
 	age, _ := item.Get("age")
+	p.safeRecord.Set(id.(int), age.(int))
 
-	p.FId, _ = id.(int)
-	p.FAge, _ = age.(int)
 	return nil
 }
 
@@ -133,7 +151,8 @@ func TestPipelineManager(t *testing.T) {
 	// push item to pipeline
 	pipelineManager.Push(&dummyRecord{Id: 1, Age: 19})
 	// verify what we pushed is what we get
-	assert.Equalf(t, 1, readPipeline.FId, "expected id=1, got=%s", readPipeline.FId)
-	assert.Equalf(t, 38, readPipeline.FAge, "expected age=1, got=%s", readPipeline.FAge)
+	safeRecord := readPipeline.safeRecord.GetVal()
+	assert.Equalf(t, 1, safeRecord[0], "expected id=1, got=%s", safeRecord[0])
+	assert.Equalf(t, 38, safeRecord[1], "expected age=1, got=%s", safeRecord[1])
 	wg.Wait()
 }
