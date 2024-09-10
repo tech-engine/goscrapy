@@ -1,4 +1,4 @@
-name: Tests on Pull Request
+name: Test on Pull Request
 
 on: 
   pull_request:
@@ -24,4 +24,4 @@ jobs:
           go-version: ${{ matrix.go-version }}
       
       - name: Run tests
-        run: go test -v ./...
+        run: go test -race -v ./...
