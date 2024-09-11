@@ -61,7 +61,7 @@ func defaultClientOpts() clientOpts {
 		}
 	}
 
-	value, ok = os.LookupEnv("MIDDLEWARE_DEFAULT_HTTP_TIMEOUT_MS")
+	value, ok = os.LookupEnv("MIDDLEWARE_HTTP_TIMEOUT_MS")
 
 	if ok {
 		timeoutMs, err := strconv.Atoi(value)
