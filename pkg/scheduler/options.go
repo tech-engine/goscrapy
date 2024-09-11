@@ -17,7 +17,7 @@ type opts struct {
 func defaultOpts() opts {
 	opts := opts{}
 	opts.reqResPoolSize = SCHEDULER_DEFAULT_REQ_RES_POOL_SIZE
-	value, ok := os.LookupEnv("SCHEDULER_DEFAULT_REQ_RES_POOL_SIZE")
+	value, ok := os.LookupEnv("SCHEDULER_REQ_RES_POOL_SIZE")
 
 	if ok {
 		parsedPoolSize, err := strconv.ParseUint(value, 10, 64)
@@ -27,7 +27,7 @@ func defaultOpts() opts {
 	}
 
 	opts.numWorkers = uint16(runtime.GOMAXPROCS(0)) * SCHEDULER_DEFAULT_NUM_WORKERS_MULTIPLIER
-	value, ok = os.LookupEnv("SCHEDULER_DEFAULT_NUM_WORKERS_MULTIPLIER")
+	value, ok = os.LookupEnv("SCHEDULER_NUM_WORKERS_MULTIPLIER")
 
 	if ok {
 		multiplier, err := strconv.ParseUint(value, 10, 16)
@@ -37,7 +37,7 @@ func defaultOpts() opts {
 	}
 
 	opts.workQueueSize = SCHEDULER_DEFAULT_WORK_QUEUE_SIZE
-	value, ok = os.LookupEnv("SCHEDULER_DEFAULT_WORK_QUEUE_SIZE")
+	value, ok = os.LookupEnv("SCHEDULER_WORK_QUEUE_SIZE")
 
 	if ok {
 		workQueueSize, err := strconv.ParseUint(value, 10, 64)

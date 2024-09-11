@@ -25,7 +25,7 @@ func NewHTTPClientAdapter(client *http.Client, poolSize uint64) *HTTPAdapter {
 
 	if poolSize == 0 {
 		poolSize = EX_ADAPTER_DEFAULT_REQ_RES_POOL_SIZE
-		value, ok := os.LookupEnv("SCHEDULER_DEFAULT_REQ_RES_POOL_SIZE")
+		value, ok := os.LookupEnv("SCHEDULER_REQ_RES_POOL_SIZE")
 
 		if ok {
 			parsedPoolSize, err := strconv.ParseUint(value, 10, 64)
