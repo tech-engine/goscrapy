@@ -120,5 +120,11 @@ Please follow the [wiki](https://github.com/tech-engine/goscrapy/wiki) docs for 
 - Triggers
 - Tests(work in progress)
 
+## Partners
+
+<a href="https://dashboard.mangoproxy.com/signup?promo=v7omc7">
+	<img src="https://mangoproxy.com/assetsfile/images/logomango.webp" width="200">
+</a>
+
 ## Get in touch
 [Discord](https://discord.gg/FPvxETjYPH)
