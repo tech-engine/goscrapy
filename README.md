@@ -1,7 +1,7 @@
 ﻿# GoScrapy: Web Scraping Framework in Go
- [![Go Reference](https://pkg.go.dev/badge/github.com/tech-engine/goscrapy.svg)](https://pkg.go.dev/github.com/tech-engine/goscrapy) [![Alt Text](https://goreportcard.com/badge/github.com/tech-engine/goscrapy)](https://github.com/tech-engine/goscrapy)
+ [![Alt Text](https://goreportcard.com/badge/github.com/tech-engine/goscrapy)](https://github.com/tech-engine/goscrapy)
 <p align="center">
-  <img width="800" src="./logo.webp">
+  <img width="800" src="./assets/logo.webp">
 </p>
 
 **GoScrapy** aims to be a powerful web scraping framework in Go, inspired by Python's Scrapy framework. It offers an easy-to-use Scrapy-like experience for extracting data from websites, making it an ideal tool for various data collection and analysis tasks, especially for those coming from Python and wanting to try scraping in Golang..
@@ -99,6 +99,10 @@ func main() {
 	})
 }
 ```
+
+<p align="center">
+  <img width="600" src="./assets/demo.gif">
+</p>
 
 ## Wiki
 Please follow the [wiki](https://github.com/tech-engine/goscrapy/wiki) docs for details.
