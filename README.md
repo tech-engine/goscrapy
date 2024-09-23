@@ -8,7 +8,7 @@
 
 ## Getting Started
 
-Goscrapy is tested with **go v1.21**
+Goscrapy requires **Go version 1.22** or higher to run.
 
 ### 1: Project Initialization
 

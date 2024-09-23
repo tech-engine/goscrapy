@@ -139,12 +139,10 @@ func TestAdapterRequest(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		func(tc testCase) {
-			t.Run(tc.method, func(t *testing.T) {
-				t.Parallel()
-				run(t, adapter, tc.method, tc.body, tc.expected)
-			})
-		}(tc)
+		t.Run(tc.method, func(t *testing.T) {
+			t.Parallel()
+			run(t, adapter, tc.method, tc.body, tc.expected)
+		})
 	}
 }
 

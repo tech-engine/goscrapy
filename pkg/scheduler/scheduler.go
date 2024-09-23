@@ -64,13 +64,13 @@ func (s *scheduler) Start(ctx context.Context) error {
 	wCtx, wCancel := context.WithCancel(context.Background())
 
 	for i = 0; i < s.opts.numWorkers; i++ {
-		go func(i uint16) {
+		go func() {
 			defer wg.Done()
 			worker := NewWorker(i+1, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.opts.reqResPoolSize)
 
 			// blocking
 			_ = worker.Start(wCtx)
-		}(i)
+		}()
 	}
 
 	// below will trigger context cancellation for the worker after scheduler is done.

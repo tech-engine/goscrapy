@@ -59,7 +59,6 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 	group, groupCtx = errgroup.WithContext(ctx)
 
 	for _, pipeline := range pm.pipelines {
-		pipeline := pipeline
 		group.Go(func() error {
 			return pipeline.Open(groupCtx)
 		})
@@ -120,12 +119,11 @@ func (pm *PipelineManager[OUT]) stop() {
 	wg.Add(len(pm.pipelines))
 	defer wg.Wait()
 
-	for _, pipeline := range pm.pipelines {
-
-		go func(p IPipeline[OUT]) {
+	for _, p := range pm.pipelines {
+		go func() {
 			defer wg.Done()
 			p.Close()
-		}(pipeline)
+		}()
 
 	}
 }
