@@ -100,7 +100,7 @@ func TestDupeFilter(t *testing.T) {
 
 	var m sync.Mutex
 	for _, tc := range testCases {
-		func(tc testCase) {
+		func() {
 
 			t.Run(tc.Method, func(t *testing.T) {
 				t.Parallel()
@@ -123,7 +123,7 @@ func TestDupeFilter(t *testing.T) {
 				}
 
 			})
-		}(tc)
+		}()
 
 	}
 

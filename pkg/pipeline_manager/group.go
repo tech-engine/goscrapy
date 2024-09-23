@@ -32,10 +32,10 @@ func (g *Group[OUT]) Open(ctx context.Context) error {
 		wg.Add(len(g.nodes))
 
 		for _, p := range g.nodes {
-			go func(_p IPipeline[OUT]) {
+			go func() {
 				defer wg.Done()
-				_p.Open(ctx)
-			}(p)
+				p.Open(ctx)
+			}()
 		}
 
 		wg.Wait()
@@ -44,7 +44,6 @@ func (g *Group[OUT]) Open(ctx context.Context) error {
 
 	group, groupCtx := errgroup.WithContext(ctx)
 	for _, p := range g.nodes {
-		p := p
 		group.Go(func() error {
 			return p.Open(groupCtx)
 		})
@@ -57,10 +56,10 @@ func (g *Group[OUT]) Close() {
 	wg.Add(len(g.nodes))
 
 	for _, p := range g.nodes {
-		go func(_p IPipeline[OUT]) {
+		go func() {
 			defer wg.Done()
-			_p.Close()
-		}(p)
+			p.Close()
+		}()
 	}
 
 	wg.Wait()
@@ -88,10 +87,10 @@ func (g *Group[OUT]) ProcessItem(pi IPipelineItem, out core.IOutput[OUT]) error 
 		wg.Add(len(g.nodes))
 
 		for _, p := range g.nodes {
-			go func(_p IPipeline[OUT]) {
+			go func() {
 				defer wg.Done()
-				_p.ProcessItem(pi, out)
-			}(p)
+				p.ProcessItem(pi, out)
+			}()
 		}
 
 		wg.Wait()
@@ -100,7 +99,6 @@ func (g *Group[OUT]) ProcessItem(pi IPipelineItem, out core.IOutput[OUT]) error 
 
 	errGroup := errgroup.Group{}
 	for _, p := range g.nodes {
-		p := p
 		errGroup.Go(func() error {
 			return p.ProcessItem(pi, out)
 		})
