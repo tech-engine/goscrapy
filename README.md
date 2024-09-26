@@ -113,7 +113,7 @@ Please follow the [wiki](https://github.com/tech-engine/goscrapy/wiki) docs for 
 
 ## License
 
-**GoScrapy** is available under BSL with additional usage grant which allows for free internal use. Please make sure that you agree with the license before contributing to **GoScrapy** because by contributing to goscrapy project you are agreeing on the license.
+**GoScrapy** is available under the BSL with an additional usage grant that allows free internal use. Please ensure that you agree with the license before contributing to **GoScrapy**, as by contributing to the GoScrapy project, you agree to the terms of the license.
 
 ## Roadmap
 
