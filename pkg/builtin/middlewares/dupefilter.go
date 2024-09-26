@@ -70,8 +70,7 @@ func generateSHA1FingerprintFromReq(r *http.Request) (string, error) {
 
 	// added sorted headers
 	for _, key := range headerKeys {
-		values := r.Header[key]
-		for _, value := range values {
+		for _, value := range r.Header[key] {
 			combinedBuf.WriteString(key)
 			combinedBuf.WriteString(value)
 		}
