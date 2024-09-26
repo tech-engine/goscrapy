@@ -26,8 +26,8 @@ func defaultOpts() opts {
 		}
 	}
 
-	opts.numWorkers = uint16(runtime.GOMAXPROCS(0)) * SCHEDULER_DEFAULT_NUM_WORKERS_MULTIPLIER
-	value, ok = os.LookupEnv("SCHEDULER_NUM_WORKERS_MULTIPLIER")
+	opts.numWorkers = uint16(runtime.GOMAXPROCS(0)) * SCHEDULER_DEFAULT_CONCURRENT_MULTIPLIER
+	value, ok = os.LookupEnv("SCHEDULER_CONCURRENCY")
 
 	if ok {
 		multiplier, err := strconv.ParseUint(value, 10, 16)
