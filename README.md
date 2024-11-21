@@ -50,53 +50,78 @@ This will create a new project directory with all the files necessary to begin w
 ✨ Congrates. books_to_scrape created successfully.
 ```
 
-### main.go
-In your __`main.go`__ file, set up and execute your spider.
+### spider.go
+In your __`spider.go`__ file, set up and execute your spider.
 
-For detailed code, please refer to the [sample code here](./_examples/books.toscrape.com/main.go).
+For detailed code, please refer to the [sample code here](./_examples/scrapejsp_method2/scrapejsp/spider.go).
 
 ```go
-package main
+package scrapejsp
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
-	"os"
-	"os/signal"
-	"books_to_scrape/books_to_scrape"
-	"sync"
-	"syscall"
+	"log"
+
+	"github.com/tech-engine/goscrapy/cmd/gos"
+	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-func main() {
-	ctx, cancel := context.WithCancel(context.Background())
+type Spider struct {
+	gos.ICoreSpider[*Record]
+}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+func NewSpider(ctx context.Context) (*Spider, <-chan error) {
 
-	spider, errCh := books_to_scrape.New(ctx)
-	
+	// use proxies
+	// proxies := core.WithProxies("proxy_url1", "proxy_url2", ...)
+	// core := gos.New[*Record]().WithClient(
+	// 	gos.DefaultClient(proxies),
+	// )
+
+	core := gos.New[*Record]()
+
+	// Add middlewares
+	core.MiddlewareManager.Add(MIDDLEWARES...)
+	// Add pipelines
+	core.PipelineManager.Add(PIPELINES...)
+
+	errCh := make(chan error)
+
 	go func() {
-		defer wg.Done()
-
-		err := <-errCh
-
-		if err != nil && errors.Is(err, context.Canceled) {
-			return
-		}
-
-		fmt.Printf("failed: %q", err)
+		errCh <- core.Start(ctx)
 	}()
 
-	// trigger the Start Request
-	spider.StartRequest(ctx, nil)
+	return &Spider{
+		core,
+	}, errCh
+}
 
-	OnTerminate(func() {
-		fmt.Println("exit signal received: shutting down gracefully")
-		cancel()
-		wg.Wait()
-	})
+// This is the entrypoint to the spider
+func (s *Spider) StartRequest(ctx context.Context, job *Job) {
+
+	req := s.NewRequest()
+	// req.Meta("JOB", job)
+	req.Url("https://jsonplaceholder.typicode.com/todos/1")
+
+	s.Request(req, s.parse)
+}
+
+func (s *Spider) Close(ctx context.Context) {
+}
+
+func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
+	fmt.Printf("status: %d", resp.StatusCode())
+
+	var data Record
+	err := json.Unmarshal(resp.Bytes(), &data)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// to push to pipelines
+	s.Yield(&data)
 }
 ```
 
