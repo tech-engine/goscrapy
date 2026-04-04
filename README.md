@@ -173,4 +173,4 @@ Please follow the [wiki](https://github.com/tech-engine/goscrapy/wiki) docs for 
 ## AI generated doc
 [deepwiki](https://deepwiki.com/tech-engine/goscrapy)
 
-**Note**: the accuracy of the ai generated doc hasn't been verified. Follow the Github wiki for accurate doc.
+**Note**: accuracy of the ai generated doc hasn't been verified. Follow the Github wiki for accurate doc.
