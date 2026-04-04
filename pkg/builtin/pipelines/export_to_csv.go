@@ -1,11 +1,10 @@
 package pipelines
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
-
-	"context"
 
 	"github.com/gocarina/gocsv"
 	"github.com/tech-engine/goscrapy/pkg/core"
