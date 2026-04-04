@@ -17,6 +17,7 @@ func NewResponse() *response {
 type response struct {
 	statusCode int
 	body       io.ReadCloser
+	bodyBytes  []byte // cache body
 	header     http.Header
 	cookies    []*http.Cookie
 	request    *http.Request
@@ -50,9 +51,24 @@ func (r *response) Meta(key string) (any, bool) {
 }
 
 func (r *response) Bytes() []byte {
-	buff := new(bytes.Buffer)
-	buff.ReadFrom(r.body)
-	return buff.Bytes()
+	if r.bodyBytes != nil {
+		return r.bodyBytes
+	}
+
+	if r.body == nil {
+		return nil
+	}
+
+	data, err := io.ReadAll(r.body)
+
+	if err != nil {
+		return nil
+	}
+
+	r.bodyBytes = data
+
+	r.body = io.NopCloser(bytes.NewReader(data))
+	return data
 }
 
 func (r *response) Reset() {
@@ -61,6 +77,7 @@ func (r *response) Reset() {
 	r.header = nil
 	r.cookies = nil
 	r.request = nil
+	r.bodyBytes = nil
 	// because we there isn't guarantee that we will have the same pair for req-res from the pools,
 	// we must set it meta=nil upon releasing req-res to their respective pools, otherwise we will have corrupt data.
 	r.meta = nil
@@ -95,7 +112,8 @@ func (r *response) WriteMeta(meta *fsm.FixedSizeMap[string, any]) {
 func (r *response) Css(selector string) core.ISelector {
 
 	if r.nodes == nil {
-		if nodes, err := NewSelector(r.body); err == nil {
+		body := r.Bytes()
+		if nodes, err := NewSelector(io.NopCloser(bytes.NewReader(body))); err == nil {
 			r.nodes = nodes
 		}
 	}
@@ -106,7 +124,8 @@ func (r *response) Css(selector string) core.ISelector {
 func (r *response) Xpath(xpath string) core.ISelector {
 
 	if r.nodes == nil {
-		if nodes, err := NewSelector(r.body); err == nil {
+		body := r.Bytes()
+		if nodes, err := NewSelector(io.NopCloser(bytes.NewReader(body))); err == nil {
 			r.nodes = nodes
 		}
 	}
