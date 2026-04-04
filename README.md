@@ -6,6 +6,19 @@
 
 **GoScrapy** aims to be a powerful web scraping framework in Go, inspired by Python's Scrapy framework. It offers an easy-to-use Scrapy-like experience for extracting data from websites, making it an ideal tool for various data collection and analysis tasks, especially for those coming from Python and wanting to try scraping in Golang..
 
+**Features**
+
+- 🚀 Blazing Fast — Built on Go's concurrency model for high-throughput parallel scraping
+- 🐍 Scrapy-inspired — Familiar architecture for anyone coming from Python's Scrapy
+- 🛠️ CLI Scaffolding — Generate project structure instantly with goscrapy startproject
+- 🔁 Smart Retry — Automatic retries with exponential back-off on failures
+- 🍪 Cookie Management — Maintains separate cookie sessions per scraping target
+- 🔍 CSS & XPath Selectors — Flexible HTML parsing with chainable selectors
+- 📦 Built-in Pipelines — Export scraped data to CSV, JSON, MongoDB, Google Sheets, and Firebase out of the box
+- 🧩 Built-in Middleware Support — Plug in built-in middlewares.
+- 🔌 Extensible by Design — Almost every layer of the framework — pipelines, middlewares, HTTP client, and selectors — is built to be swapped or extended without touching the core
+
+
 ## Getting Started
 
 Goscrapy requires **Go version 1.22** or higher to run.
