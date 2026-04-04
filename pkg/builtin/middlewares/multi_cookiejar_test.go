@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
 // Set our custom transport middleware
@@ -32,8 +33,8 @@ func filteredHeaders(h http.Header) http.Header {
 	return newHeader
 }
 
-func makeTestRequestWithClient(client *http.Client) func(string, string, http.Header) (*http.Response, error) {
-	return func(method, url string, header http.Header) (*http.Response, error) {
+func makeTestRequestWithClient(client *http.Client) func(string, string, http.Header, string) (*http.Response, error) {
+	return func(method, url string, header http.Header, key string) (*http.Response, error) {
 		// Create a first GET request without any cookie
 		req, err := http.NewRequest(method, url, nil)
 
@@ -43,6 +44,10 @@ func makeTestRequestWithClient(client *http.Client) func(string, string, http.He
 
 		if header != nil {
 			req.Header = header
+		}
+
+		if key != "" {
+			req = req.WithContext(core.InjectCtxValue(req.Context(), "GOSCookieJarKey", key))
 		}
 
 		return client.Do(req)
@@ -114,11 +119,7 @@ func RunWithCookieJar(t *testing.T, key string) {
 		"X-Goscrapy-Server-Req-" + key: []string{"single_host_req_" + key},
 	}
 
-	if key != "" {
-		headerOne.Add("X-Goscrapy-Cookie-Jar-Key", key)
-	}
-
-	respOne, err := requester("GET", testServer.URL+"/set-cookie", headerOne)
+	respOne, err := requester("GET", testServer.URL+"/set-cookie", headerOne, key)
 
 	assert.Nil(t, err, "error making http request 1")
 
@@ -141,10 +142,8 @@ func RunWithCookieJar(t *testing.T, key string) {
 	assert.Truef(t, found, "expected response cookies [X-Goscrapy-Server-Req-%s=single_host_req_%s] not found", key, key)
 
 	// second stage 2:
-	headerTwo := http.Header{
-		"X-Goscrapy-Cookie-Jar-Key": []string{key},
-	}
-	respTwo, err := requester("GET", testServer.URL+"/verify", headerTwo)
+	headerTwo := http.Header{}
+	respTwo, err := requester("GET", testServer.URL+"/verify", headerTwo, key)
 
 	assert.Nil(t, err, "error making http request 2")
 

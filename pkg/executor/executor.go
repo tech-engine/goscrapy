@@ -1,6 +1,8 @@
 package executor
 
 import (
+	"context"
+
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 )
@@ -19,13 +21,18 @@ func (e *Executor) Execute(req core.IRequestReader, res engine.IResponseWriter) 
 
 	request := e.adapter.Acquire()
 
-	if req.ReadContext() != nil {
-		request.WithContext(req.ReadContext())
+	ctx := req.ReadContext()
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
+	if req.ReadCookieJar() != "" {
+		ctx = core.InjectCtxValue(ctx, "GOSCookieJarKey", req.ReadCookieJar())
+	}
+
+	request = request.WithContext(ctx)
+
 	headers := req.ReadHeader()
-	// we inject a header for cookiejar implementation
-	headers.Add("X-Goscrapy-Cookie-Jar-Key", req.ReadCookieJar())
 
 	request.URL = req.ReadUrl()
 	request.Method = "GET"
