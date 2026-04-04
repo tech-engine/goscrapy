@@ -74,16 +74,16 @@ func (r *request) Method(method string) core.IRequestWriter {
 
 func (r *request) Body(body any) core.IRequestWriter {
 	switch v := body.(type) {
-	case io.Reader:
-		r.body = io.NopCloser(v)
 	case io.ReadCloser:
 		r.body = v
+	case io.Reader:
+		r.body = io.NopCloser(v)
 	case string:
 		r.body = io.NopCloser(strings.NewReader(v))
 	case []byte:
 		r.body = io.NopCloser(bytes.NewReader(v))
 	default:
-		var buf *bytes.Buffer
+		buf := new(bytes.Buffer)
 		_ = json.NewEncoder(buf).Encode(v)
 		r.body = io.NopCloser(buf)
 	}
