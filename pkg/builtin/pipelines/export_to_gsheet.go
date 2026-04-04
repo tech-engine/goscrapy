@@ -2,7 +2,6 @@ package pipelines
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
@@ -36,7 +35,7 @@ func Export2GSHEET[OUT any](keyFilePath, spreadSheetId string, sheetId int64) *e
 	}
 
 	if response.HTTPStatusCode != 200 {
-		log.Printf(fmt.Sprintf("Export2GSHEET: %d status code received", response.HTTPStatusCode))
+		log.Printf("Export2GSHEET: %d status code received", response.HTTPStatusCode)
 		return nil
 	}
 
