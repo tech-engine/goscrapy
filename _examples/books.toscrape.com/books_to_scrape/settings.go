@@ -14,13 +14,13 @@ import (
 // Default: 10000
 const MIDDLEWARE_HTTP_TIMEOUT_MS = ""
 
-// Default: 100
+// Default: 1000
 const MIDDLEWARE_HTTP_MAX_IDLE_CONN = ""
 
-// Default: 100
+// Default: 1000
 const MIDDLEWARE_HTTP_MAX_CONN_PER_HOST = ""
 
-// Default: 100
+// Default: 1000
 const MIDDLEWARE_HTTP_MAX_IDLE_CONN_PER_HOST = ""
 
 // Inbuilt Retry middleware settings
@@ -34,13 +34,13 @@ const MIDDLEWARE_HTTP_RETRY_CODES = ""
 // Default: 1s
 const MIDDLEWARE_HTTP_RETRY_BASE_DELAY = ""
 
-// Default: 1000000
+// Default: 50000
 const SCHEDULER_REQ_RES_POOL_SIZE = ""
 
-// Default: num of CPU * 3
+// Default: num of CPU * 120
 const SCHEDULER_CONCURRENCY = ""
 
-// Default: 1000000
+// Default: 100000
 const SCHEDULER_WORK_QUEUE_SIZE = ""
 
 // Pipeline Manager settings
@@ -51,10 +51,10 @@ const PIPELINEMANAGER_ITEMPOOL_SIZE = ""
 // Default: 24
 const PIPELINEMANAGER_ITEM_SIZE = ""
 
-// Default: 0
+// Default: 5000
 const PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE = ""
 
-// Default: 1000
+// Default: 120
 const PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY = ""
 
 // Middlewares here
@@ -101,7 +101,7 @@ func init() {
 		"MIDDLEWARE_HTTP_RETRY_CODES":                  MIDDLEWARE_HTTP_RETRY_CODES,
 		"MIDDLEWARE_HTTP_RETRY_BASE_DELAY":             MIDDLEWARE_HTTP_RETRY_BASE_DELAY,
 		"SCHEDULER_REQ_RES_POOL_SIZE":                  SCHEDULER_REQ_RES_POOL_SIZE,
-		"SCHEDULER_CONCURRENCY":             			SCHEDULER_CONCURRENCY,
+		"SCHEDULER_CONCURRENCY":                        SCHEDULER_CONCURRENCY,
 		"SCHEDULER_WORK_QUEUE_SIZE":                    SCHEDULER_WORK_QUEUE_SIZE,
 		"PIPELINEMANAGER_ITEMPOOL_SIZE":                PIPELINEMANAGER_ITEMPOOL_SIZE,
 		"PIPELINEMANAGER_ITEM_SIZE":                    PIPELINEMANAGER_ITEM_SIZE,
