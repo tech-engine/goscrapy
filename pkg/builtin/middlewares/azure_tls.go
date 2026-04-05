@@ -11,25 +11,44 @@ import (
 
 	"github.com/Noooste/azuretls-client"
 	fhttp "github.com/Noooste/fhttp"
+	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 )
 
+type Browser string
+
+const (
+	BrowserChrome  Browser = "chrome"
+	BrowserFirefox Browser = "firefox"
+	BrowserSafari  Browser = "safari"
+	BrowserEdge    Browser = "edge"
+)
+
 type AzureTLSOptions struct {
-	Browser    string
+	Browser    Browser
 	Proxy      string
 	SessionKey string
 }
 
 type azureTLSCtxKey struct{}
 
-func WithAzureTLSOptions(ctx context.Context, opts *AzureTLSOptions) context.Context {
-	return context.WithValue(ctx, azureTLSCtxKey{}, opts)
-}
+// func WithAzureTLSOptions(ctx context.Context, opts *AzureTLSOptions) context.Context {
+// 	return context.WithValue(ctx, azureTLSCtxKey{}, opts)
+// }
 
 type azureTLS struct {
 	globalOpts *AzureTLSOptions
 	sessions   map[string]*azuretls.Session
 	mu         sync.RWMutex
+}
+
+func SetAzureTLSOptions(req core.IRequestRW, opts *AzureTLSOptions) core.IRequestRW {
+	ctx := req.ReadContext()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	req.WithContext(context.WithValue(ctx, azureTLSCtxKey{}, opts))
+	return req
 }
 
 func newAzureTLS(globalOpts *AzureTLSOptions) *azureTLS {
@@ -63,8 +82,12 @@ func (a *azureTLS) getSession(opts *AzureTLSOptions) *azuretls.Session {
 	session := azuretls.NewSession()
 
 	switch opts.Browser {
-	case "firefox":
+	case BrowserFirefox:
 		session.Browser = azuretls.Firefox
+	case BrowserSafari:
+		session.Browser = azuretls.Safari
+	case BrowserEdge:
+		session.Browser = azuretls.Edge
 	default:
 		session.Browser = azuretls.Chrome
 	}
@@ -100,7 +123,7 @@ func (a *azureTLS) roundTrip(req *http.Request) (*http.Response, error) {
 
 	// map http.Header to fhttp.Header
 	azureHeaders := make(fhttp.Header, len(req.Header))
-
+	fmt.Println("my headers", req.Header)
 	maps.Copy(azureHeaders, req.Header)
 
 	azureResp, err := tlsSession.Do(&azuretls.Request{
@@ -115,8 +138,8 @@ func (a *azureTLS) roundTrip(req *http.Request) (*http.Response, error) {
 		return nil, fmt.Errorf("AzureTLS failed: %w", err)
 	}
 
-	stdHeader := make(http.Header, len(azureResp.HttpResponse.Header))
-	maps.Copy(stdHeader, azureResp.HttpResponse.Header)
+	httpHeader := make(http.Header, len(azureResp.HttpResponse.Header))
+	maps.Copy(httpHeader, azureResp.HttpResponse.Header)
 
 	// map azuretls.Response to http.Response
 	resp := &http.Response{
@@ -125,7 +148,7 @@ func (a *azureTLS) roundTrip(req *http.Request) (*http.Response, error) {
 		Proto:         azureResp.HttpResponse.Proto,
 		ProtoMajor:    azureResp.HttpResponse.ProtoMajor,
 		ProtoMinor:    azureResp.HttpResponse.ProtoMinor,
-		Header:        stdHeader,
+		Header:        httpHeader,
 		Body:          io.NopCloser(bytes.NewReader(azureResp.Body)),
 		ContentLength: azureResp.HttpResponse.ContentLength,
 		Uncompressed:  azureResp.HttpResponse.Uncompressed,
@@ -135,6 +158,9 @@ func (a *azureTLS) roundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func AzureTLS(globalOpts *AzureTLSOptions) func(http.RoundTripper) http.RoundTripper {
+	if globalOpts == nil {
+		globalOpts = &AzureTLSOptions{Browser: BrowserChrome}
+	}
 	az := newAzureTLS(globalOpts)
 	return func(next http.RoundTripper) http.RoundTripper {
 		return middlewaremanager.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
