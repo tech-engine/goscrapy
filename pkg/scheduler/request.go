@@ -60,7 +60,7 @@ func (r *request) Url(_url string) core.IRequestWriter {
 	__url, err := url.Parse(_url)
 
 	if err != nil {
-		panic(fmt.Sprintf("SetUrl: error parsing url"))
+		panic(fmt.Sprintf("SetUrl: error parsing url: %v", err))
 	}
 
 	r.url = __url

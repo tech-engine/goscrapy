@@ -10,7 +10,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/engine"
 )
 
-const EX_ADAPTER_DEFAULT_REQ_RES_POOL_SIZE = 1e6
+const EX_ADAPTER_DEFAULT_REQ_RES_POOL_SIZE = 50000
 
 // HTTPAdapter implements Executor's ExecAdapter interface
 type HTTPAdapter struct {
