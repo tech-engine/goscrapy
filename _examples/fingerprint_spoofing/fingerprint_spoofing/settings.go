@@ -1,4 +1,4 @@
-package scrapejsp
+package fingerprint_spoofing
 
 import (
 	"os"
@@ -58,14 +58,14 @@ const PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE = ""
 const PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY = ""
 
 var azureTLSOpts = &middlewares.AzureTLSOptions{
-	Browser: "chrome",
+	Browser: "firefox",
 }
 
 // Middlewares here
 // Executed in reverse order from bottom to top.
 var MIDDLEWARES = []middlewaremanager.Middleware{
 	middlewares.Retry(),
-	// middlewares.MultiCookieJar,
+	// middlewares.MultiCookieJar, // disable when using azureTLS as azureTLS handles cookie management
 	middlewares.AzureTLS(azureTLSOpts),
 	middlewares.DupeFilter,
 }

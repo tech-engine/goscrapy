@@ -13,7 +13,7 @@ type Spider struct {
 	gos.ICoreSpider[*Record]
 }
 
-func NewSpider(ctx context.Context) (*Spider, <-chan error) {
+func New(ctx context.Context) (*Spider, <-chan error) {
 
 	core := gos.New[*Record]()
 
@@ -35,14 +35,11 @@ func NewSpider(ctx context.Context) (*Spider, <-chan error) {
 
 // This is the entrypoint to the spider
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
-	req := s.NewRequest()
-	// req.Meta("JOB", job)
-	opts := &middlewares.AzureTLSOptions{
-		Browser:    "firefox",
-		SessionKey: "any-session-key-here",
-	}
-	reqCtx := middlewares.WithAzureTLSOptions(context.Background(), opts)
-	req.Url("https://tls.peet.ws/api/all").WithContext(reqCtx)
+	req := middlewares.SetAzureTLSOptions(s.NewRequest(), &middlewares.AzureTLSOptions{
+		Browser: middlewares.BrowserFirefox,
+		Proxy:   "http://user:pass@myproxy.com:8080",
+	})
+	req.Url("https://tls.peet.ws/api/all")
 	s.Request(req, s.parse)
 }
 
