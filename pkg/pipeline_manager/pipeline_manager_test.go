@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tech-engine/goscrapy/pkg/core"
@@ -151,8 +152,13 @@ func TestPipelineManager(t *testing.T) {
 	// push item to pipeline
 	pipelineManager.Push(&dummyRecord{Id: 1, Age: 19})
 	// verify what we pushed is what we get
+	assert.Eventually(t, func() bool {
+		val := readPipeline.safeRecord.GetVal()
+		return val[0] == 1 && val[1] == 38
+	}, time.Second*2, time.Millisecond*5)
+
 	safeRecord := readPipeline.safeRecord.GetVal()
-	assert.Equalf(t, 1, safeRecord[0], "expected id=1, got=%s", safeRecord[0])
-	assert.Equalf(t, 38, safeRecord[1], "expected age=1, got=%s", safeRecord[1])
+	assert.Equalf(t, 1, safeRecord[0], "expected id=1, got=%d", safeRecord[0])
+	assert.Equalf(t, 38, safeRecord[1], "expected age=38, got=%d", safeRecord[1])
 	wg.Wait()
 }
