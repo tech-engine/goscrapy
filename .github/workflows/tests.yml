@@ -1,12 +1,12 @@
 name: Test on Pull Request
 
-on: 
+on:
   push:
     branches:
-      - 'main'
+      - "main"
   pull_request:
     branches:
-      - 'main'
+      - "main"
 
 jobs:
   test:
@@ -15,16 +15,54 @@ jobs:
 
     strategy:
       matrix:
-        go-version: ['1.22']
+        go-version: ["1.25"]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go-version }}
-      
+
       - name: Run tests
         run: go test -race -v ./...
+
+  notify:
+    name: Notify Discord
+    runs-on: ubuntu-latest
+    needs: test
+    if: needs.test.result == 'success' && github.event_name == 'push'
+    steps:
+      - name: Send notification
+        env:
+          WEBHOOK_URL: ${{ secrets.GOS_DISCORD_WEBHOOK_SECRET }}
+        run: |
+          TITLE="📦 New Commit Pushed"
+          DESC="${{ github.event.head_commit.message }}"
+
+          PAYLOAD=$(jq -n \
+            --arg title "$TITLE" \
+            --arg desc "$DESC" \
+            --argjson color 3066993 \
+            --arg repo "${{ github.repository }}" \
+            --arg branch "${{ github.ref_name }}" \
+            --arg actor "${{ github.actor }}" \
+            --arg url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{
+              username: "GitHub Actions",
+              embeds: [{
+                title: $title,
+                description: $desc,
+                color: $color,
+                fields: [
+                  {name: "Repo",   value: $repo,   inline: true},
+                  {name: "Branch", value: $branch, inline: true},
+                  {name: "Actor",  value: $actor,  inline: true}
+                ],
+                url: $url
+              }]
+            }')
+
+          curl -s -H "Content-Type: application/json" -X POST -d "$PAYLOAD" "$WEBHOOK_URL"
