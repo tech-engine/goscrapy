@@ -28,6 +28,7 @@ type AzureTLSOptions struct {
 	Browser    Browser
 	Proxy      string
 	SessionKey string
+	JA3        string
 }
 
 type azureTLSCtxKey struct{}
@@ -59,7 +60,7 @@ func newAzureTLS(globalOpts *AzureTLSOptions) *azureTLS {
 }
 
 // getSession retrieves or provisions a session safely
-func (a *azureTLS) getSession(opts *AzureTLSOptions) *azuretls.Session {
+func (a *azureTLS) getSession(opts *AzureTLSOptions) (*azuretls.Session, error) {
 	a.mu.RLock()
 	sessionKey := opts.SessionKey
 	if sessionKey == "" {
@@ -68,7 +69,7 @@ func (a *azureTLS) getSession(opts *AzureTLSOptions) *azuretls.Session {
 
 	if session, exists := a.sessions[sessionKey]; exists {
 		a.mu.RUnlock()
-		return session
+		return session, nil
 	}
 	a.mu.RUnlock()
 
@@ -76,7 +77,7 @@ func (a *azureTLS) getSession(opts *AzureTLSOptions) *azuretls.Session {
 	defer a.mu.Unlock()
 
 	if session, exists := a.sessions[sessionKey]; exists {
-		return session
+		return session, nil
 	}
 
 	session := azuretls.NewSession()
@@ -96,8 +97,14 @@ func (a *azureTLS) getSession(opts *AzureTLSOptions) *azuretls.Session {
 		session.SetProxy(opts.Proxy)
 	}
 
+	if opts.JA3 != "" {
+		if err := session.ApplyJa3(opts.JA3, session.Browser); err != nil {
+			return nil, fmt.Errorf("failed to apply JA3 fingerprint: %w", err)
+		}
+	}
+
 	a.sessions[sessionKey] = session
-	return session
+	return session, nil
 }
 
 func (a *azureTLS) roundTrip(req *http.Request) (*http.Response, error) {
@@ -116,10 +123,17 @@ func (a *azureTLS) roundTrip(req *http.Request) (*http.Response, error) {
 			mergedOpts.SessionKey = ctxOpts.SessionKey
 		}
 
+		if ctxOpts.JA3 != "" {
+			mergedOpts.JA3 = ctxOpts.JA3
+		}
+
 		opts = &mergedOpts
 	}
 
-	tlsSession := a.getSession(opts)
+	tlsSession, err := a.getSession(opts)
+	if err != nil {
+		return nil, err
+	}
 
 	// map http.Header to fhttp.Header
 	azureHeaders := make(fhttp.Header, len(req.Header))
