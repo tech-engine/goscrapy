@@ -42,22 +42,31 @@ flowchart LR
     Engine -->|2. Schedule| Scheduler
     Scheduler -->|3. Pull Worker| WorkerQueue[(Worker Queue)]
     WorkerQueue -.->|4. Available Worker| Scheduler
-    Scheduler -->|5. Push Work| Worker
-    Worker -->|6. Pass Work| Executor
-    Executor -->|7. Middleware| HTTP_Client
+    Scheduler -->|5. Pass Work| Worker
+    Worker -->|6. Trigger| Executor
+    Executor -->|7. Forward| Middlewares
+    Middlewares -->|8. Request| HTTP_Client
 
     %% Response Flow
-    HTTP_Client -.->|8. Response| Executor
-    Executor -.->|9. Callback| Spider
+    HTTP_Client -.->|9. Response| Middlewares
+    Middlewares -.->|10. Response| Executor
+    Executor -.->|11. Callback| Spider
 
     %% Data Flow
-    Spider ==>|10. Yield Record| Engine
-    Engine ==>|11. Push Data| PipelineManager
-    PipelineManager ==>|12. Export| Pipelines[(DB, CSV, File)]
+    Spider ==>|12. Yield Record| Engine
+    Engine ==>|13. Push Data| PipelineManager
+    PipelineManager ==>|14. Export| Pipelines[(DB, CSV, File)]
 
-    style Engine fill:#00ADD8,stroke:#333,stroke-width:2px,color:#fff
-    style Spider fill:#f9f,stroke:#333,stroke-width:2px,color:#000
-    style Pipelines fill:#bbf,stroke:#333,stroke-width:2px,color:#000
+    style Spider fill:#F5C4B3,stroke:#993C1D,stroke-width:1px,color:#711B0C
+    style Engine fill:#B5D4F4,stroke:#185FA5,stroke-width:1px,color:#0C447C
+    style Scheduler fill:#CECBF6,stroke:#534AB7,stroke-width:1px,color:#3C3489
+    style WorkerQueue fill:#D3D1C7,stroke:#5F5E5A,stroke-width:1px,color:#444441
+    style Worker fill:#9FE1CB,stroke:#0F6E56,stroke-width:1px,color:#085041
+    style Executor fill:#FAC775,stroke:#854F0B,stroke-width:1px,color:#633806
+    style Middlewares fill:#E5B8F3,stroke:#842B9E,stroke-width:1px,color:#4B1161
+    style HTTP_Client fill:#C0DD97,stroke:#3B6D11,stroke-width:1px,color:#27500A
+    style PipelineManager fill:#F4C0D1,stroke:#993556,stroke-width:1px,color:#72243E
+    style Pipelines fill:#D3D1C7,stroke:#5F5E5A,stroke-width:1px,color:#444441
 ```
 
 ## Getting Started
