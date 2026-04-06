@@ -40,21 +40,24 @@ flowchart LR
     %% Request Flow
     Spider -->|1. Request| Engine
     Engine -->|2. Schedule| Scheduler
-    Scheduler -->|3. Dispatch| Executor
-    Executor -->|4. Middleware| HTTP_Client
+    Scheduler -->|3. Pull Worker| WorkerQueue[(Worker Queue)]
+    WorkerQueue -.->|4. Available Worker| Scheduler
+    Scheduler -->|5. Push Work| Worker
+    Worker -->|6. Pass Work| Executor
+    Executor -->|7. Middleware| HTTP_Client
 
     %% Response Flow
-    HTTP_Client -.->|5. Response| Executor
-    Executor -.->|6. Callback| Spider
+    HTTP_Client -.->|8. Response| Executor
+    Executor -.->|9. Callback| Spider
 
     %% Data Flow
-    Spider ==>|7. Yield Record| Engine
-    Engine ==>|8. Push Data| PipelineManager
-    PipelineManager ==>|9. Export| Pipelines[(DB, CSV, File)]
+    Spider ==>|10. Yield Record| Engine
+    Engine ==>|11. Push Data| PipelineManager
+    PipelineManager ==>|12. Export| Pipelines[(DB, CSV, File)]
 
     style Engine fill:#00ADD8,stroke:#333,stroke-width:2px,color:#fff
-    style Spider fill:#f9f,stroke:#333,stroke-width:2px
-    style Pipelines fill:#bbf,stroke:#333,stroke-width:2px
+    style Spider fill:#f9f,stroke:#333,stroke-width:2px,color:#000
+    style Pipelines fill:#bbf,stroke:#333,stroke-width:2px,color:#000
 ```
 
 ## Getting Started
