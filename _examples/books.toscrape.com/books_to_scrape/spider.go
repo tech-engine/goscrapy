@@ -25,6 +25,9 @@ func New(ctx context.Context) (*Spider, <-chan error) {
 
 	core := gos.New[*Record]()
 
+	// print stats when the engine is done
+	core.Engine.WithOnShutdown(Stats.Print)
+
 	// Add middlewares
 	core.MiddlewareManager.Add(MIDDLEWARES...)
 	// Add pipelines

@@ -57,9 +57,13 @@ const PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE = ""
 // Default: 150
 const PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY = ""
 
+// stats collector for scraping metrics
+var Stats = middlewares.NewStats()
+
 // Middlewares here
 // Executed in reverse order from bottom to top.
 var MIDDLEWARES = []middlewaremanager.Middleware{
+	middlewares.Stats(Stats),
 	middlewares.Retry(),
 	middlewares.MultiCookieJar,
 	middlewares.DupeFilter,
