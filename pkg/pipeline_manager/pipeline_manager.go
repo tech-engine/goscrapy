@@ -77,22 +77,11 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
-	// This semaphone will make sure only a fixed number of goroutines
-	// are spun up to process items from output queue
-	semaphone := make(chan struct{}, pm.opts.maxProcessItemConcurrency)
-
-	for {
-		select {
-		case semaphone <- struct{}{}:
-
-			wg.Add(1)
-			go func() {
-
-				defer wg.Done()
-				defer func() { <-semaphone }()
-
-				// this select is to make sure this goroutine doesn't get's blocked
-				// waiting for items on queue and get a chance to exit when on context cancellation
+	for i := uint64(0); i < pm.opts.maxProcessItemConcurrency; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
 				select {
 				case item := <-pm.outputQueue:
 					if ctx.Err() != nil {
@@ -103,13 +92,12 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 					// currently not needed but we also consider closing pm.outputQueue channel in future
 					return
 				}
-
-			}()
-
-		case <-ctx.Done():
-			return ctx.Err()
-		}
+			}
+		}()
 	}
+
+	<-ctx.Done()
+	return ctx.Err()
 }
 
 // Stoping manager would call the close function of every pipeline
