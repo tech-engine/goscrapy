@@ -3,6 +3,7 @@ package gos
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
@@ -40,6 +41,8 @@ type IEngineConfigurer[OUT any] interface {
 	core.IEngine[OUT]
 	WithScheduler(engine.IScheduler)
 	WithPipelineManager(engine.IPipelineManager[OUT])
+	WithOnShutdown(...func())
+	WithShutdownTimeout(time.Duration)
 }
 
 // engine.*Engine[OUT] accepts a scheduler that implements engine.IScheduler[OUT] interface which

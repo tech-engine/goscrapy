@@ -12,6 +12,7 @@ import (
 
 type opts struct {
 	shutdownTimeout time.Duration
+	onShutdown      []func()
 }
 
 func defaultOpts() opts {
@@ -43,8 +44,22 @@ func New[OUT any](schd IScheduler, pm IPipelineManager[OUT], optFuncs ...types.O
 	return engine
 }
 
+// WithOnShutdown registers shutdown handlers to be executed on exit
+func WithOnShutdown(funcs ...func()) types.OptFunc[opts] {
+	return func(o *opts) {
+		o.onShutdown = append(o.onShutdown, funcs...)
+	}
+}
+
 // start the core
 func (m *Engine[OUT]) Start(ctx context.Context) error {
+
+	// run all shutdown hooks before returning
+	defer func() {
+		for _, fn := range m.opts.onShutdown {
+			fn()
+		}
+	}()
 
 	g, gCtx := errgroup.WithContext(ctx)
 
@@ -95,4 +110,8 @@ func (m *Engine[OUT]) WithPipelineManager(pm IPipelineManager[OUT]) {
 
 func (m *Engine[OUT]) WithShutdownTimeout(timeout time.Duration) {
 	m.opts.shutdownTimeout = timeout
+}
+
+func (m *Engine[OUT]) WithOnShutdown(funcs ...func()) {
+	m.opts.onShutdown = append(m.opts.onShutdown, funcs...)
 }
