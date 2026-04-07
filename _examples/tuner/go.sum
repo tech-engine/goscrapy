@@ -18,6 +18,8 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/tech-engine/goscrapy v0.17.1 h1:4VvX+bCaAr8Np5dRhOEDlDU2zR+2ECTLytJI+o3FDFE=
 github.com/tech-engine/goscrapy v0.17.1/go.mod h1:bONYjx+ddp188dlnnH8OfkJXtIOO7vYV7I8tQ90aBzs=
+github.com/tech-engine/goscrapy v0.17.5 h1:jFi+Ddkzg4M8Y0ykZzYaLR9rL3Jh9LarcFW22Ne4Dao=
+github.com/tech-engine/goscrapy v0.17.5/go.mod h1:d2fKw3udodip0xyy3Y1QCzEJgLtDrqMDraXZso/27SU=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
