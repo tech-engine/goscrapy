@@ -43,8 +43,8 @@ func NewSpider(ctx context.Context) (*Spider, <-chan error) {
 // This is the entrypoint to the spider
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 
-	req := s.NewRequest()
-	// req.Meta("JOB", job)
+	req := s.NewRequest(ctx)
+	req.Url("http://localhost:8080/data")
 	req.Url("https://jsonplaceholder.typicode.com/todos/1")
 
 	s.Request(req, s.parse)

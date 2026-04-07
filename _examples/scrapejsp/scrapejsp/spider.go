@@ -23,7 +23,7 @@ func NewSpider(core gos.ICoreSpider[*Record]) *Spider {
 // This is the entrypoint to the spider
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 
-	req := s.NewRequest()
+	req := s.NewRequest(ctx)
 	// req.Meta("JOB", job)
 	req.Url("https://jsonplaceholder.typicode.com/todos/1")
 

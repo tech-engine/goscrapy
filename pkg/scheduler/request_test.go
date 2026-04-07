@@ -13,10 +13,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestRequest() *request {
+func newTestRequest(ctx context.Context) *request {
 	return &request{
 		method: "GET",
 		header: make(http.Header),
+		ctx: ctx,
 	}
 }
 
@@ -33,7 +34,7 @@ func TestRequest_Method_TableDriven(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := newTestRequest()
+			req := newTestRequest(context.Background())
 			req.Method(tt.input)
 			assert.Equal(t, tt.expected, req.ReadMethod())
 		})
@@ -41,7 +42,7 @@ func TestRequest_Method_TableDriven(t *testing.T) {
 }
 
 func TestRequest_Url(t *testing.T) {
-	req := newTestRequest()
+	req := newTestRequest(context.Background())
 
 	testUrl := "https://example.com/path?foo=bar"
 	req.Url(testUrl)
@@ -63,7 +64,7 @@ func TestRequest_Url_TableDriven(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := newTestRequest()
+			req := newTestRequest(context.Background())
 
 			if tt.shouldPanic {
 				assert.Panics(t, func() {
@@ -80,7 +81,7 @@ func TestRequest_Url_TableDriven(t *testing.T) {
 }
 
 func TestRequest_Header(t *testing.T) {
-	req := newTestRequest()
+	req := newTestRequest(context.Background())
 
 	testHeader := http.Header{
 		"Content-Type":  []string{"application/json"},
@@ -107,7 +108,7 @@ func TestRequest_Body_TableDriven(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := newTestRequest()
+			req := newTestRequest(context.Background())
 			req.Body(tt.input)
 
 			body, err := io.ReadAll(req.ReadBody())
@@ -119,14 +120,9 @@ func TestRequest_Body_TableDriven(t *testing.T) {
 }
 
 func TestRequest_Context(t *testing.T) {
-	req := newTestRequest()
-
-	// Default context should be nil on a bare request
-	assert.Nil(t, req.ReadContext())
-
 	type ctxKeyType string
 	ctx := context.WithValue(context.Background(), ctxKeyType("key"), "value")
-	req.WithContext(ctx)
+	req := newTestRequest(ctx)
 	assert.Equal(t, ctx, req.ReadContext())
 }
 
@@ -142,7 +138,7 @@ func TestRequest_CookieJar_TableDriven(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := newTestRequest()
+			req := newTestRequest(context.Background())
 
 			if tt.input != "" {
 				req.CookieJar(tt.input)
@@ -154,7 +150,7 @@ func TestRequest_CookieJar_TableDriven(t *testing.T) {
 }
 
 func TestRequest_Meta_TableDriven(t *testing.T) {
-	req := newTestRequest()
+	req := newTestRequest(context.Background())
 
 	tests := []struct {
 		key   string
@@ -181,7 +177,7 @@ func TestRequest_Meta_TableDriven(t *testing.T) {
 }
 
 func TestRequest_Reset(t *testing.T) {
-	req := newTestRequest()
+	req := newTestRequest(context.Background())
 	req.Method(http.MethodDelete)
 	req.Url("https://example.com")
 	req.Header(http.Header{"Cache-Control": []string{"no-cache"}})
@@ -205,7 +201,7 @@ func TestRequest_Reset(t *testing.T) {
 }
 
 func TestRequest_Chaining(t *testing.T) {
-	req := newTestRequest()
+	req := newTestRequest(context.Background())
 
 	// All writer methods should return the request itself for chaining
 	result := req.
@@ -214,8 +210,7 @@ func TestRequest_Chaining(t *testing.T) {
 		Header(http.Header{}).
 		Body("data").
 		CookieJar("jar").
-		Meta("k", "v").
-		WithContext(context.Background())
+		Meta("k", "v")
 
 	assert.NotNil(t, result)
 	assert.Equal(t, "POST", req.ReadMethod())

@@ -12,7 +12,7 @@ import (
 
 type IEngine[OUT any] interface {
 	Start(context.Context) error
-	NewRequest() IRequestRW
+	NewRequest(context.Context) IRequestRW
 	Schedule(IRequestReader, ResponseCallback)
 	Yield(IOutput[OUT])
 }
@@ -28,7 +28,6 @@ type IRequestReader interface {
 }
 
 type IRequestWriter interface {
-	WithContext(context.Context) IRequestWriter
 	Url(string) IRequestWriter
 	Header(http.Header) IRequestWriter
 	Method(string) IRequestWriter

@@ -110,10 +110,7 @@ func (r *request) Meta(key string, val any) core.IRequestWriter {
 	return r
 }
 
-func (r *request) WithContext(ctx context.Context) core.IRequestWriter {
-	r.ctx = ctx
-	return r
-}
+
 
 // func (r *request) MetaDataKey(key string) (any, bool) {
 // 	if r.meta == nil {

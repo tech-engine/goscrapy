@@ -35,5 +35,5 @@ type IResponse interface {
 type IScheduler interface {
 	Start(context.Context) error
 	Schedule(core.IRequestReader, core.ResponseCallback)
-	NewRequest() core.IRequestRW
+	NewRequest(context.Context) core.IRequestRW
 }

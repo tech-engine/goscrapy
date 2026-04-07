@@ -64,7 +64,7 @@ func (s *Spider) Close(ctx context.Context) {
 func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 	fmt.Printf("GET: %d %s\n", resp.StatusCode(), resp.Request().URL.String())
 	for _, productUrl := range resp.Css("article.product_pod h3 a").Attr("href") {
-		req := s.NewRequest()
+		req := s.NewRequest(ctx)
 
 		if strings.HasPrefix(productUrl, "catalogue/") {
 			productUrl = fmt.Sprintf("%s/%s", s.baseUrl, productUrl)
@@ -90,7 +90,7 @@ func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 		nextUrl = fmt.Sprintf("%s/catalogue/%s", s.baseUrl, nextUrls[0])
 	}
 
-	req := s.NewRequest()
+	req := s.NewRequest(ctx)
 	req.Url(nextUrl)
 	s.Request(req, s.parse)
 }

@@ -82,7 +82,7 @@ func (m *mockScheduler) Schedule(req core.IRequestReader, cb core.ResponseCallba
 	m.callbacks = append(m.callbacks, cb)
 }
 
-func (m *mockScheduler) NewRequest() core.IRequestRW {
+func (m *mockScheduler) NewRequest(ctx context.Context) core.IRequestRW {
 	return &mockRequest{}
 }
 
@@ -209,7 +209,7 @@ func TestEngine_Schedule_Multiple(t *testing.T) {
 
 func TestEngine_NewRequest(t *testing.T) {
 	eng, _, _ := newTestEngine()
-	assert.NotNil(t, eng.NewRequest())
+	assert.NotNil(t, eng.NewRequest(context.Background()))
 }
 
 func TestEngine_Start_Lifecycle(t *testing.T) {

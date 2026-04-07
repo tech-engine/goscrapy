@@ -11,7 +11,6 @@ import (
 
 	"github.com/Noooste/azuretls-client"
 	fhttp "github.com/Noooste/fhttp"
-	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 )
 
@@ -33,23 +32,17 @@ type AzureTLSOptions struct {
 
 type azureTLSCtxKey struct{}
 
-// func WithAzureTLSOptions(ctx context.Context, opts *AzureTLSOptions) context.Context {
-// 	return context.WithValue(ctx, azureTLSCtxKey{}, opts)
-// }
+func WithAzureTLSOptions(ctx context.Context, opts *AzureTLSOptions) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return context.WithValue(ctx, azureTLSCtxKey{}, opts)
+}
 
 type azureTLS struct {
 	globalOpts *AzureTLSOptions
 	sessions   map[string]*azuretls.Session
 	mu         sync.RWMutex
-}
-
-func SetAzureTLSOptions(req core.IRequestRW, opts *AzureTLSOptions) core.IRequestRW {
-	ctx := req.ReadContext()
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	req.WithContext(context.WithValue(ctx, azureTLSCtxKey{}, opts))
-	return req
 }
 
 func newAzureTLS(globalOpts *AzureTLSOptions) *azureTLS {

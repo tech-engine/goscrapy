@@ -51,8 +51,8 @@ func (m *Engine[OUT]) Yield(out core.IOutput[OUT]) {
 	m.pipelineManager.Push(out)
 }
 
-func (m *Engine[OUT]) NewRequest() core.IRequestRW {
-	return m.scheduler.NewRequest()
+func (m *Engine[OUT]) NewRequest(ctx context.Context) core.IRequestRW {
+	return m.scheduler.NewRequest(ctx)
 }
 
 func (m *Engine[OUT]) WithScheduler(schd IScheduler) {

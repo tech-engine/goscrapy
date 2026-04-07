@@ -111,7 +111,7 @@ func (s *scheduler) Schedule(req core.IRequestReader, next core.ResponseCallback
 	s.workQueue <- work
 }
 
-func (s *scheduler) NewRequest() core.IRequestRW {
+func (s *scheduler) NewRequest(ctx context.Context) core.IRequestRW {
 	req := s.requestPool.Acquire()
 	if req == nil {
 		req = &request{
@@ -119,6 +119,7 @@ func (s *scheduler) NewRequest() core.IRequestRW {
 			header: make(http.Header),
 		}
 	}
+	req.ctx = ctx
 	return req
 }
 

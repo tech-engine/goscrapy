@@ -35,10 +35,11 @@ func New(ctx context.Context) (*Spider, <-chan error) {
 
 // This is the entrypoint to the spider
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
-	req := middlewares.SetAzureTLSOptions(s.NewRequest(), &middlewares.AzureTLSOptions{
+	ctx = middlewares.WithAzureTLSOptions(ctx, &middlewares.AzureTLSOptions{
 		Browser: middlewares.BrowserFirefox,
 		Proxy:   "http://user:pass@myproxy.com:8080",
 	})
+	req := s.NewRequest(ctx)
 	req.Url("https://tls.peet.ws/api/all")
 	s.Request(req, s.parse)
 }

@@ -1,6 +1,7 @@
 package gos
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
@@ -14,7 +15,7 @@ import (
 // Any custom spider created using GoScrapy Framework must implement ICoreSpider[OUT any] interface
 type ICoreSpider[OUT any] interface {
 	Request(req core.IRequestReader, cb core.ResponseCallback)
-	NewRequest() core.IRequestRW
+	NewRequest(context.Context) core.IRequestRW
 	Yield(core.IOutput[OUT])
 }
 
