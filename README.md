@@ -1,4 +1,4 @@
-﻿# GoScrapy: Web Scraping Framework in Go
+# GoScrapy: Web Scraping Framework in Go
 
 <p align="center">
   <img width="800" src="./assets/logo.webp">
@@ -189,8 +189,8 @@ func NewSpider(ctx context.Context) (*Spider, <-chan error) {
 
 // StartRequest is the entrypoint to the spider
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
-	req := s.NewRequest()
-	req.Url("https://jsonplaceholder.typicode.com/todos/1")
+	req := s.NewRequest(ctx)
+	req.Url("https://httpbin.org/get")
 	s.Request(req, s.parse)
 }
 
