@@ -3,19 +3,13 @@ package httpnative
 import (
 	"fmt"
 	"net/http"
-	"os"
-	"strconv"
 
-	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 )
 
-const EX_ADAPTER_DEFAULT_REQ_RES_POOL_SIZE = 50000
-
 // HTTPAdapter implements Executor's ExecAdapter interface
 type HTTPAdapter struct {
-	client  *http.Client
-	reqpool *rp.Pooler[http.Request]
+	client *http.Client
 }
 
 func NewHTTPClientAdapter(client *http.Client, poolSize uint64) *HTTPAdapter {
@@ -23,39 +17,18 @@ func NewHTTPClientAdapter(client *http.Client, poolSize uint64) *HTTPAdapter {
 		client = http.DefaultClient
 	}
 
-	if poolSize == 0 {
-		poolSize = EX_ADAPTER_DEFAULT_REQ_RES_POOL_SIZE
-		value, ok := os.LookupEnv("SCHEDULER_REQ_RES_POOL_SIZE")
-
-		if ok {
-			parsedPoolSize, err := strconv.ParseUint(value, 10, 64)
-			if err == nil {
-				poolSize = parsedPoolSize
-			}
-		}
-	}
-
 	return &HTTPAdapter{
-		client:  client,
-		reqpool: rp.NewPooler(rp.WithSize[http.Request](poolSize)),
+		client: client,
 	}
 }
 
-func (r *HTTPAdapter) Acquire() *http.Request {
-	req := r.reqpool.Acquire()
-	if req == nil {
-		req = &http.Request{}
-	}
-	return req
-}
+
 
 func (r *HTTPAdapter) WithClient(client *http.Client) {
 	r.client = client
 }
 
 func (r *HTTPAdapter) Do(res engine.IResponseWriter, req *http.Request) error {
-	defer r.reqpool.Release(req)
-
 	source, err := r.client.Do(req)
 
 	if err != nil {

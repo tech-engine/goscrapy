@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
@@ -19,8 +20,6 @@ func New(adapter IExecutorAdapter) *Executor {
 
 func (e *Executor) Execute(req core.IRequestReader, res engine.IResponseWriter) error {
 
-	request := e.adapter.Acquire()
-
 	ctx := req.ReadContext()
 	if ctx == nil {
 		ctx = context.Background()
@@ -30,20 +29,18 @@ func (e *Executor) Execute(req core.IRequestReader, res engine.IResponseWriter) 
 		ctx = core.InjectCtxValue(ctx, "GOSCookieJarKey", req.ReadCookieJar())
 	}
 
-	request = request.WithContext(ctx)
-
-	headers := req.ReadHeader()
-
-	request.URL = req.ReadUrl()
-	request.Method = "GET"
-
+	method := "GET"
 	if req.ReadMethod() != "" {
-		request.Method = req.ReadMethod()
+		method = req.ReadMethod()
 	}
 
-	request.Header = headers
+	request, err := http.NewRequestWithContext(ctx, method, req.ReadUrl().String(), req.ReadBody())
+	if err != nil {
+		return err
+	}
 
-	request.Body = req.ReadBody()
+	request.URL = req.ReadUrl()
+	request.Header = req.ReadHeader()
 
 	return e.adapter.Do(res, request)
 }
