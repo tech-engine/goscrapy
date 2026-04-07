@@ -78,7 +78,7 @@ func runBenchmark(concurrency, poolSize, maxIdle, queueBuf string) float64 {
 			default:
 				// Push blocks of requests
 				for i := 0; i < 5000; i++ {
-					req := spider.NewRequest()
+					req := spider.NewRequest(ctx)
 					req.Url("http://localhost:18080/")
 					spider.Request(req, spider.parse)
 				}
