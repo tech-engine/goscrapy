@@ -2,9 +2,9 @@ package engine
 
 import (
 	"context"
-	"sync"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"golang.org/x/sync/errgroup"
 )
 
 type Engine[OUT any] struct {
@@ -26,42 +26,21 @@ func New[OUT any](schd IScheduler, pm IPipelineManager[OUT]) *Engine[OUT] {
 // start the core
 func (m *Engine[OUT]) Start(ctx context.Context) error {
 
-	var (
-		wg    sync.WaitGroup
-		errCh = make(chan error, 2)
-	)
-
-	wg.Add(2)
+	g, gCtx := errgroup.WithContext(ctx)
 
 	pmCtx, pmCancel := context.WithCancel(context.Background())
 
-	go func() {
-
-		defer wg.Done()
+	g.Go(func() error {
+		// Signals pipeline manager to shut down only after scheduler completes
 		defer pmCancel()
+		return m.scheduler.Start(gCtx)
+	})
 
-		errCh <- m.scheduler.Start(ctx)
+	g.Go(func() error {
+		return m.pipelineManager.Start(pmCtx)
+	})
 
-	}()
-
-	go func() {
-
-		defer wg.Done()
-
-		errCh <- m.pipelineManager.Start(pmCtx)
-
-	}()
-
-	wg.Wait()
-
-	close(errCh)
-
-	for err := range errCh {
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return g.Wait()
 }
 
 func (m *Engine[OUT]) Schedule(req core.IRequestReader, cb core.ResponseCallback) {
