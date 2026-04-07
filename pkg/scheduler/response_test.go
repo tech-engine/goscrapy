@@ -226,3 +226,38 @@ func TestResponse_Reset(t *testing.T) {
 	assert.Nil(t, resp.meta, "meta must be nil after Reset")
 	assert.Nil(t, resp.nodes, "nodes must be nil after Reset")
 }
+
+func TestResponse_Detach(t *testing.T) {
+	resp := newTestResponse()
+
+	// 1. Fill response with data
+	resp.WriteStatusCode(200)
+	header := http.Header{"Content-Type": {"text/plain"}}
+	resp.WriteHeader(header)
+	resp.WriteBody(io.NopCloser(bytes.NewReader([]byte("original body"))))
+	resp.WriteCookies([]*http.Cookie{{Name: "test-cookie", Value: "123"}})
+	meta := fsmap.New[string, any](10)
+	meta.Set("key", "val")
+	resp.WriteMeta(meta)
+
+	// 2. Detach
+	detached := resp.Detach()
+
+	// 3. Reset original
+	resp.Reset()
+
+	// 4. Verify detached still has data
+	assert.Equal(t, 200, detached.StatusCode())
+	assert.Equal(t, "original body", string(detached.Bytes()))
+	assert.Equal(t, "text/plain", detached.Header().Get("Content-Type"))
+	require.Len(t, detached.Cookies(), 1)
+	assert.Equal(t, "test-cookie", detached.Cookies()[0].Name)
+	val, ok := detached.Meta("key")
+	assert.True(t, ok)
+	assert.Equal(t, "val", val)
+
+	// 5. Verify body can be read again from detached
+	body, err := io.ReadAll(detached.Body())
+	assert.NoError(t, err)
+	assert.Equal(t, "original body", string(body))
+}
