@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tech-engine/goscrapy/internal/fsm"
+	"github.com/tech-engine/goscrapy/internal/fsmap"
 )
 
 func newTestResponse() *response {
@@ -112,7 +112,7 @@ func TestResponse_Meta_TableDriven(t *testing.T) {
 		{"count", 42},
 	}
 
-	meta := fsm.New[string, any](10)
+	meta := fsmap.New[string, any](10)
 	resp.WriteMeta(meta)
 
 	for _, tt := range tests {
@@ -210,7 +210,7 @@ func TestResponse_Reset(t *testing.T) {
 	resp.WriteBody(io.NopCloser(bytes.NewReader([]byte("<html></html>"))))
 	resp.WriteCookies([]*http.Cookie{{Name: "a", Value: "b"}})
 	resp.WriteRequest(&http.Request{})
-	resp.WriteMeta(fsm.New[string, any](10))
+	resp.WriteMeta(fsmap.New[string, any](10))
 
 	// Force parsing
 	_ = resp.Css("html").Get()

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tech-engine/goscrapy/internal/fsm"
+	"github.com/tech-engine/goscrapy/internal/fsmap"
 )
 
 type testCase struct {
@@ -45,7 +45,7 @@ func (r *testResponseWriter) WriteCookies(c []*http.Cookie) {
 func (r *testResponseWriter) WriteRequest(req *http.Request) {
 }
 
-func (r *testResponseWriter) WriteMeta(m *fsm.FixedSizeMap[string, any]) {
+func (r *testResponseWriter) WriteMeta(m *fsmap.FixedSizeMap[string, any]) {
 }
 
 func handler() *http.ServeMux {

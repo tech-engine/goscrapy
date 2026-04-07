@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/tech-engine/goscrapy/internal/fsm"
+	"github.com/tech-engine/goscrapy/internal/fsmap"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"golang.org/x/net/html"
 )
@@ -21,7 +21,7 @@ type response struct {
 	header     http.Header
 	cookies    []*http.Cookie
 	request    *http.Request
-	meta       *fsm.FixedSizeMap[string, any]
+	meta       *fsmap.FixedSizeMap[string, any]
 	nodes      Selectors
 }
 
@@ -105,7 +105,7 @@ func (r *response) WriteCookies(cookies []*http.Cookie) {
 	r.cookies = cookies
 }
 
-func (r *response) WriteMeta(meta *fsm.FixedSizeMap[string, any]) {
+func (r *response) WriteMeta(meta *fsmap.FixedSizeMap[string, any]) {
 	r.meta = meta
 }
 

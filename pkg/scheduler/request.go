@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/tech-engine/goscrapy/internal/fsm"
+	"github.com/tech-engine/goscrapy/internal/fsmap"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
@@ -20,7 +20,7 @@ type request struct {
 	method       string
 	body         io.ReadCloser
 	header       http.Header
-	meta         *fsm.FixedSizeMap[string, any]
+	meta         *fsmap.FixedSizeMap[string, any]
 	cookieJarKey string
 }
 
@@ -46,7 +46,7 @@ func (r *request) ReadContext() context.Context {
 }
 
 // ReadMeta give us a shallow copy of meta.
-func (r *request) ReadMeta() *fsm.FixedSizeMap[string, any] {
+func (r *request) ReadMeta() *fsmap.FixedSizeMap[string, any] {
 	return r.meta
 }
 
@@ -104,7 +104,7 @@ func (r *request) CookieJar(key string) core.IRequestWriter {
 // Pass meta data as key/value pair to be available in callback response.
 func (r *request) Meta(key string, val any) core.IRequestWriter {
 	if r.meta == nil {
-		r.meta = fsm.New[string, any](24)
+		r.meta = fsmap.New[string, any](24)
 	}
 	r.meta.Set(key, val)
 	return r

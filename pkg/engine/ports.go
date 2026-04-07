@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/tech-engine/goscrapy/internal/fsm"
+	"github.com/tech-engine/goscrapy/internal/fsmap"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
@@ -24,7 +24,7 @@ type IResponseWriter interface {
 	WriteStatusCode(int)
 	WriteCookies([]*http.Cookie)
 	WriteRequest(*http.Request)
-	WriteMeta(*fsm.FixedSizeMap[string, any])
+	WriteMeta(*fsmap.FixedSizeMap[string, any])
 }
 
 type IResponse interface {

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/tech-engine/goscrapy/internal/fsm"
+	"github.com/tech-engine/goscrapy/internal/fsmap"
 	"golang.org/x/net/html"
 )
 
@@ -23,7 +23,7 @@ type IRequestReader interface {
 	ReadHeader() http.Header
 	ReadMethod() string
 	ReadBody() io.ReadCloser
-	ReadMeta() *fsm.FixedSizeMap[string, any]
+	ReadMeta() *fsmap.FixedSizeMap[string, any]
 	ReadCookieJar() string
 }
 

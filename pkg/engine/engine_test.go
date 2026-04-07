@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tech-engine/goscrapy/internal/fsm"
+	"github.com/tech-engine/goscrapy/internal/fsmap"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
@@ -144,7 +144,7 @@ func (r *mockRequest) ReadUrl() *url.URL                                   { ret
 func (r *mockRequest) ReadHeader() http.Header                             { return nil }
 func (r *mockRequest) ReadMethod() string                                  { return r.method }
 func (r *mockRequest) ReadBody() io.ReadCloser                             { return nil }
-func (r *mockRequest) ReadMeta() *fsm.FixedSizeMap[string, any]            { return nil }
+func (r *mockRequest) ReadMeta() *fsmap.FixedSizeMap[string, any]            { return nil }
 func (r *mockRequest) ReadCookieJar() string                               { return "" }
 func (r *mockRequest) WithContext(ctx context.Context) core.IRequestWriter { return r }
 func (r *mockRequest) Url(s string) core.IRequestWriter                    { return r }
