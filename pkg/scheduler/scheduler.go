@@ -99,7 +99,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 	}
 
 drain:
-	// Draining the work queue
+	// draining the work queue
 	for {
 		select {
 		case work := <-s.workQueue:
@@ -109,12 +109,10 @@ drain:
 			case <-time.After(100 * time.Millisecond):
 				// if we can't get a worker within 100ms during drain,
 				// it might mean workers are stuck or busy.
-				// we'll try again or exit if we hit a limit.
-				// for now, we'll just keep trying until workQueue is empty.
 				s.workQueue <- work
 			}
 		default:
-			// Queue is empty
+			// queue is empty
 			return ctx.Err()
 		}
 	}

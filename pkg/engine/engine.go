@@ -48,8 +48,7 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 
 	g, gCtx := errgroup.WithContext(ctx)
 
-	// pmCtx is used to signal the pipeline manager to stop.
-	// We want it to stay alive until the scheduler has finished.
+	// pmCtx is used to stop the pipeline manager once scheduler has finished
 	pmCtx, pmCancel := context.WithCancel(context.Background())
 
 	g.Go(func() error {
@@ -64,8 +63,8 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 
 	err := g.Wait()
 
-	// after stopping scheduler and pipeline manager, wait for queued work to finish.
-	// use a timeout to avoid hanging.
+	// after finishing scheduler and pipeline manager we wait for queued items to finish.
+	// we use a timeout to prevent hanging forever.
 	if m.opts.shutdownTimeout > 0 {
 		_, cancel := context.WithTimeout(context.Background(), m.opts.shutdownTimeout)
 		defer cancel()
