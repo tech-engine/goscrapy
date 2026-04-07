@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 	"github.com/tech-engine/goscrapy/internal/types"
@@ -17,6 +19,7 @@ type scheduler struct {
 	requestPool       *rp.Pooler[request]
 	workerQueue       WorkerQueue
 	workQueue         WorkQueue
+	stopping          atomic.Bool
 }
 
 // NewScheduler creates a new scheduler.
@@ -52,9 +55,8 @@ func (s *scheduler) Start(ctx context.Context) error {
 	}
 
 	var (
-		i   uint16
-		err error
-		wg  sync.WaitGroup
+		i  uint16
+		wg sync.WaitGroup
 	)
 
 	defer wg.Wait()
@@ -79,25 +81,49 @@ func (s *scheduler) Start(ctx context.Context) error {
 	for {
 		select {
 		case work := <-s.workQueue:
-
-			// the below check ensures our scheduler don't pick any worker once context has been cancelled
-			if err = ctx.Err(); err != nil {
-				return err
-			}
-
 			select {
 			case worker := <-s.workerQueue:
 				worker <- work
 			case <-ctx.Done():
-				return ctx.Err()
+				// context cancellation.
+				// we should try to put the work back or handle it.
+				// in graceful shutdown, we will handle this in the drain loop.
+				s.workQueue <- work
+				s.stopping.Store(true)
+				goto drain
 			}
 		case <-ctx.Done():
+			s.stopping.Store(true)
+			goto drain
+		}
+	}
+
+drain:
+	// Draining the work queue
+	for {
+		select {
+		case work := <-s.workQueue:
+			select {
+			case worker := <-s.workerQueue:
+				worker <- work
+			case <-time.After(100 * time.Millisecond):
+				// if we can't get a worker within 100ms during drain,
+				// it might mean workers are stuck or busy.
+				// we'll try again or exit if we hit a limit.
+				// for now, we'll just keep trying until workQueue is empty.
+				s.workQueue <- work
+			}
+		default:
+			// Queue is empty
 			return ctx.Err()
 		}
 	}
 }
 
 func (s *scheduler) Schedule(req core.IRequestReader, next core.ResponseCallback) {
+	if s.stopping.Load() {
+		return
+	}
 
 	work := s.schedulerWorkPool.Acquire()
 

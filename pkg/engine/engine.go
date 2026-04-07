@@ -3,19 +3,39 @@ package engine
 import (
 	"context"
 
+	"time"
+
+	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"golang.org/x/sync/errgroup"
 )
 
-type Engine[OUT any] struct {
-	scheduler       IScheduler
-	pipelineManager IPipelineManager[OUT]
-	outputCh        chan core.IOutput[OUT]
+type opts struct {
+	shutdownTimeout time.Duration
 }
 
-func New[OUT any](schd IScheduler, pm IPipelineManager[OUT]) *Engine[OUT] {
+func defaultOpts() opts {
+	return opts{
+		shutdownTimeout: 10 * time.Second,
+	}
+}
+
+type Engine[OUT any] struct {
+	opts
+	scheduler       IScheduler
+	pipelineManager IPipelineManager[OUT]
+}
+
+func New[OUT any](schd IScheduler, pm IPipelineManager[OUT], optFuncs ...types.OptFunc[opts]) *Engine[OUT] {
+
+	opts := defaultOpts()
+
+	for _, fn := range optFuncs {
+		fn(&opts)
+	}
 
 	engine := &Engine[OUT]{
+		opts:            opts,
 		scheduler:       schd,
 		pipelineManager: pm,
 	}
@@ -28,6 +48,8 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 
 	g, gCtx := errgroup.WithContext(ctx)
 
+	// pmCtx is used to signal the pipeline manager to stop.
+	// We want it to stay alive until the scheduler has finished.
 	pmCtx, pmCancel := context.WithCancel(context.Background())
 
 	g.Go(func() error {
@@ -40,7 +62,16 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 		return m.pipelineManager.Start(pmCtx)
 	})
 
-	return g.Wait()
+	err := g.Wait()
+
+	// after stopping scheduler and pipeline manager, wait for queued work to finish.
+	// use a timeout to avoid hanging.
+	if m.opts.shutdownTimeout > 0 {
+		_, cancel := context.WithTimeout(context.Background(), m.opts.shutdownTimeout)
+		defer cancel()
+	}
+
+	return err
 }
 
 func (m *Engine[OUT]) Schedule(req core.IRequestReader, cb core.ResponseCallback) {
@@ -61,4 +92,8 @@ func (m *Engine[OUT]) WithScheduler(schd IScheduler) {
 
 func (m *Engine[OUT]) WithPipelineManager(pm IPipelineManager[OUT]) {
 	m.pipelineManager = pm
+}
+
+func (m *Engine[OUT]) WithShutdownTimeout(timeout time.Duration) {
+	m.opts.shutdownTimeout = timeout
 }

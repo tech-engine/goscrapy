@@ -83,13 +83,16 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 			defer wg.Done()
 			for {
 				select {
-				case item := <-pm.outputQueue:
-					if ctx.Err() != nil {
+				case item, ok := <-pm.outputQueue:
+					if !ok {
 						return
 					}
 					pm.processItem(item)
 				case <-ctx.Done():
-					// currently not needed but we also consider closing pm.outputQueue channel in future
+					// after cancellation, keep draining outputQueue until empty.
+					for item := range pm.outputQueue {
+						pm.processItem(item)
+					}
 					return
 				}
 			}
@@ -97,6 +100,8 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 	}
 
 	<-ctx.Done()
+	// no more items will be pushed, scheduler has finished
+	close(pm.outputQueue)
 	return ctx.Err()
 }
 
@@ -134,14 +139,14 @@ func (pm *PipelineManager[OUT]) processItem(original core.IOutput[OUT]) {
 
 	pItem = pm.itemPool.Acquire()
 
+	if pItem == nil {
+		pItem = cmap.NewCMap[string, any](cmap.WithSize(int(pm.itemPoolSize)))
+	}
+
 	defer func() {
 		pItem.Clear()
 		pm.itemPool.Release(pItem)
 	}()
-
-	if pItem == nil {
-		pItem = cmap.NewCMap[string, any](cmap.WithSize(int(pm.itemSize)))
-	}
 
 	for _, pipeline := range pm.pipelines {
 
