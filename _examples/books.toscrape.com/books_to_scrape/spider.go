@@ -48,7 +48,7 @@ func New(ctx context.Context) (*Spider, <-chan error) {
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 
 	// for each request we must call NewRequest() and never reuse it
-	req := s.NewRequest()
+	req := s.NewRequest(ctx)
 
 	// GET is the request method
 	req.Url(s.baseUrl)
