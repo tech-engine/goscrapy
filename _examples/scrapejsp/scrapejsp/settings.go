@@ -37,7 +37,7 @@ const MIDDLEWARE_HTTP_RETRY_BASE_DELAY = ""
 // Default: 50000
 const SCHEDULER_REQ_RES_POOL_SIZE = ""
 
-// Default: num of CPU * 120
+// Default: num of CPU * 30
 const SCHEDULER_CONCURRENCY = ""
 
 // Default: 100000
@@ -54,7 +54,7 @@ const PIPELINEMANAGER_ITEM_SIZE = ""
 // Default: 5000
 const PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE = ""
 
-// Default: 120
+// Default: 150
 const PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY = ""
 
 // Middlewares here
