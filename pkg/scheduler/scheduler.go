@@ -85,8 +85,12 @@ func (s *scheduler) Start(ctx context.Context) error {
 				return err
 			}
 
-			wg.Add(1)
-			go s.push(&wg, work)
+			select {
+			case worker := <-s.workerQueue:
+				worker <- work
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -118,11 +122,3 @@ func (s *scheduler) NewRequest() core.IRequestRW {
 	return req
 }
 
-// push a *schedulerWork unit to a worker
-func (s *scheduler) push(wg *sync.WaitGroup, work *schedulerWork) {
-	defer wg.Done()
-
-	// pull a worker and push a task in the worker's queue
-	worker := <-s.workerQueue
-	worker <- work
-}
