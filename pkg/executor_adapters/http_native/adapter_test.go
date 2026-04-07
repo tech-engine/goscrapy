@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -79,16 +78,9 @@ func run(t *testing.T, adapter *HTTPAdapter, method string, body io.ReadCloser, 
 	var err error
 	resp := &testResponseWriter{}
 
-	urlParsed, err := url.Parse(testServer.URL)
-
+	req, err := http.NewRequestWithContext(context.Background(), method, testServer.URL, body)
 	assert.NoError(t, err)
 
-	req := adapter.Acquire()
-
-	req.URL = urlParsed
-
-	req.Method = method
-	req.Body = body
 	err = adapter.Do(resp, req)
 
 	assert.NoError(t, err)
@@ -151,23 +143,13 @@ func TestAdapterRequestCtx(t *testing.T) {
 
 	resp := &testResponseWriter{}
 
-	urlParsed, err := url.Parse(testServer.URL)
-
-	assert.NoError(t, err)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	// added so that we can distinguise this request and sleep selectively for 3 seconds in our test server
-	// which will cause the context to expire before we get a response from server
-	headers := http.Header{}
-	headers.Add("delay", "3")
+	req, err := http.NewRequestWithContext(ctx, "GET", testServer.URL, nil)
+	assert.NoError(t, err)
 
-	req := adapter.Acquire()
-
-	req.URL = urlParsed
-	req = req.WithContext(ctx)
-	req.Header = headers
+	req.Header.Add("delay", "3")
 
 	err = adapter.Do(resp, req)
 
