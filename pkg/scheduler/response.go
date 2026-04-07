@@ -50,6 +50,43 @@ func (r *response) Meta(key string) (any, bool) {
 	return r.meta.Get(key)
 }
 
+func (r *response) Detach() core.IResponseReader {
+	// ensure body is cached
+	r.Bytes()
+
+	dr := &response{
+		statusCode: r.statusCode,
+		bodyBytes:  r.bodyBytes,
+		request:    r.request,
+	}
+
+	// clone body
+	if dr.bodyBytes != nil {
+		dr.body = io.NopCloser(bytes.NewReader(dr.bodyBytes))
+	}
+
+	// deep copy headers
+	if r.header != nil {
+		dr.header = r.header.Clone()
+	}
+
+	// deep copy cookies
+	if r.cookies != nil {
+		dr.cookies = make([]*http.Cookie, len(r.cookies))
+		copy(dr.cookies, r.cookies)
+	}
+
+	// deep copy meta
+	if r.meta != nil {
+		dr.meta = r.meta.Clone()
+	}
+
+	// copy nodes
+	dr.nodes = r.nodes
+
+	return dr
+}
+
 func (r *response) Bytes() []byte {
 	if r.bodyBytes != nil {
 		return r.bodyBytes

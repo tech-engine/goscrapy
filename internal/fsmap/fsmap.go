@@ -42,3 +42,11 @@ func (fsm *FixedSizeMap[K, V]) Set(key K, val V) error {
 func (fsm *FixedSizeMap[K, V]) Clear() {
 	clear(fsm.data)
 }
+
+func (fsm *FixedSizeMap[K, V]) Clone() *FixedSizeMap[K, V] {
+	newMap := New[K, V](fsm.size)
+	for k, v := range fsm.data {
+		newMap.data[k] = v
+	}
+	return newMap
+}

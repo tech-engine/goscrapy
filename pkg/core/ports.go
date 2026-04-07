@@ -50,6 +50,7 @@ type IResponseReader interface {
 	Cookies() []*http.Cookie
 	Request() *http.Request
 	Meta(string) (any, bool)
+	Detach() IResponseReader
 	ISelector
 }
 
