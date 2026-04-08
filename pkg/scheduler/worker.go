@@ -79,18 +79,26 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 		res = &response{}
 	}
 
-	// join framework lifecycle context and request context
+	// merge framework lifecycle and req cntxt
 	reqCtx := work.request.ReadContext()
 	if reqCtx == nil {
 		reqCtx = context.Background()
 	}
 
-	// we create a child context that is cancelled if either the framework stops
-	// or the request itself times out/is cancelled by the user.
+	// use engine lifecycle as parent
 	opCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	// link req cancel/timeout
 	if reqCtx != context.Background() {
+		// inherit deadline
+		if d, ok := reqCtx.Deadline(); ok {
+			var dCancel context.CancelFunc
+			opCtx, dCancel = context.WithDeadline(opCtx, d)
+			defer dCancel()
+		}
+
+		// abort if req is cancelled
 		go func() {
 			select {
 			case <-reqCtx.Done():
@@ -100,7 +108,10 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 		}()
 	}
 
-	// inject recorder + our unified context into the request
+	// merge values from both context chains
+	opCtx = &mergedContext{Context: opCtx, reqCtx: reqCtx}
+
+	// inject recorder + unified context
 	reqWriter := work.request.(core.IRequestWriter)
 	reqWriter.Context(opCtx)
 
@@ -114,7 +125,7 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 		next := (*work).next
 		if next != nil {
 			res.WriteMeta(work.request.ReadMeta())
-			// pass our unified context down to the spider callback
+			// pass unified context to spider callback
 			next(context.WithValue(opCtx, "WORKER_ID", w.ID), res)
 		}
 	}
@@ -128,6 +139,21 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 	w.responsePool.Release(res)
 
 	return err
+}
+
+// helper to join two context value chains
+// prioritize lifecycle values
+// fallback to spider values
+type mergedContext struct {
+	context.Context
+	reqCtx context.Context
+}
+
+func (m *mergedContext) Value(key any) any {
+	if val := m.Context.Value(key); val != nil {
+		return val
+	}
+	return m.reqCtx.Value(key)
 }
 
 func (w *Worker) resetAndRelease(work *schedulerWork) {
