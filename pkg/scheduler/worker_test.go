@@ -34,6 +34,7 @@ func TestWorker(t *testing.T) {
 		schedulerWorkPool,
 		requestPool,
 		respPoolSize,
+		nil,
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())

@@ -146,7 +146,7 @@ func (r *mockRequest) ReadMethod() string                                  { ret
 func (r *mockRequest) ReadBody() io.ReadCloser                             { return nil }
 func (r *mockRequest) ReadMeta() *fsmap.FixedSizeMap[string, any]            { return nil }
 func (r *mockRequest) ReadCookieJar() string                               { return "" }
-func (r *mockRequest) WithContext(ctx context.Context) core.IRequestWriter { return r }
+func (r *mockRequest) Context(ctx context.Context) core.IRequestWriter { return r }
 func (r *mockRequest) Url(s string) core.IRequestWriter                    { return r }
 func (r *mockRequest) Header(h http.Header) core.IRequestWriter            { return r }
 func (r *mockRequest) Method(m string) core.IRequestWriter                 { r.method = m; return r }
