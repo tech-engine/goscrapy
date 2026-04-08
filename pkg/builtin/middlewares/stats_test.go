@@ -1,12 +1,16 @@
-// Note: AI generated test file
 package middlewares
 
 import (
+	"context"
+	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
+	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -90,4 +94,59 @@ func TestStats_Print(t *testing.T) {
 	assert.NotPanics(t, func() {
 		stats.Print()
 	})
+}
+func TestStats_DataAndTiming(t *testing.T) {
+	stats := NewStats()
+	body := "hello world"
+	mock := &mockRoundTripper{
+		response: &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader(body)),
+		},
+	}
+
+	middleware := Stats(stats)(mock)
+	req, _ := http.NewRequest("GET", "https://example.com", nil)
+	resp, err := middleware.RoundTrip(req)
+	require.NoError(t, err)
+
+	// Read body to trigger counting
+	b, _ := io.ReadAll(resp.Body)
+	assert.Equal(t, body, string(b))
+	resp.Body.Close()
+
+	assert.Equal(t, uint64(len(body)), stats.totalBytes.Load())
+
+	// Test timing storage manually
+	stats.AddSample(MetricTLS, 100*time.Millisecond)
+	stats.metricsMu.Lock()
+	assert.Equal(t, 1, len(stats.tlsTimes))
+	assert.Equal(t, 100*time.Millisecond, stats.tlsTimes[0])
+	stats.metricsMu.Unlock()
+}
+
+func TestStats_WorkerAggregation(t *testing.T) {
+	global := NewStats()
+	worker := global.NewWorkerCollector()
+
+	worker.AddBytes(1024)
+	worker.AddSample(MetricTLS, 50*time.Millisecond)
+
+	// Inject worker into context
+	ctx := ts.WithRecorder(context.Background(), worker)
+	mock := &mockRoundTripper{response: &http.Response{StatusCode: 200}}
+	mw := Stats(global)(mock)
+
+	req, _ := http.NewRequest("GET", "http://test.com", nil)
+	req = req.WithContext(ctx)
+	mw.RoundTrip(req)
+
+	// Global should not have worker's direct data yet
+	assert.Equal(t, uint64(0), global.totalBytes.Load())
+
+	// Print triggers merge
+	global.Print()
+
+	assert.Equal(t, uint64(1024), global.totalBytes.Load())
+	assert.Equal(t, 1, int(global.totalCount.Load())) // 1 from MW call which uses the worker recorder
 }
