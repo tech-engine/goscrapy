@@ -146,6 +146,75 @@ func TestWorker_ContextIntegration(t *testing.T) {
 			t.Fatal("callback was not called or values were missing")
 		}
 	})
+
+	t.Run("RecursiveContextPersistence", func(t *testing.T) {
+		executor := &mockExecutorFunc{
+			execute: func(req core.IRequestReader, res engine.IResponseWriter) error {
+				res.WriteRequest(new(http.Request))
+				return nil
+			},
+		}
+
+		worker := NewWorker(42, executor, make(WorkerQueue, 1),
+			rp.NewPooler(rp.WithSize[schedulerWork](1)),
+			rp.NewPooler(rp.WithSize[request](1)),
+			1, nil)
+
+		fCtx, fCancel := context.WithCancel(context.Background())
+		rCtx := context.Background()
+
+		req := &request{method: "GET", header: make(http.Header), ctx: rCtx}
+		
+		callbackDone := make(chan struct{})
+		var callbackCtx context.Context
+
+		work := &schedulerWork{
+			request: req,
+			next: func(ctx context.Context, resp core.IResponseReader) {
+				callbackCtx = ctx
+				
+				// Assertions must happen INSIDE the callback before worker.execute returns and resets the response
+				assert.NoError(t, ctx.Err(), "callback context should be alive")
+				assert.NoError(t, resp.Request().Context().Err(), "native http request context should be alive")
+				
+				close(callbackDone)
+			},
+		}
+
+		err := worker.execute(fCtx, work)
+		assert.NoError(t, err)
+
+		<-callbackDone
+		
+		// 1. SURVIVAL: At this point worker.execute has returned, meaning its internal defer cancel() has run.
+		assert.NoError(t, callbackCtx.Err(), "callback context should NOT be cancelled after execution completes")
+		
+		// 2. VALUE INTEGRITY: Framework values should still be accessible
+		assert.Equal(t, uint16(42), callbackCtx.Value("WORKER_ID"), "survived context should still resolve framework values")
+		
+		// 3. PERSISTENCE: Engine shutdown should not kill the "idle" callback context (it binds to new requests later)
+		fCancel()
+		assert.NoError(t, callbackCtx.Err(), "idle callback context should survive framework shutdown until next execution")
+
+		// 4. SESSION COHERENCE: If the session itself is cancelled, then the callback context MUST die
+		sCtx, sCancel := context.WithCancel(context.Background())
+		
+		// Re-initialize request since worker.execute resets the work object
+		work.request = &request{method: "GET", header: make(http.Header), ctx: sCtx}
+		
+		sessionCallbackDone := make(chan struct{})
+		work.next = func(ctx context.Context, resp core.IResponseReader) {
+			callbackCtx = ctx
+			close(sessionCallbackDone)
+		}
+		
+		err = worker.execute(context.Background(), work)
+		assert.NoError(t, err)
+		<-sessionCallbackDone
+		
+		sCancel()
+		assert.ErrorIs(t, callbackCtx.Err(), context.Canceled, "callback context MUST cancel if the underlying session cancels")
+	})
 }
 
 type mockExecutorFunc struct {
