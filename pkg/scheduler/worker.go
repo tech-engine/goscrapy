@@ -79,14 +79,14 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 		res = &response{}
 	}
 
-	// merge framework lifecycle and req cntxt
+	// merge framework lifecycle and req context
 	reqCtx := work.request.ReadContext()
 	if reqCtx == nil {
 		reqCtx = context.Background()
 	}
 
 	// use engine lifecycle as parent
-	opCtx, cancel := context.WithCancel(ctx)
+	baseCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// link req cancel/timeout
@@ -94,39 +94,62 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 		// inherit deadline
 		if d, ok := reqCtx.Deadline(); ok {
 			var dCancel context.CancelFunc
-			opCtx, dCancel = context.WithDeadline(opCtx, d)
+			baseCtx, dCancel = context.WithDeadline(baseCtx, d)
 			defer dCancel()
 		}
 
-		// abort if req is cancelled
+		// abort if req is cancelled. captured baseCtx is stable here.
 		go func() {
 			select {
 			case <-reqCtx.Done():
-				cancel()
-			case <-opCtx.Done():
+				if reqCtx.Err() != context.DeadlineExceeded {
+					cancel()
+				}
+			case <-baseCtx.Done():
 			}
 		}()
 	}
 
 	// merge values from both context chains
-	opCtx = &mergedContext{Context: opCtx, reqCtx: reqCtx}
+	fullCtx := &mergedContext{Context: baseCtx, reqCtx: reqCtx}
 
+	// For later reference if I forgot for any reason, which is very likely.
 	// inject recorder + unified context
+	// although work.request is of type core.IRequestReader, but under the hood it is actually as
+	// core.IRequestWriter because Scheduler.NewRequest returns a core.IRequestRW, which is what
+	// work.request is actually.
 	reqWriter := work.request.(core.IRequestWriter)
-	reqWriter.Context(opCtx)
+	reqWriter.Context(fullCtx)
 
 	if w.stats != nil {
-		reqWriter.Context(ts.WithRecorder(opCtx, w.stats))
+		reqWriter.Context(ts.WithRecorder(fullCtx, w.stats))
 	}
 
 	err := w.executor.Execute(work.request, res)
 
 	if err == nil {
-		next := (*work).next
+		next := work.next
 		if next != nil {
 			res.WriteMeta(work.request.ReadMeta())
-			// pass unified context to spider callback
-			next(context.WithValue(opCtx, "WORKER_ID", w.ID), res)
+
+			// build persistent callback context isolated from exec cancellation
+			cbCtx := &callbackContext{
+				Context:      reqCtx,
+				frameworkCtx: ctx,
+			}
+			cbValCtx := context.WithValue(cbCtx, "WORKER_ID", w.ID)
+
+			// revert request context for safety
+			// the network phase is over, this request is now bound to the long-lived session context again
+			reqWriter.Context(cbValCtx)
+
+			// sync native http request context for consistency if available
+			if r := res.Request(); r != nil {
+				res.WriteRequest(r.WithContext(cbValCtx))
+			}
+
+			// pass persistent context to spider callback
+			next(cbValCtx, res)
 		}
 	}
 
@@ -154,6 +177,21 @@ func (m *mergedContext) Value(key any) any {
 		return val
 	}
 	return m.reqCtx.Value(key)
+}
+
+// helper to join two context value chains for callbacks
+// prioritize spider values
+// fallback to lifecycle values
+type callbackContext struct {
+	context.Context
+	frameworkCtx context.Context
+}
+
+func (c *callbackContext) Value(key any) any {
+	if val := c.Context.Value(key); val != nil {
+		return val
+	}
+	return c.frameworkCtx.Value(key)
 }
 
 func (w *Worker) resetAndRelease(work *schedulerWork) {
