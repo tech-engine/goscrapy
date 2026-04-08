@@ -56,6 +56,11 @@ func (r *request) ReadCookieJar() string {
 }
 
 // Request inplements core.IRequestWriter
+func (r *request) Context(ctx context.Context) core.IRequestWriter {
+	r.ctx = ctx
+	return r
+}
+
 func (r *request) Url(_url string) core.IRequestWriter {
 	__url, err := url.Parse(_url)
 

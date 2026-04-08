@@ -28,6 +28,7 @@ type IRequestReader interface {
 }
 
 type IRequestWriter interface {
+	Context(context.Context) IRequestWriter
 	Url(string) IRequestWriter
 	Header(http.Header) IRequestWriter
 	Method(string) IRequestWriter

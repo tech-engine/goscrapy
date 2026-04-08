@@ -10,6 +10,7 @@ import (
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
+	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 )
 
 type scheduler struct {
@@ -62,20 +63,26 @@ func (s *scheduler) Start(ctx context.Context) error {
 	defer wg.Wait()
 	wg.Add(int(s.opts.numWorkers))
 
-	// this is to make sure that we close the scheduler and after that close all the workers
+	// worker lifecycle context
 	wCtx, wCancel := context.WithCancel(context.Background())
 
 	for i = 0; i < s.opts.numWorkers; i++ {
 		go func() {
 			defer wg.Done()
-			worker := NewWorker(i+1, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.opts.reqResPoolSize)
+
+			var recorder ts.StatRecorder
+			if s.opts.statsProducer != nil {
+				recorder = s.opts.statsProducer.NewWorkerCollector()
+			}
+
+			worker := NewWorker(i+1, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.opts.reqResPoolSize, recorder)
 
 			// blocking
 			_ = worker.Start(wCtx)
 		}()
 	}
 
-	// below will trigger context cancellation for the worker after scheduler is done.
+	// cancel worker context upon scheduler exit
 	defer wCancel()
 
 	for {
@@ -146,4 +153,3 @@ func (s *scheduler) NewRequest(ctx context.Context) core.IRequestRW {
 	req.ctx = ctx
 	return req
 }
-

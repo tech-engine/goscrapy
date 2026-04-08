@@ -6,12 +6,14 @@ import (
 	"strconv"
 
 	"github.com/tech-engine/goscrapy/internal/types"
+	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 )
 
 type opts struct {
 	numWorkers     uint16
 	reqResPoolSize uint64
 	workQueueSize  uint64
+	statsProducer  ts.CollectorProducer
 }
 
 func defaultOpts() opts {
@@ -63,5 +65,11 @@ func WithWorkers(n uint16) types.OptFunc[opts] {
 func WithWorkQueueSize(n uint64) types.OptFunc[opts] {
 	return func(opts *opts) {
 		opts.workQueueSize = n
+	}
+}
+
+func WithStats(p ts.CollectorProducer) types.OptFunc[opts] {
+	return func(opts *opts) {
+		opts.statsProducer = p
 	}
 }
