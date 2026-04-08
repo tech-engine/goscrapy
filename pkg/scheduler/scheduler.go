@@ -92,7 +92,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 			case worker := <-s.workerQueue:
 				worker <- work
 			case <-ctx.Done():
-				// context cancellation.
+				// context cancellation from top(engine).
 				// we should try to put the work back or handle it.
 				// in graceful shutdown, we will handle this in the drain loop.
 				s.workQueue <- work
