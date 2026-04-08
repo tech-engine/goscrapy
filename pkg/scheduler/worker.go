@@ -73,20 +73,39 @@ func (w *Worker) Start(ctx context.Context) error {
 	}
 }
 
-// Handles executing a scheduler work and calling the next callback of with the result as response
 func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 	res := w.responsePool.Acquire()
 	if res == nil {
 		res = &response{}
 	}
 
+	// join framework lifecycle context and request context
+	reqCtx := work.request.ReadContext()
+	if reqCtx == nil {
+		reqCtx = context.Background()
+	}
+
+	// we create a child context that is cancelled if either the framework stops
+	// or the request itself times out/is cancelled by the user.
+	opCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	if reqCtx != context.Background() {
+		go func() {
+			select {
+			case <-reqCtx.Done():
+				cancel()
+			case <-opCtx.Done():
+			}
+		}()
+	}
+
+	// inject recorder + our unified context into the request
+	reqWriter := work.request.(core.IRequestWriter)
+	reqWriter.Context(opCtx)
+
 	if w.stats != nil {
-		reqCtx := work.request.ReadContext()
-		if reqCtx == nil {
-			reqCtx = context.Background()
-		}
-		// inject recorder into request context
-		work.request = work.request.(core.IRequestWriter).Context(ts.WithRecorder(reqCtx, w.stats)).(core.IRequestReader)
+		reqWriter.Context(ts.WithRecorder(opCtx, w.stats))
 	}
 
 	err := w.executor.Execute(work.request, res)
@@ -94,12 +113,9 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 	if err == nil {
 		next := (*work).next
 		if next != nil {
-			pCtx := work.request.ReadContext()
-			if pCtx == nil {
-				pCtx = context.Background()
-			}
 			res.WriteMeta(work.request.ReadMeta())
-			next(context.WithValue(pCtx, "WORKER_ID", w.ID), res)
+			// pass our unified context down to the spider callback
+			next(context.WithValue(opCtx, "WORKER_ID", w.ID), res)
 		}
 	}
 

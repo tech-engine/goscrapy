@@ -64,7 +64,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 	wg.Add(int(s.opts.numWorkers))
 
 	// worker lifecycle context
-	wCtx, wCancel := context.WithCancel(context.Background())
+	wCtx, wCancel := context.WithCancel(ctx)
 
 	for i = 0; i < s.opts.numWorkers; i++ {
 		go func() {
