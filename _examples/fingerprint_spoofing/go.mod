@@ -2,7 +2,7 @@ module fingerprint_spoofing
 
 go 1.25.1
 
-require github.com/tech-engine/goscrapy v0.19.2
+require github.com/tech-engine/goscrapy v0.19.3
 
 require (
 	cel.dev/expr v0.25.1 // indirect

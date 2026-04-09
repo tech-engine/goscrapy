@@ -37,6 +37,8 @@ github.com/tech-engine/goscrapy v0.19.0 h1:nSj/E0yp5szJIxuMLT6ftEEBWwnNW81kZKHEl
 github.com/tech-engine/goscrapy v0.19.0/go.mod h1:d2fKw3udodip0xyy3Y1QCzEJgLtDrqMDraXZso/27SU=
 github.com/tech-engine/goscrapy v0.19.2 h1:BJff4grrvR513mP3auBvng6kQ1A61qVfvY+kOFQP+QQ=
 github.com/tech-engine/goscrapy v0.19.2/go.mod h1:d2fKw3udodip0xyy3Y1QCzEJgLtDrqMDraXZso/27SU=
+github.com/tech-engine/goscrapy v0.19.3 h1:ykwuKQvtof0jV9wxC21FS+AqhW4xc9IFbqjhQHETiYU=
+github.com/tech-engine/goscrapy v0.19.3/go.mod h1:d2fKw3udodip0xyy3Y1QCzEJgLtDrqMDraXZso/27SU=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 go.yaml.in/yaml/v3 v3.0.4/go.mod h1:DhzuOOF2ATzADvBadXxruRBLzYTpT36CKvDb3+aBEFg=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=

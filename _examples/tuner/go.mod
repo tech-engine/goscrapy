@@ -2,7 +2,7 @@ module tuner
 
 go 1.25.1
 
-require github.com/tech-engine/goscrapy v0.19.2
+require github.com/tech-engine/goscrapy v0.19.3
 
 require (
 	github.com/andybalholm/cascadia v1.3.3 // indirect
