@@ -8,6 +8,7 @@ import (
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/logger"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -16,6 +17,7 @@ type PipelineManager[OUT any] struct {
 	itemPool    *rp.Pooler[cmap.CMap[string, any]]
 	outputQueue chan core.IOutput[OUT]
 	pipelines   []IPipeline[OUT]
+	logger      core.ILogger
 }
 
 func New[OUT any](optFuncs ...types.OptFunc[opts]) *PipelineManager[OUT] {
@@ -33,11 +35,16 @@ func New[OUT any](optFuncs ...types.OptFunc[opts]) *PipelineManager[OUT] {
 		outputQueue: make(chan core.IOutput[OUT], opts.outputQueueBuffSize),
 		pipelines:   make([]IPipeline[OUT], 0),
 		itemPool:    rp.NewPooler(rp.WithSize[cmap.CMap[string, any]](opts.itemPoolSize)),
+		logger:      logger.GetLogger(), // default to global logger
 	}
 }
 
 func (pm *PipelineManager[OUT]) Add(pipeline ...IPipeline[OUT]) {
 	pm.pipelines = append(pm.pipelines, pipeline...)
+}
+
+func (pm *PipelineManager[OUT]) WithLogger(logger core.ILogger) {
+	pm.logger = logger
 }
 
 // runs after the spider's Open func and calls all open function of pipelines
@@ -125,6 +132,7 @@ func (pm *PipelineManager[OUT]) Push(original core.IOutput[OUT]) {
 	if len(pm.pipelines) <= 0 {
 		return
 	}
+	pm.logger.Debug("📦 PipelineManager: item pushed to queue")
 	pm.outputQueue <- original
 }
 
@@ -152,7 +160,9 @@ func (pm *PipelineManager[OUT]) processItem(original core.IOutput[OUT]) {
 
 		// we check if pipeline is a group by checking
 		if err = pipeline.ProcessItem(IPipelineItem(pItem), original); err != nil {
+			pm.logger.Errorf("❌ Pipeline error: %v", err)
 			return
 		}
 	}
+	pm.logger.Debug("✅ PipelineManager: item processed successfully")
 }

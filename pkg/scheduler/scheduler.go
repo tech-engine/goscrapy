@@ -10,6 +10,7 @@ import (
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/logger"
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 )
 
@@ -21,6 +22,7 @@ type scheduler struct {
 	workerQueue       WorkerQueue
 	workQueue         WorkQueue
 	stopping          atomic.Bool
+	logger            core.ILogger
 }
 
 // NewScheduler creates a new scheduler.
@@ -41,11 +43,17 @@ func New(executor IExecutor, optFuncs ...types.OptFunc[opts]) *scheduler {
 		requestPool:       rp.NewPooler(rp.WithSize[request](opts.reqResPoolSize)),
 		workerQueue:       make(WorkerQueue, opts.numWorkers),
 		workQueue:         make(WorkQueue, opts.workQueueSize),
+		logger:            logger.GetLogger(), // default to global logger
 	}
 }
 
 func (s *scheduler) WithExecutor(executor IExecutor) {
 	s.executor = executor
+}
+
+func (s *scheduler) WithLogger(l core.ILogger) {
+	s.logger = l
+	s.executor.WithLogger(l)
 }
 
 // Handles creating workers and listening on the work queue

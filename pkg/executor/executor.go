@@ -48,3 +48,7 @@ func (e *Executor) Execute(req core.IRequestReader, res engine.IResponseWriter) 
 func (e *Executor) WithAdapter(adapter IExecutorAdapter) {
 	e.adapter = adapter
 }
+
+func (e *Executor) WithLogger(logger core.ILogger) {
+	e.adapter.WithLogger(logger)
+}

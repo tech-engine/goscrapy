@@ -7,6 +7,7 @@ import (
 
 	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/logger"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -25,6 +26,7 @@ type Engine[OUT any] struct {
 	opts
 	scheduler       IScheduler
 	pipelineManager IPipelineManager[OUT]
+	logger          core.ILogger
 }
 
 func New[OUT any](schd IScheduler, pm IPipelineManager[OUT], optFuncs ...types.OptFunc[opts]) *Engine[OUT] {
@@ -39,6 +41,7 @@ func New[OUT any](schd IScheduler, pm IPipelineManager[OUT], optFuncs ...types.O
 		opts:            opts,
 		scheduler:       schd,
 		pipelineManager: pm,
+		logger:          logger.GetLogger(), // default to global logger
 	}
 
 	return engine
@@ -51,14 +54,16 @@ func WithOnShutdown(funcs ...func()) types.OptFunc[opts] {
 	}
 }
 
-// start the core
 func (m *Engine[OUT]) Start(ctx context.Context) error {
+	m.logger.Info("Engine starting...")
 
 	// run all shutdown hooks before returning
 	defer func() {
+		m.logger.Info("Shutting down engine...")
 		for _, fn := range m.opts.onShutdown {
 			fn()
 		}
+		m.logger.Info("Engine shutdown complete.")
 	}()
 
 	g, gCtx := errgroup.WithContext(ctx)
@@ -110,6 +115,12 @@ func (m *Engine[OUT]) WithPipelineManager(pm IPipelineManager[OUT]) {
 
 func (m *Engine[OUT]) WithShutdownTimeout(timeout time.Duration) {
 	m.opts.shutdownTimeout = timeout
+}
+
+func (m *Engine[OUT]) WithName(name string) {
+	m.logger = m.logger.WithName(name)
+	m.scheduler.WithLogger(m.logger)
+	m.pipelineManager.WithLogger(m.logger)
 }
 
 func (m *Engine[OUT]) WithOnShutdown(funcs ...func()) {
