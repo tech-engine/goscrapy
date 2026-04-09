@@ -3,8 +3,6 @@ package gos
 import (
 	"context"
 	"net/http"
-
-	"errors"
 	"os"
 	"os/signal"
 	"syscall"
