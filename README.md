@@ -245,8 +245,30 @@ By contributing to the GoScrapy project, you agree to the terms of the license.
 - ~~Cookie management~~
 - ~~Builtin & Custom Middlewares support~~
 - ~~Css & Xpath Selectors~~
-- Logging
+- ~~Logging & Custom Logger Support~~
 - Increasing E2E test coverage
+
+### Logging
+GoScrapy includes a built-in, logging system. You can control the output volume via the `GOSCRAPY_LOG_LEVEL` environment variable:
+
+- `DEBUG`: Detailed execution trace (requests, pipeline steps).
+- `INFO`: Basic startup/shutdown info (default).
+- `WARN`: Warnings and retry notifications.
+- `ERROR`: Fatal errors.
+- `NONE`: Disable all framework logging.
+
+#### Custom Loggers
+You can plug in your customer logger implemention with `core.ILogger` interface:
+
+```go
+import "github.com/tech-engine/goscrapy/pkg/logger"
+
+func main() {
+    // ...
+    logger.SetLogger(myCustomZapLogger)
+    // ...
+}
+```
 
 ## Partners
 
