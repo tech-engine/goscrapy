@@ -4,6 +4,11 @@ import (
 	"context"
 	"net/http"
 
+	"errors"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/executor"
@@ -41,4 +46,31 @@ func (c *gosBuilder[OUT]) WithClient(cli *http.Client) *gosBuilder[OUT] {
 
 func (c *gosBuilder[OUT]) Start(ctx context.Context) error {
 	return c.Engine.Start(ctx)
+}
+
+func (c *gosBuilder[OUT]) Setup(
+	middlewares []middlewaremanager.Middleware,
+	pipelines []pipelinemanager.IPipeline[OUT],
+	onShutdown ...func(),
+) *gosBuilder[OUT] {
+	c.MiddlewareManager.Add(middlewares...)
+	c.PipelineManager.Add(pipelines...)
+	for _, fn := range onShutdown {
+		c.Engine.WithOnShutdown(fn)
+	}
+	return c
+}
+
+// Wait for completion or termination
+func Wait(cancel context.CancelFunc, errCh <-chan error) error {
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-sigCh:
+		cancel()
+		return <-errCh
+	}
 }
