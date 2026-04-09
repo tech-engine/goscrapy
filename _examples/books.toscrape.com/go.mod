@@ -2,7 +2,7 @@ module books_to_scrape
 
 go 1.25.0
 
-require github.com/tech-engine/goscrapy v0.19.0
+require github.com/tech-engine/goscrapy v0.19.2
 
 require (
 	cel.dev/expr v0.25.1 // indirect
@@ -11,9 +11,9 @@ require (
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/firestore v1.21.0 // indirect
-	cloud.google.com/go/iam v1.7.0 // indirect
-	cloud.google.com/go/longrunning v0.9.0 // indirect
-	cloud.google.com/go/monitoring v1.25.0 // indirect
+	cloud.google.com/go/iam v1.8.0 // indirect
+	cloud.google.com/go/longrunning v0.10.0 // indirect
+	cloud.google.com/go/monitoring v1.26.0 // indirect
 	cloud.google.com/go/storage v1.62.0 // indirect
 	firebase.google.com/go v3.13.0+incompatible // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.32.0 // indirect

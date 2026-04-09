@@ -14,6 +14,7 @@ import (
 
 	"github.com/tech-engine/goscrapy/cmd/gos"
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/logger"
 )
 
 // Minimal Record to satisfy the framework output definition
@@ -106,6 +107,9 @@ func runBenchmark(concurrency, poolSize, maxIdle, queueBuf string) float64 {
 }
 
 func main() {
+	// Disable logging during benchmark to avoid output clutter and perf impact
+	logger.SetLevel(core.LevelNone)
+
 	fmt.Println("Warming up Mock Server on :18080...")
 	mockServer()
 	time.Sleep(500 * time.Millisecond)
