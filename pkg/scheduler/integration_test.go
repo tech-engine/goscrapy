@@ -29,6 +29,8 @@ func (e *blockingExecutor) Execute(req core.IRequestReader, res engine.IResponse
 	}
 }
 
+func (e *blockingExecutor) WithLogger(logger core.ILogger) {}
+
 func TestWorker_ContextIntegration(t *testing.T) {
 	t.Run("FrameworkShutdown_AbortsInFlightRequest", func(t *testing.T) {
 		executor := &blockingExecutor{started: make(chan struct{})}
@@ -224,3 +226,5 @@ type mockExecutorFunc struct {
 func (m *mockExecutorFunc) Execute(req core.IRequestReader, res engine.IResponseWriter) error {
 	return m.execute(req, res)
 }
+
+func (m *mockExecutorFunc) WithLogger(logger core.ILogger) {}

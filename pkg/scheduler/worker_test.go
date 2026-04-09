@@ -17,6 +17,8 @@ func (e *dummyExecutor) Execute(reader core.IRequestReader, writer engine.IRespo
 	return nil
 }
 
+func (e *dummyExecutor) WithLogger(logger core.ILogger) {}
+
 func TestWorker(t *testing.T) {
 	// create a worker
 	var workerId uint16 = 1

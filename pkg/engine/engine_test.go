@@ -86,6 +86,8 @@ func (m *mockScheduler) NewRequest(ctx context.Context) core.IRequestRW {
 	return &mockRequest{}
 }
 
+func (m *mockScheduler) WithLogger(logger core.ILogger) {}
+
 //
 // --- Mock Pipeline Manager ---
 //
@@ -130,6 +132,8 @@ func (m *mockPipelineManager) Push(out core.IOutput[any]) {
 
 	m.pushed = append(m.pushed, out)
 }
+
+func (m *mockPipelineManager) WithLogger(logger core.ILogger) {}
 
 //
 // --- Mock Request ---
