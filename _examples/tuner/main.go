@@ -1,5 +1,4 @@
 // Note: Benchmark file is generated using AI
-// Note: Benchmark file is generated using AI
 package main
 
 import (
@@ -7,8 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/tech-engine/goscrapy/cmd/gos"
@@ -55,7 +56,7 @@ func runBenchmark(concurrency, poolSize, maxIdle, queueBuf string) float64 {
 	os.Setenv("PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE", queueBuf)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	engine := gos.New[*Record]()
+	engine := gos.New[*Record]().Setup(nil, nil)
 
 	spider := &BenchSpider{
 		ICoreSpider: engine,
@@ -108,6 +109,15 @@ func main() {
 	fmt.Println("Warming up Mock Server on :18080...")
 	mockServer()
 	time.Sleep(500 * time.Millisecond)
+
+	// handle signals
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		fmt.Println("\n🛑 Tuning interrupted.")
+		os.Exit(0)
+	}()
 
 	type permutation struct {
 		Concurrency string
