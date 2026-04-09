@@ -11,6 +11,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/executor"
 	httpnative "github.com/tech-engine/goscrapy/pkg/executor_adapters/http_native"
+	"github.com/tech-engine/goscrapy/pkg/logger"
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 	pipelinemanager "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 	"github.com/tech-engine/goscrapy/pkg/scheduler"
@@ -42,6 +43,11 @@ func (c *gosBuilder[OUT]) WithClient(cli *http.Client) *gosBuilder[OUT] {
 	return c
 }
 
+func (c *gosBuilder[OUT]) WithName(name string) *gosBuilder[OUT] {
+	c.Engine.WithName(name)
+	return c
+}
+
 func (c *gosBuilder[OUT]) Start(ctx context.Context) error {
 	return c.Engine.Start(ctx)
 }
@@ -51,6 +57,7 @@ func (c *gosBuilder[OUT]) Setup(
 	pipelines []pipelinemanager.IPipeline[OUT],
 	onShutdown ...func(),
 ) *gosBuilder[OUT] {
+	logger.Infof("Initializing engine with %d middlewares and %d pipelines", len(middlewares), len(pipelines))
 	c.MiddlewareManager.Add(middlewares...)
 	c.PipelineManager.Add(pipelines...)
 	for _, fn := range onShutdown {
@@ -67,7 +74,8 @@ func Wait(cancel context.CancelFunc, errCh <-chan error) error {
 	select {
 	case err := <-errCh:
 		return err
-	case <-sigCh:
+	case sig := <-sigCh:
+		logger.Infof("Received termination signal: %v", sig)
 		cancel()
 		return <-errCh
 	}
