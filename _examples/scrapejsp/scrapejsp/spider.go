@@ -6,19 +6,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/tech-engine/goscrapy/cmd/gos"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
-
-type Spider struct {
-	gos.ICoreSpider[*Record]
-}
-
-func NewSpider(core gos.ICoreSpider[*Record]) *Spider {
-	return &Spider{
-		core,
-	}
-}
 
 // This is the entrypoint to the spider
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {

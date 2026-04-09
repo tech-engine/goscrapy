@@ -6,39 +6,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/tech-engine/goscrapy/cmd/gos"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
-
-type Spider struct {
-	gos.ICoreSpider[*Record]
-}
-
-func NewSpider(ctx context.Context) (*Spider, <-chan error) {
-
-	// use proxies
-	// proxies := core.WithProxies("proxy_url1", "proxy_url2", ...)
-	// core := gos.New[*Record]().WithClient(
-	// 	gos.DefaultClient(proxies),
-	// )
-
-	core := gos.New[*Record]()
-
-	// Add middlewares
-	core.MiddlewareManager.Add(MIDDLEWARES...)
-	// Add pipelines
-	core.PipelineManager.Add(PIPELINES...)
-
-	errCh := make(chan error)
-
-	go func() {
-		errCh <- core.Start(ctx)
-	}()
-
-	return &Spider{
-		core,
-	}, errCh
-}
 
 // This is the entrypoint to the spider
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {

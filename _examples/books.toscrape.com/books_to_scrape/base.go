@@ -1,0 +1,37 @@
+package books_to_scrape
+
+import (
+	"context"
+
+	"github.com/tech-engine/goscrapy/cmd/gos"
+)
+
+type Spider struct {
+	gos.ICoreSpider[*Record]
+	baseUrl string
+}
+
+func New(ctx context.Context) (*Spider, <-chan error) {
+
+	// use proxies
+	// proxies := core.WithProxies("proxy_url1", "proxy_url2", ...)
+	// core := gos.New[*Record]().WithClient(
+	// 	gos.DefaultClient(proxies),
+	// )
+
+	core := gos.New[*Record]().Setup(MIDDLEWARES, PIPELINES, Stats.Print)
+
+	errCh := make(chan error)
+
+	spider := &Spider{
+		core,
+		"https://books.toscrape.com",
+	}
+
+	go func() {
+		errCh <- core.Start(ctx)
+		spider.Close(ctx)
+	}()
+
+	return spider, errCh
+}

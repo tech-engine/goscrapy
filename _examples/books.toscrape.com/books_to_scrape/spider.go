@@ -6,47 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tech-engine/goscrapy/cmd/gos"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
-
-type Spider struct {
-	gos.ICoreSpider[*Record]
-	baseUrl string
-}
-
-func New(ctx context.Context) (*Spider, <-chan error) {
-
-	// use proxies
-	// proxies := core.WithProxies("proxy_url1", "proxy_url2", ...)
-	// core := gos.New[*Record]().WithClient(
-	// 	gos.DefaultClient(proxies),
-	// )
-
-	core := gos.New[*Record]()
-
-	// print stats when the engine is done
-	core.Engine.WithOnShutdown(Stats.Print)
-
-	// Add middlewares
-	core.MiddlewareManager.Add(MIDDLEWARES...)
-	// Add pipelines
-	core.PipelineManager.Add(PIPELINES...)
-
-	errCh := make(chan error)
-
-	spider := &Spider{
-		core,
-		"https://books.toscrape.com",
-	}
-
-	go func() {
-		errCh <- core.Start(ctx)
-		spider.Close(ctx)
-	}()
-
-	return spider, errCh
-}
 
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 
