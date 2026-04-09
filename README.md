@@ -249,7 +249,7 @@ By contributing to the GoScrapy project, you agree to the terms of the license.
 - Increasing E2E test coverage
 
 ### Logging
-GoScrapy includes a built-in, logging system. You can control the output volume via the `GOSCRAPY_LOG_LEVEL` environment variable:
+GoScrapy includes a built-in logging system. You can control the logging level via the `GOSCRAPY_LOG_LEVEL` environment variable:
 
 - `DEBUG`: Detailed execution trace (requests, pipeline steps).
 - `INFO`: Basic startup/shutdown info (default).
