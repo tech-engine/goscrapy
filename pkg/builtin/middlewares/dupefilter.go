@@ -1,14 +1,12 @@
 package middlewares
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"hash"
 	"io"
 	"net/http"
 	"sort"
-	"strings"
 	"sync"
 
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
@@ -17,49 +15,52 @@ import (
 
 var ERR_DUPEFILTER_BLOCKED = errors.New("duplicate request")
 
+var hasherPool = sync.Pool{
+	New: func() any {
+		h, _ := blake2b.New256(nil)
+		return h
+	},
+}
+
 type RequestMap struct {
-	seen map[string]struct{}
+	seen map[[32]byte]struct{}
 	mu   sync.RWMutex
 }
 
 func NewRequestMap() *RequestMap {
 	return &RequestMap{
-		seen: make(map[string]struct{}),
+		seen: make(map[[32]byte]struct{}),
 	}
 }
 
-func generateSHA1FingerprintFromReq(r *http.Request) (string, error) {
-
+func generateRequestFingerprint(r *http.Request) ([32]byte, error) {
 	var (
 		err  error
 		body io.ReadCloser
-		hash hash.Hash
 	)
 
 	if r.GetBody != nil {
 		body, err = r.GetBody()
 		if err != nil {
-			return "", err
+			return [32]byte{}, err
 		}
 		defer body.Close()
 	}
 
-	var combinedBuf strings.Builder
-
-	hash, err = blake2b.New256(nil)
-	if err != nil {
-		return "", err
-	}
+	h := hasherPool.Get().(hash.Hash)
+	defer hasherPool.Put(h)
+	h.Reset()
 
 	if body != nil {
-
-		if _, err = io.Copy(hash, body); err != nil {
-			return "", err
+		if _, err = io.Copy(h, body); err != nil {
+			return [32]byte{}, err
 		}
 	}
 
-	combinedBuf.WriteString(r.Method)
-	combinedBuf.WriteString(r.URL.String())
+	h.Write([]byte(r.Method))
+	h.Write([]byte(r.URL.Host))
+	h.Write([]byte(r.URL.Path))
+	h.Write([]byte(r.URL.RawQuery))
 
 	headerKeys := make([]string, 0, len(r.Header))
 	for key := range r.Header {
@@ -68,39 +69,39 @@ func generateSHA1FingerprintFromReq(r *http.Request) (string, error) {
 
 	sort.Strings(headerKeys)
 
-	// added sorted headers
 	for _, key := range headerKeys {
+		h.Write([]byte(key))
 		for _, value := range r.Header[key] {
-			combinedBuf.WriteString(key)
-			combinedBuf.WriteString(value)
+			h.Write([]byte(value))
 		}
 	}
 
-	if _, err = hash.Write([]byte(combinedBuf.String())); err != nil {
-		return "", err
-	}
+	var finalHash [32]byte
+	copy(finalHash[:], h.Sum(nil))
 
-	finalHash := hash.Sum(nil)
-
-	return hex.EncodeToString(finalHash[:]), nil
-
+	return finalHash, nil
 }
 
 func DupeFilter(next http.RoundTripper) http.RoundTripper {
 	requestMap := NewRequestMap()
 	return middlewaremanager.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
-		signature, err := generateSHA1FingerprintFromReq(req)
-
+		signature, err := generateRequestFingerprint(req)
 		if err != nil {
-			return nil, fmt.Errorf("duplicatefilter.go:DupeFilterMiddleware: error generating request signature %w", err)
+			return nil, fmt.Errorf("dupefilter.go:DupeFilter: error generating request signature %w", err)
+		}
+
+		requestMap.mu.RLock()
+		_, seen := requestMap.seen[signature]
+		requestMap.mu.RUnlock()
+
+		if seen {
+			return nil, fmt.Errorf("dupefilter.go:DupeFilter: %w", ERR_DUPEFILTER_BLOCKED)
 		}
 
 		requestMap.mu.Lock()
-
-		// we have already seen this signature so we skip
 		if _, ok := requestMap.seen[signature]; ok {
 			requestMap.mu.Unlock()
-			return nil, fmt.Errorf("duplicatefilter.go:DupeFilterMiddleware: %w", ERR_DUPEFILTER_BLOCKED)
+			return nil, fmt.Errorf("dupefilter.go:DupeFilter: %w", ERR_DUPEFILTER_BLOCKED)
 		}
 
 		requestMap.seen[signature] = struct{}{}
