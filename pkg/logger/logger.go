@@ -111,14 +111,61 @@ type defaultLogger struct {
 	name string
 }
 
-func (d *defaultLogger) Debug(v ...any)            { d.print("DEBUG", "🔍", v...) }
-func (d *defaultLogger) Info(v ...any)             { d.print("INFO", "🕷️", v...) }
-func (d *defaultLogger) Warn(v ...any)             { d.print("WARN", "⚠️", v...) }
-func (d *defaultLogger) Error(v ...any)            { d.print("ERROR", "❌", v...) }
-func (d *defaultLogger) Debugf(f string, v ...any) { d.printf("DEBUG", "🔍", f, v...) }
-func (d *defaultLogger) Infof(f string, v ...any)  { d.printf("INFO", "🕷️", f, v...) }
-func (d *defaultLogger) Warnf(f string, v ...any)  { d.printf("WARN", "⚠️", f, v...) }
-func (d *defaultLogger) Errorf(f string, v ...any) { d.printf("ERROR", "❌", f, v...) }
+func (d *defaultLogger) Debug(v ...any) {
+	if GetLevel() > core.LevelDebug {
+		return
+	}
+	d.print("DEBUG", "🔍", v...)
+}
+
+func (d *defaultLogger) Info(v ...any) {
+	if GetLevel() > core.LevelInfo {
+		return
+	}
+	d.print("INFO", "🕷️", v...)
+}
+
+func (d *defaultLogger) Warn(v ...any) {
+	if GetLevel() > core.LevelWarn {
+		return
+	}
+	d.print("WARN", "⚠️", v...)
+}
+
+func (d *defaultLogger) Error(v ...any) {
+	if GetLevel() > core.LevelError {
+		return
+	}
+	d.print("ERROR", "❌", v...)
+}
+
+func (d *defaultLogger) Debugf(f string, v ...any) {
+	if GetLevel() > core.LevelDebug {
+		return
+	}
+	d.printf("DEBUG", "🔍", f, v...)
+}
+
+func (d *defaultLogger) Infof(f string, v ...any) {
+	if GetLevel() > core.LevelInfo {
+		return
+	}
+	d.printf("INFO", "🕷️", f, v...)
+}
+
+func (d *defaultLogger) Warnf(f string, v ...any) {
+	if GetLevel() > core.LevelWarn {
+		return
+	}
+	d.printf("WARN", "⚠️", f, v...)
+}
+
+func (d *defaultLogger) Errorf(f string, v ...any) {
+	if GetLevel() > core.LevelError {
+		return
+	}
+	d.printf("ERROR", "❌", f, v...)
+}
 
 func (d *defaultLogger) WithName(name string) core.ILogger {
 	return &defaultLogger{
