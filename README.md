@@ -104,6 +104,7 @@ This will create a new project directory with all the files necessary to begin w
 
 🚀 GoScrapy generating project files. Please wait!
 
+✔️  books_to_scrape\base.go
 ✔️  books_to_scrape\constants.go
 ✔️  books_to_scrape\errors.go
 ✔️  books_to_scrape\job.go
@@ -148,13 +149,42 @@ var PIPELINES = []pm.IPipeline[*Record]{
 }
 ```
 
-## Creating a Spider
-
-In your `spider.go` file, set up and execute your spider.
-For detailed code, please refer to the [sample code here](./_examples/scrapejsp_method2/scrapejsp/spider.go).
+### base.go
+The boilerplate engine setup is hidden away in `base.go`.
 
 ```go
-package scrapejsp
+package myspider
+
+import (
+	"context"
+	"github.com/tech-engine/goscrapy/cmd/gos"
+)
+
+type Spider struct {
+	gos.ICoreSpider[*Record]
+}
+
+func New(ctx context.Context) (*Spider, <-chan error) {
+	// Initialize and configure everything in one go
+	core := gos.New[*Record]().Setup(MIDDLEWARES, PIPELINES, Stats.Print)
+
+	errCh := make(chan error)
+	spider := &Spider{core}
+
+	go func() {
+		errCh <- core.Start(ctx)
+		spider.Close(ctx)
+	}()
+
+	return spider, errCh
+}
+```
+
+### spider.go
+Your `spider.go` remains clean and focused entirely on parsing.
+
+```go
+package myspider
 
 import (
 	"context"
@@ -162,30 +192,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/tech-engine/goscrapy/cmd/gos"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
-
-type Spider struct {
-	gos.ICoreSpider[*Record]
-}
-
-func NewSpider(ctx context.Context) (*Spider, <-chan error) {
-	core := gos.New[*Record]()
-
-	// Add middlewares and pipelines
-	core.MiddlewareManager.Add(MIDDLEWARES...)
-	core.PipelineManager.Add(PIPELINES...)
-
-	errCh := make(chan error)
-	go func() {
-		errCh <- core.Start(ctx)
-	}()
-
-	return &Spider{
-		core,
-	}, errCh
-}
 
 // StartRequest is the entrypoint to the spider
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
