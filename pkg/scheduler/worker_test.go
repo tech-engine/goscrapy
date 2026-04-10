@@ -35,7 +35,7 @@ func TestWorker(t *testing.T) {
 		workerQueue,
 		schedulerWorkPool,
 		requestPool,
-		respPoolSize,
+		rp.NewPooler(rp.WithSize[response](respPoolSize)),
 		nil,
 	)
 
