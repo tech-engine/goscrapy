@@ -41,6 +41,9 @@ func (r *HTTPAdapter) Do(res engine.IResponseWriter, req *http.Request) error {
 	source, err := r.client.Do(req)
 
 	if err != nil {
+		if ctxErr := req.Context().Err(); ctxErr != nil {
+			return fmt.Errorf("Do: request aborted %w", ctxErr)
+		}
 		r.logger.Errorf("❌ Request failed: %v", err)
 		return fmt.Errorf("Do: error dispatching request %w", err)
 	}
