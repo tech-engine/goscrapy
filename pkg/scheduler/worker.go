@@ -22,7 +22,7 @@ type Worker struct {
 	stats             ts.StatRecorder
 }
 
-func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, schedulerWorkPool *rp.Pooler[schedulerWork], requestPool *rp.Pooler[request], respPoolSize uint64, stats ts.StatRecorder) *Worker {
+func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, schedulerWorkPool *rp.Pooler[schedulerWork], requestPool *rp.Pooler[request], responsePool *rp.Pooler[response], stats ts.StatRecorder) *Worker {
 
 	return &Worker{
 		ID:                id,
@@ -31,7 +31,7 @@ func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, scheduler
 		workQueue:         make(WorkQueue),
 		schedulerWorkPool: schedulerWorkPool,
 		requestPool:       requestPool,
-		responsePool:      rp.NewPooler(rp.WithSize[response](respPoolSize)),
+		responsePool:      responsePool,
 		stats:             stats,
 	}
 }

@@ -19,6 +19,7 @@ type scheduler struct {
 	executor          IExecutor
 	schedulerWorkPool *rp.Pooler[schedulerWork]
 	requestPool       *rp.Pooler[request]
+	responsePool      *rp.Pooler[response]
 	workerQueue       WorkerQueue
 	workQueue         WorkQueue
 	stopping          atomic.Bool
@@ -41,6 +42,7 @@ func New(executor IExecutor, optFuncs ...types.OptFunc[opts]) *scheduler {
 		executor:          executor,
 		schedulerWorkPool: rp.NewPooler(rp.WithSize[schedulerWork](opts.reqResPoolSize)),
 		requestPool:       rp.NewPooler(rp.WithSize[request](opts.reqResPoolSize)),
+		responsePool:      rp.NewPooler(rp.WithSize[response](opts.reqResPoolSize)),
 		workerQueue:       make(WorkerQueue, opts.numWorkers),
 		workQueue:         make(WorkQueue, opts.workQueueSize),
 		logger:            logger.GetLogger(), // default to global logger
@@ -83,7 +85,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 				recorder = s.opts.statsProducer.NewWorkerCollector()
 			}
 
-			worker := NewWorker(i+1, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.opts.reqResPoolSize, recorder)
+			worker := NewWorker(i+1, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.responsePool, recorder)
 
 			// blocking
 			_ = worker.Start(wCtx)
