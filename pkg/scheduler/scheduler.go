@@ -65,10 +65,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 		return ctx.Err()
 	}
 
-	var (
-		i  uint16
-		wg sync.WaitGroup
-	)
+	var wg sync.WaitGroup
 
 	defer wg.Wait()
 	wg.Add(int(s.opts.numWorkers))
@@ -76,7 +73,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 	// worker lifecyle context
 	wCtx, wCancel := context.WithCancel(ctx)
 
-	for i = 0; i < s.opts.numWorkers; i++ {
+	for i := uint16(1); i <= s.opts.numWorkers; i++ {
 		go func() {
 			defer wg.Done()
 
@@ -85,7 +82,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 				recorder = s.opts.statsProducer.NewWorkerCollector()
 			}
 
-			worker := NewWorker(i+1, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.responsePool, recorder)
+			worker := NewWorker(i, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.responsePool, recorder)
 
 			// blocking
 			_ = worker.Start(wCtx)
