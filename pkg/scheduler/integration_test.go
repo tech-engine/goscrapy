@@ -37,7 +37,7 @@ func TestWorker_ContextIntegration(t *testing.T) {
 		worker := NewWorker(1, executor, make(WorkerQueue, 1),
 			rp.NewPooler(rp.WithSize[schedulerWork](1)),
 			rp.NewPooler(rp.WithSize[request](1)),
-			1, nil)
+			rp.NewPooler(rp.WithSize[response](1)), nil)
 
 		// Framework lifecycle context
 		fCtx, fCancel := context.WithCancel(context.Background())
@@ -74,7 +74,7 @@ func TestWorker_ContextIntegration(t *testing.T) {
 		worker := NewWorker(1, executor, make(WorkerQueue, 1),
 			rp.NewPooler(rp.WithSize[schedulerWork](1)),
 			rp.NewPooler(rp.WithSize[request](1)),
-			1, nil)
+			rp.NewPooler(rp.WithSize[response](1)), nil)
 
 		// Framework lifecycle context (alive)
 		fCtx, fCancel := context.WithCancel(context.Background())
@@ -120,7 +120,7 @@ func TestWorker_ContextIntegration(t *testing.T) {
 		worker := NewWorker(42, executor, make(WorkerQueue, 1),
 			rp.NewPooler(rp.WithSize[schedulerWork](1)),
 			rp.NewPooler(rp.WithSize[request](1)),
-			1, nil)
+			rp.NewPooler(rp.WithSize[response](1)), nil)
 
 		fCtx := context.WithValue(context.Background(), "trace-id", "12345")
 		
@@ -160,7 +160,7 @@ func TestWorker_ContextIntegration(t *testing.T) {
 		worker := NewWorker(42, executor, make(WorkerQueue, 1),
 			rp.NewPooler(rp.WithSize[schedulerWork](1)),
 			rp.NewPooler(rp.WithSize[request](1)),
-			1, nil)
+			rp.NewPooler(rp.WithSize[response](1)), nil)
 
 		fCtx, fCancel := context.WithCancel(context.Background())
 		rCtx := context.Background()
