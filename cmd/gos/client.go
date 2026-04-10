@@ -57,7 +57,7 @@ func defaultClientOpts() clientOpts {
 	if ok {
 		maxIdleConnPerHost, err := strconv.Atoi(value)
 		if err == nil {
-			opts.maxConnsPerHost = maxIdleConnPerHost
+			opts.maxIdleConnsPerHost = maxIdleConnPerHost
 		}
 	}
 
