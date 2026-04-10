@@ -111,8 +111,14 @@ func (r *response) Bytes() []byte {
 func (r *response) Reset() {
 	r.statusCode = 0
 	r.body = nil
-	r.header = nil
-	r.cookies = nil
+	// reuse the header map
+	if r.header != nil {
+		for key := range r.header {
+			r.header.Del(key)
+		}
+	}
+	// reuse the cookies slice by resetting length
+	r.cookies = r.cookies[:0]
 	r.request = nil
 	r.bodyBytes = nil
 	// because we there isn't guarantee that we will have the same pair for req-res from the pools,

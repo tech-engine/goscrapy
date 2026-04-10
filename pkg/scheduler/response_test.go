@@ -219,8 +219,10 @@ func TestResponse_Reset(t *testing.T) {
 
 	assert.Equal(t, 0, resp.StatusCode())
 	assert.Nil(t, resp.Body())
-	assert.Nil(t, resp.Header())
-	assert.Nil(t, resp.Cookies())
+	// After reset, header is empty but retained for reuse (not nil)
+	assert.Empty(t, resp.Header())
+	// After reset, cookies slice is empty but retained for reuse (not nil)
+	assert.Empty(t, resp.Cookies())
 	assert.Nil(t, resp.Request())
 
 	assert.Nil(t, resp.meta, "meta must be nil after Reset")
