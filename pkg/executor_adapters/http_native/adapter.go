@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
-	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
 
@@ -26,8 +25,6 @@ func NewHTTPClientAdapter(client *http.Client, poolSize uint64) *HTTPAdapter {
 	}
 }
 
-
-
 func (r *HTTPAdapter) WithClient(client *http.Client) {
 	r.client = client
 }
@@ -36,7 +33,7 @@ func (r *HTTPAdapter) WithLogger(logger core.ILogger) {
 	r.logger = logger
 }
 
-func (r *HTTPAdapter) Do(res engine.IResponseWriter, req *http.Request) error {
+func (r *HTTPAdapter) Do(res core.IResponseWriter, req *http.Request) error {
 	r.logger.Debugf("📡 Sending %s request: %s", req.Method, req.URL.String())
 	source, err := r.client.Do(req)
 

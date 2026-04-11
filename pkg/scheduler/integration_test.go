@@ -11,14 +11,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 	"github.com/tech-engine/goscrapy/pkg/core"
-	"github.com/tech-engine/goscrapy/pkg/engine"
 )
 
 type blockingExecutor struct {
 	started chan struct{}
 }
 
-func (e *blockingExecutor) Execute(req core.IRequestReader, res engine.IResponseWriter) error {
+func (e *blockingExecutor) Execute(req core.IRequestReader, res core.IResponseWriter) error {
 	close(e.started)
 	ctx := req.ReadContext()
 	select {
@@ -112,7 +111,7 @@ func TestWorker_ContextIntegration(t *testing.T) {
 	t.Run("ValueAndWorkerIDPropagation", func(t *testing.T) {
 		// Mock executor that finishes immediately
 		executor := &mockExecutorFunc{
-			execute: func(req core.IRequestReader, res engine.IResponseWriter) error {
+			execute: func(req core.IRequestReader, res core.IResponseWriter) error {
 				return nil
 			},
 		}
@@ -151,7 +150,7 @@ func TestWorker_ContextIntegration(t *testing.T) {
 
 	t.Run("RecursiveContextPersistence", func(t *testing.T) {
 		executor := &mockExecutorFunc{
-			execute: func(req core.IRequestReader, res engine.IResponseWriter) error {
+			execute: func(req core.IRequestReader, res core.IResponseWriter) error {
 				res.WriteRequest(new(http.Request))
 				return nil
 			},
@@ -220,10 +219,10 @@ func TestWorker_ContextIntegration(t *testing.T) {
 }
 
 type mockExecutorFunc struct {
-	execute func(req core.IRequestReader, res engine.IResponseWriter) error
+	execute func(req core.IRequestReader, res core.IResponseWriter) error
 }
 
-func (m *mockExecutorFunc) Execute(req core.IRequestReader, res engine.IResponseWriter) error {
+func (m *mockExecutorFunc) Execute(req core.IRequestReader, res core.IResponseWriter) error {
 	return m.execute(req, res)
 }
 

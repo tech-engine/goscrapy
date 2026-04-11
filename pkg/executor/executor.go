@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
-	"github.com/tech-engine/goscrapy/pkg/engine"
 )
 
 type Executor struct {
@@ -18,7 +17,7 @@ func New(adapter IExecutorAdapter) *Executor {
 	}
 }
 
-func (e *Executor) Execute(req core.IRequestReader, res engine.IResponseWriter) error {
+func (e *Executor) Execute(req core.IRequestReader, res core.IResponseWriter) error {
 
 	ctx := req.ReadContext()
 	if ctx == nil {

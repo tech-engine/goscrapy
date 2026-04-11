@@ -7,13 +7,12 @@ import (
 
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 	"github.com/tech-engine/goscrapy/pkg/core"
-	"github.com/tech-engine/goscrapy/pkg/engine"
 )
 
 type dummyExecutor struct {
 }
 
-func (e *dummyExecutor) Execute(reader core.IRequestReader, writer engine.IResponseWriter) error {
+func (e *dummyExecutor) Execute(reader core.IRequestReader, writer core.IResponseWriter) error {
 	return nil
 }
 

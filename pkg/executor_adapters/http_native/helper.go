@@ -3,10 +3,10 @@ package httpnative
 import (
 	"net/http"
 
-	"github.com/tech-engine/goscrapy/pkg/engine"
+	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-func HTTPRequestAdapterResponse(res engine.IResponseWriter, source *http.Response) {
+func HTTPRequestAdapterResponse(res core.IResponseWriter, source *http.Response) {
 
 	res.WriteHeader(source.Header)
 	res.WriteStatusCode(source.StatusCode)

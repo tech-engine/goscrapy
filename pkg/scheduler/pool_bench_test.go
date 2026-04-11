@@ -1,4 +1,3 @@
-// Note: AI generated bench
 package scheduler
 
 import (
@@ -14,7 +13,6 @@ import (
 
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 	"github.com/tech-engine/goscrapy/pkg/core"
-	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
 
@@ -23,7 +21,7 @@ type benchExecutor struct {
 	client *http.Client
 }
 
-func (e *benchExecutor) Execute(req core.IRequestReader, res engine.IResponseWriter) error {
+func (e *benchExecutor) Execute(req core.IRequestReader, res core.IResponseWriter) error {
 	ctx := req.ReadContext()
 	if ctx == nil {
 		ctx = context.Background()

@@ -80,3 +80,19 @@ type ISelector interface {
 	Xpath(string) ISelector
 	ISelectorGetter
 }
+
+// moved from engine package
+type IResponseWriter interface {
+	WriteHeader(http.Header)
+	WriteBody(io.ReadCloser)
+	WriteStatusCode(int)
+	WriteCookies([]*http.Cookie)
+	WriteRequest(*http.Request)
+	WriteMeta(*fsmap.FixedSizeMap[string, any])
+}
+
+// moved from engine package
+type IResponse interface {
+	IResponseReader
+	IResponseWriter
+}
