@@ -15,7 +15,6 @@ type IEngine[OUT any] interface {
 	NewRequest(context.Context) IRequestRW
 	Schedule(IRequestReader, ResponseCallback)
 	Yield(IOutput[OUT])
-	WithName(string)
 }
 
 type IRequestReader interface {
