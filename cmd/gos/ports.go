@@ -43,6 +43,7 @@ type IEngineConfigurer[OUT any] interface {
 	WithPipelineManager(engine.IPipelineManager[OUT])
 	WithOnShutdown(...func())
 	WithShutdownTimeout(time.Duration)
+	WithLogger(core.ILogger) *engine.Engine[OUT]
 }
 
 // engine.*Engine[OUT] accepts a scheduler that implements engine.IScheduler[OUT] interface which
