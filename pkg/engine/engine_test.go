@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tech-engine/goscrapy/internal/fsmap"
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/logger"
 )
 
 //
@@ -23,7 +24,7 @@ import (
 func newTestEngine() (*Engine[any], *mockScheduler, *mockPipelineManager) {
 	s := newMockScheduler()
 	pm := newMockPipelineManager()
-	return New[any](s, pm), s, pm
+	return New(s, pm), s, pm
 }
 
 func waitOrFail(t *testing.T, ch <-chan struct{}, msg string) {
@@ -46,6 +47,7 @@ type mockScheduler struct {
 	scheduled  []core.IRequestReader
 	callbacks  []core.ResponseCallback
 	startError error
+	logger     core.ILogger
 }
 
 func newMockScheduler() *mockScheduler {
@@ -86,7 +88,12 @@ func (m *mockScheduler) NewRequest(ctx context.Context) core.IRequestRW {
 	return &mockRequest{}
 }
 
-func (m *mockScheduler) WithLogger(logger core.ILogger) {}
+func (m *mockScheduler) WithLogger(logger core.ILogger) IScheduler {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.logger = logger
+	return m
+}
 
 //
 // --- Mock Pipeline Manager ---
@@ -98,6 +105,7 @@ type mockPipelineManager struct {
 	startReady chan struct{}
 	pushed     []core.IOutput[any]
 	startError error
+	logger     core.ILogger
 }
 
 func newMockPipelineManager() *mockPipelineManager {
@@ -133,7 +141,12 @@ func (m *mockPipelineManager) Push(out core.IOutput[any]) {
 	m.pushed = append(m.pushed, out)
 }
 
-func (m *mockPipelineManager) WithLogger(logger core.ILogger) {}
+func (m *mockPipelineManager) WithLogger(logger core.ILogger) IPipelineManager[any] {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.logger = logger
+	return m
+}
 
 //
 // --- Mock Request ---
@@ -327,4 +340,30 @@ func TestEngine_Start_Idempotent(t *testing.T) {
 	})
 
 	time.Sleep(100 * time.Millisecond)
+}
+
+func TestEngine_LoggerCoverage(t *testing.T) {
+	t.Run("DefaultLogger_DoesNotPanic", func(t *testing.T) {
+		// New returns engine with a non-nil logger (default os.Stderr)
+		eng, _, _ := newTestEngine()
+		assert.NotNil(t, eng.logger)
+		
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+
+		assert.NotPanics(t, func() {
+			_ = eng.Start(ctx)
+		})
+	})
+
+	t.Run("WithLogger_PropagatesRecursively", func(t *testing.T) {
+		eng, sched, pm := newTestEngine()
+		
+		mockLogger := logger.NewNoopLogger()
+		eng.WithLogger(mockLogger)
+
+		assert.NotNil(t, eng.logger)
+		assert.NotNil(t, sched.logger)
+		assert.NotNil(t, pm.logger)
+	})
 }
