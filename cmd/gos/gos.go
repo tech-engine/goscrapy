@@ -18,56 +18,57 @@ import (
 )
 
 func New[OUT any]() *gosBuilder[OUT] {
-	c := &gosBuilder[OUT]{
-		httpClient: DefaultClient(),
+
+	httpClient := &http.Client{}
+	mm := middlewaremanager.New(httpClient)
+	pm := pipelinemanager.New[OUT]()
+
+	adapter := httpnative.NewHTTPClientAdapter(httpClient)
+	executor := executor.New(adapter)
+	scheduler := scheduler.New(executor)
+
+	eng := engine.New(scheduler, pm)
+
+	//propagate logger to all components (recursive)
+	eng.WithLogger(logger.NewLogger())
+
+	builder := &gosBuilder[OUT]{
+		Engine:            eng,
+		MiddlewareManager: mm,
+		PipelineManager:   pm,
+		Scheduler:         scheduler,
 	}
 
-	c.MiddlewareManager = middlewaremanager.New(c.httpClient)
-
-	c.ExecutorAdapter = httpnative.NewHTTPClientAdapter(c.MiddlewareManager.HTTPClient(), 0)
-
-	c.Executor = executor.New(c.ExecutorAdapter)
-
-	c.Scheduler = scheduler.New(c.Executor)
-
-	c.PipelineManager = pipelinemanager.New[OUT]()
-
-	c.Engine = engine.New(c.Scheduler, c.PipelineManager)
-
-	c.Core = core.New(c.Engine)
-	return c
+	return builder
 }
 
-func (c *gosBuilder[OUT]) WithClient(cli *http.Client) *gosBuilder[OUT] {
-	c.httpClient = cli
-	return c
-}
-
-func (c *gosBuilder[OUT]) WithName(name string) *gosBuilder[OUT] {
-	c.Engine.WithName(name)
-	return c
-}
-
-func (c *gosBuilder[OUT]) Start(ctx context.Context) error {
-	return c.Engine.Start(ctx)
-}
-
-func (c *gosBuilder[OUT]) Setup(
+func (gos *gosBuilder[OUT]) Setup(
 	middlewares []middlewaremanager.Middleware,
 	pipelines []pipelinemanager.IPipeline[OUT],
 	onShutdown ...func(),
 ) *gosBuilder[OUT] {
-	logger.Infof("Initializing engine with %d middlewares and %d pipelines", len(middlewares), len(pipelines))
-	c.MiddlewareManager.Add(middlewares...)
-	c.PipelineManager.Add(pipelines...)
+	gos.logger.Infof("Initializing engine with %d middlewares and %d pipelines", len(middlewares), len(pipelines))
+	gos.MiddlewareManager.Add(middlewares...)
+	gos.PipelineManager.Add(pipelines...)
 	for _, fn := range onShutdown {
-		c.Engine.WithOnShutdown(fn)
+		gos.Engine.WithOnShutdown(fn)
 	}
-	return c
+	return gos
+}
+
+func (gos *gosBuilder[OUT]) WithLogger(loggerIn core.IConfigurableLogger) *gosBuilder[OUT] {
+	loggerIn = logger.EnsureLogger(loggerIn).(core.IConfigurableLogger)
+	gos.logger = loggerIn.WithName("GOS")
+	gos.Engine.WithLogger(loggerIn)
+	return gos
+}
+
+func (gos *gosBuilder[OUT]) Start(ctx context.Context) error {
+	return gos.Engine.Start(ctx)
 }
 
 // Wait for completion or termination
-func Wait(cancel context.CancelFunc, errCh <-chan error) error {
+func (gos *gosBuilder[OUT]) Wait(cancel context.CancelFunc, errCh <-chan error) error {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
@@ -75,7 +76,7 @@ func Wait(cancel context.CancelFunc, errCh <-chan error) error {
 	case err := <-errCh:
 		return err
 	case sig := <-sigCh:
-		logger.Infof("Received termination signal: %v", sig)
+		gos.logger.Infof("Received termination signal: %v", sig)
 		cancel()
 		return <-errCh
 	}

@@ -15,4 +15,5 @@ type gosBuilder[OUT any] struct {
 	ExecutorAdapter   IExecutorAdapterConfigurer
 	MiddlewareManager IMiddlewareManager
 	httpClient        *http.Client
+	logger            core.ILogger
 }
