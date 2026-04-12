@@ -41,29 +41,39 @@ func New[OUT any](schd IScheduler, pm IPipelineManager[OUT], optFuncs ...types.O
 		opts:            opts,
 		scheduler:       schd,
 		pipelineManager: pm,
-		logger:          logger.GetLogger(), // default to global logger
+		logger:          logger.EnsureLogger(nil).WithName("Engine"),
 	}
 
 	return engine
 }
 
+func (m *Engine[OUT]) WithShutdownTimeout(timeout time.Duration) {
+	m.opts.shutdownTimeout = timeout
+}
+
 // WithOnShutdown registers shutdown handlers to be executed on exit
-func WithOnShutdown(funcs ...func()) types.OptFunc[opts] {
-	return func(o *opts) {
-		o.onShutdown = append(o.onShutdown, funcs...)
-	}
+func (m *Engine[OUT]) WithOnShutdown(funcs ...func()) {
+	m.onShutdown = append(m.onShutdown, funcs...)
+}
+
+func (m *Engine[OUT]) WithScheduler(schd IScheduler) {
+	m.scheduler = schd
+}
+
+func (m *Engine[OUT]) WithPipelineManager(pm IPipelineManager[OUT]) {
+	m.pipelineManager = pm
 }
 
 func (m *Engine[OUT]) Start(ctx context.Context) error {
-	m.logger.Info("Engine starting...")
+	m.logger.Infof("Engine starting...")
 
 	// run all shutdown hooks before returning
 	defer func() {
-		m.logger.Info("Shutting down engine...")
-		for _, fn := range m.opts.onShutdown {
+		m.logger.Infof("Shutting down engine...")
+		for _, fn := range m.onShutdown {
 			fn()
 		}
-		m.logger.Info("Engine shutdown complete.")
+		m.logger.Infof("Engine shutdown complete.")
 	}()
 
 	g, gCtx := errgroup.WithContext(ctx)
@@ -84,7 +94,7 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	err := g.Wait()
 
 	// after finishing scheduler and pipeline manager we wait for queued items to finish.
-	// we use a timeout to prevent hanging forever.
+	// we use a timeout
 	if m.opts.shutdownTimeout > 0 {
 		_, cancel := context.WithTimeout(context.Background(), m.opts.shutdownTimeout)
 		defer cancel()
@@ -93,36 +103,23 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	return err
 }
 
-func (m *Engine[OUT]) Schedule(req core.IRequestReader, cb core.ResponseCallback) {
-	m.scheduler.Schedule(req, cb)
-}
-
-func (m *Engine[OUT]) Yield(out core.IOutput[OUT]) {
-	m.pipelineManager.Push(out)
+func (m *Engine[OUT]) Schedule(req core.IRequestReader, next core.ResponseCallback) {
+	m.scheduler.Schedule(req, next)
 }
 
 func (m *Engine[OUT]) NewRequest(ctx context.Context) core.IRequestRW {
 	return m.scheduler.NewRequest(ctx)
 }
 
-func (m *Engine[OUT]) WithScheduler(schd IScheduler) {
-	m.scheduler = schd
+func (m *Engine[OUT]) Yield(v core.IOutput[OUT]) {
+	m.pipelineManager.Push(v)
 }
 
-func (m *Engine[OUT]) WithPipelineManager(pm IPipelineManager[OUT]) {
-	m.pipelineManager = pm
-}
+func (m *Engine[OUT]) WithLogger(loggerIn core.ILogger) *Engine[OUT] {
+	loggerIn = logger.EnsureLogger(loggerIn)
+	m.logger = loggerIn.WithName("Engine")
+	m.scheduler.WithLogger(loggerIn)
+	m.pipelineManager.WithLogger(loggerIn)
 
-func (m *Engine[OUT]) WithShutdownTimeout(timeout time.Duration) {
-	m.opts.shutdownTimeout = timeout
-}
-
-func (m *Engine[OUT]) WithName(name string) {
-	m.logger = m.logger.WithName(name)
-	m.scheduler.WithLogger(m.logger)
-	m.pipelineManager.WithLogger(m.logger)
-}
-
-func (m *Engine[OUT]) WithOnShutdown(funcs ...func()) {
-	m.opts.onShutdown = append(m.opts.onShutdown, funcs...)
+	return m
 }
