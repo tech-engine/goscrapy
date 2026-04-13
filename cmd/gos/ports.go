@@ -11,6 +11,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 	pipelinemanager "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 	"github.com/tech-engine/goscrapy/pkg/scheduler"
+	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 )
 
 // Any custom spider created using GoScrapy Framework must implement ICoreSpider[OUT any] interface
@@ -53,6 +54,7 @@ type IEngineConfigurer[OUT any] interface {
 type ISchedulerConfigurer[OUT any] interface {
 	engine.IScheduler
 	WithExecutor(scheduler.IExecutor)
+	WithStatsRecorderFactory(ts.IStatsRecorderFactory)
 }
 
 // scheduler.*Scheduler accepts a executor that implements scheduler.IExecutor interface which
