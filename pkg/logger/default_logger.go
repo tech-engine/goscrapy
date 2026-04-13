@@ -111,7 +111,7 @@ func (l *logger) WithName(name string) core.ILogger {
 func (l *logger) formatHeader(b []byte, level core.LogLevel, emoji string) []byte {
 	b = time.Now().AppendFormat(b, "2006/01/02 15:04:05 ")
 	b = append(b, emoji...)
-	b = append(b, ' ')
+	b = append(b, ' ', ' ')
 
 	if int(level) < len(levelBytes) {
 		b = append(b, levelBytes[level]...)
