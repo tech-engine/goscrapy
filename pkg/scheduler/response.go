@@ -89,6 +89,9 @@ func (r *response) Detach() core.IResponseReader {
 
 func (r *response) Bytes() []byte {
 	if r.bodyBytes != nil {
+		if r.body == nil {
+			r.body = io.NopCloser(bytes.NewReader(r.bodyBytes))
+		}
 		return r.bodyBytes
 	}
 
@@ -96,6 +99,7 @@ func (r *response) Bytes() []byte {
 		return nil
 	}
 
+	defer r.body.Close()
 	data, err := io.ReadAll(r.body)
 
 	if err != nil {
