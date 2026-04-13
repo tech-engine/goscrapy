@@ -192,8 +192,6 @@ package myspider
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"log"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
@@ -209,11 +207,12 @@ func (s *Spider) Close(ctx context.Context) {
 }
 
 func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
-	fmt.Printf("status: %d", resp.StatusCode())
+	s.Logger().Infof("status: %d", resp.StatusCode())
 
 	var data Record
 	if err := json.Unmarshal(resp.Bytes(), &data); err != nil {
-		log.Fatalln(err)
+		s.Logger().Errorf("failed to unmarshal record: %v", err)
+		return
 	}
 
 	// Yield sends the data securely to your configured pipelines
