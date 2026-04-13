@@ -109,15 +109,12 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 		}
 
 		// abort if req is cancelled
-		go func() {
-			select {
-			case <-reqCtx.Done():
-				if reqCtx.Err() != context.DeadlineExceeded {
-					cancel()
-				}
-			case <-baseCtx.Done():
+		stopFunc := context.AfterFunc(reqCtx, func() {
+			if reqCtx.Err() != context.DeadlineExceeded {
+				cancel()
 			}
-		}()
+		})
+		defer stopFunc()
 	}
 
 	// merge values from both context chains
