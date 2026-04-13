@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const VERSION = "0.12.0"
+const VERSION = "0.13.0"
 
 const BANNER_MSG = `
 _________       ________                                         
@@ -25,7 +25,7 @@ GoScrapy: Harnessing Go's power for efficient web scraping, inspired by Python's
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:     "goscrapy [command]",
-	Short:   "A command line tool to everything related to GoScrapy.",
+	Short:   "A cli utility for everything GoScrapy.",
 	Long:    BANNER_MSG,
 	Version: VERSION,
 }

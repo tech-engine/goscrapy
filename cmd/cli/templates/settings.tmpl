@@ -9,6 +9,13 @@ import (
 	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 )
 
+// Default: INFO
+// Options: DEBUG, INFO, WARN, ERROR, NONE
+const GOS_LOG_LEVEL = "INFO"
+
+// To enable stats collection, uncomment the following line and the Stats middleware below
+// var HttpStats = middlewares.NewStatsCollector()
+
 // HTTP Transport settings
 
 // Default: 10000
@@ -60,6 +67,7 @@ const PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY = ""
 // Middlewares here
 // Executed in reverse order from bottom to top.
 var MIDDLEWARES = []middlewaremanager.Middleware{
+	// middlewares.Stats(HttpStats),
 	middlewares.Retry(),
 	middlewares.MultiCookieJar,
 	middlewares.DupeFilter,
@@ -93,6 +101,7 @@ var PIPELINES = []pm.IPipeline[*Record]{
 
 func init() {
 	var settings = map[string]string{
+		"GOS_LOG_LEVEL":                                GOS_LOG_LEVEL,
 		"MIDDLEWARE_HTTP_TIMEOUT_MS":                   MIDDLEWARE_HTTP_TIMEOUT_MS,
 		"MIDDLEWARE_HTTP_MAX_IDLE_CONN":                MIDDLEWARE_HTTP_MAX_IDLE_CONN,
 		"MIDDLEWARE_HTTP_MAX_CONN_PER_HOST":            MIDDLEWARE_HTTP_MAX_CONN_PER_HOST,
@@ -101,7 +110,7 @@ func init() {
 		"MIDDLEWARE_HTTP_RETRY_CODES":                  MIDDLEWARE_HTTP_RETRY_CODES,
 		"MIDDLEWARE_HTTP_RETRY_BASE_DELAY":             MIDDLEWARE_HTTP_RETRY_BASE_DELAY,
 		"SCHEDULER_REQ_RES_POOL_SIZE":                  SCHEDULER_REQ_RES_POOL_SIZE,
-		"SCHEDULER_CONCURRENCY":             			SCHEDULER_CONCURRENCY,
+		"SCHEDULER_CONCURRENCY":                        SCHEDULER_CONCURRENCY,
 		"SCHEDULER_WORK_QUEUE_SIZE":                    SCHEDULER_WORK_QUEUE_SIZE,
 		"PIPELINEMANAGER_ITEMPOOL_SIZE":                PIPELINEMANAGER_ITEMPOOL_SIZE,
 		"PIPELINEMANAGER_ITEM_SIZE":                    PIPELINEMANAGER_ITEM_SIZE,
