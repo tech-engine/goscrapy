@@ -14,7 +14,7 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 	// for each request we must call NewRequest() and never reuse it
 	req := s.NewRequest(ctx)
 
-	// GET is the request method
+	// GET is the default method
 	req.Url(s.baseUrl)
 
 	s.Request(req, s.parse)
@@ -22,11 +22,11 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 
 // can be called when spider is about to close
 func (s *Spider) Close(ctx context.Context) {
-	fmt.Println("closing")
+	s.Logger().Info("closing")
 }
 
 func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
-	fmt.Printf("GET: %d %s\n", resp.StatusCode(), resp.Request().URL.String())
+	s.Logger().Infof("GET: %d %s", resp.StatusCode(), resp.Request().URL.String())
 	for _, productUrl := range resp.Css("article.product_pod h3 a").Attr("href") {
 		req := s.NewRequest(ctx)
 
@@ -38,7 +38,7 @@ func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 
 		req.Url(productUrl)
 		s.Request(req, s.parseProduct)
-		fmt.Printf("GET: %s\n", productUrl)
+		s.Logger().Infof("GET: %s", productUrl)
 	}
 
 	// pagination

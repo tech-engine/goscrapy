@@ -11,25 +11,19 @@ type Spider struct {
 	baseUrl string
 }
 
+// New initializes the spider with minimal setup (no TUI, no stats collection).
 func New(ctx context.Context) (*Spider, <-chan error) {
-
-	// use proxies
-	// proxies := core.WithProxies("proxy_url1", "proxy_url2", ...)
-	// core := gos.New[*Record]().WithClient(
-	// 	gos.DefaultClient(proxies),
-	// )
-
-	core := gos.New[*Record]().Setup(MIDDLEWARES, PIPELINES, Stats.Print)
-
-	errCh := make(chan error)
+	app := gos.NewApp[*Record]().
+		Setup(MIDDLEWARES, PIPELINES)
 
 	spider := &Spider{
-		core,
-		"https://books.toscrape.com",
+		ICoreSpider: app,
+		baseUrl:     "https://books.toscrape.com",
 	}
 
+	errCh := make(chan error, 1)
 	go func() {
-		errCh <- core.Start(ctx)
+		errCh <- app.Start(ctx)
 		spider.Close(ctx)
 	}()
 

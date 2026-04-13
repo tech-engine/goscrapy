@@ -57,13 +57,15 @@ const PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE = ""
 // Default: 150
 const PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY = ""
 
-// stats collector for scraping metrics
-var Stats = middlewares.NewStats()
+const LiveDashboard = true
+
+// stats collector for scraping metrics - Now explicitly managed by user
+// var HttpStats = middlewares.NewStatsCollector()
 
 // Middlewares here
 // Executed in reverse order from bottom to top.
 var MIDDLEWARES = []middlewaremanager.Middleware{
-	middlewares.Stats(Stats),
+	// middlewares.Stats(HttpStats),
 	middlewares.Retry(),
 	middlewares.MultiCookieJar,
 	middlewares.DupeFilter,
@@ -95,8 +97,14 @@ var PIPELINES = []pm.IPipeline[*Record]{
 	// myCustomPipelineGroup(),
 }
 
+// Default: INFO
+// Options: DEBUG, INFO, WARN, ERROR, NONE
+// NONE will disable all logging
+const GOS_LOG_LEVEL = "INFO"
+
 func init() {
 	var settings = map[string]string{
+		"GOS_LOG_LEVEL":                                GOS_LOG_LEVEL,
 		"MIDDLEWARE_HTTP_TIMEOUT_MS":                   MIDDLEWARE_HTTP_TIMEOUT_MS,
 		"MIDDLEWARE_HTTP_MAX_IDLE_CONN":                MIDDLEWARE_HTTP_MAX_IDLE_CONN,
 		"MIDDLEWARE_HTTP_MAX_CONN_PER_HOST":            MIDDLEWARE_HTTP_MAX_CONN_PER_HOST,

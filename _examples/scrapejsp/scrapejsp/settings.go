@@ -9,6 +9,10 @@ import (
 	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 )
 
+// Default: INFO
+// Options: DEBUG, INFO, WARN, ERROR, NONE
+const GOS_LOG_LEVEL = "INFO"
+
 // HTTP Transport settings
 
 // Default: 10000
@@ -93,6 +97,7 @@ var PIPELINES = []pm.IPipeline[*Record]{
 
 func init() {
 	var settings = map[string]string{
+		"GOS_LOG_LEVEL":                                GOS_LOG_LEVEL,
 		"MIDDLEWARE_HTTP_TIMEOUT_MS":                   MIDDLEWARE_HTTP_TIMEOUT_MS,
 		"MIDDLEWARE_HTTP_MAX_IDLE_CONN":                MIDDLEWARE_HTTP_MAX_IDLE_CONN,
 		"MIDDLEWARE_HTTP_MAX_CONN_PER_HOST":            MIDDLEWARE_HTTP_MAX_CONN_PER_HOST,

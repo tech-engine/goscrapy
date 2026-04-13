@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
-	"github.com/tech-engine/goscrapy/cmd/gos"
 	// replace with your own project name
 	"books_to_scrape/books_to_scrape"
 )
@@ -23,9 +23,12 @@ func main() {
 	fmt.Println("🕷️  GoScrapy spider is running. Press Ctrl+C to stop.")
 
 	// wait for completion
-	if err := gos.Wait(cancel, errCh); err != nil && !errors.Is(err, context.Canceled) {
-		fmt.Printf("❌ Engine finished with error: %v\n", err)
-	} else {
-		fmt.Println("✨ Engine finished successfully.")
+	err := spider.Wait(cancel, errCh)
+
+	if err != nil && !errors.Is(err, context.Canceled) {
+		fmt.Fprintf(os.Stderr, "❌ Engine finished with error: %v\n", err)
+		os.Exit(1)
 	}
+
+	fmt.Println("✨ Engine finished successfully.")
 }

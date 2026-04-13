@@ -11,17 +11,16 @@ type Spider struct {
 }
 
 func New(ctx context.Context) (*Spider, <-chan error) {
-
-	core := gos.New[*Record]().Setup(MIDDLEWARES, PIPELINES)
-
-	errCh := make(chan error)
+	app := gos.NewApp[*Record]().
+		Setup(MIDDLEWARES, PIPELINES)
 
 	spider := &Spider{
-		core,
+		ICoreSpider: app,
 	}
 
+	errCh := make(chan error, 1)
 	go func() {
-		errCh <- core.Start(ctx)
+		errCh <- app.Start(ctx)
 		spider.Close(ctx)
 	}()
 
