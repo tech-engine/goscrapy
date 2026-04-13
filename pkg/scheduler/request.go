@@ -129,13 +129,9 @@ func (r *request) Meta(key string, val any) core.IRequestWriter {
 func (r *request) Reset() {
 	r.method = ""
 	r.url = nil
-	if r.header != nil {
-		for key := range r.header {
-			r.header.Del(key)
-		}
-	}
 	r.body = nil
 	r.cookieJarKey = ""
+	clear(r.header)
 	if r.meta != nil {
 		r.meta.Clear()
 	}
