@@ -77,8 +77,8 @@ func TestLoggerWithWriter(t *testing.T) {
 }
 
 func TestLoggerEnvVar(t *testing.T) {
-	os.Setenv("GOSCRAPY_LOG_LEVEL", "DEBUG")
-	defer os.Unsetenv("GOSCRAPY_LOG_LEVEL")
+	os.Setenv("GOS_LOG_LEVEL", "DEBUG")
+	defer os.Unsetenv("GOS_LOG_LEVEL")
 
 	var buf bytes.Buffer
 	l := NewLogger(WithWriter(&buf))

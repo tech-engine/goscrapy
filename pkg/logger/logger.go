@@ -58,7 +58,7 @@ func defaultOpts() loggerOpts {
 		w:     os.Stderr,
 	}
 
-	value, ok := os.LookupEnv("GOSCRAPY_LOG_LEVEL")
+	value, ok := os.LookupEnv("GOS_LOG_LEVEL")
 	if ok && value != "" {
 		opts.level = ParseLevel(value)
 	}
