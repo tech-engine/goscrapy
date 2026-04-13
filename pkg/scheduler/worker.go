@@ -2,11 +2,13 @@ package scheduler
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"sync"
 
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/logger"
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 )
 
@@ -19,10 +21,11 @@ type Worker struct {
 	schedulerWorkPool *rp.Pooler[schedulerWork]
 	responsePool      *rp.Pooler[response]
 	requestPool       *rp.Pooler[request]
-	stats             ts.StatRecorder
+	stats             ts.StatsRecorder
+	logger            core.ILogger
 }
 
-func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, schedulerWorkPool *rp.Pooler[schedulerWork], requestPool *rp.Pooler[request], responsePool *rp.Pooler[response], stats ts.StatRecorder) *Worker {
+func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, schedulerWorkPool *rp.Pooler[schedulerWork], requestPool *rp.Pooler[request], responsePool *rp.Pooler[response], stats ts.StatsRecorder) *Worker {
 
 	return &Worker{
 		ID:                id,
@@ -33,7 +36,14 @@ func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, scheduler
 		requestPool:       requestPool,
 		responsePool:      responsePool,
 		stats:             stats,
+		logger:            logger.EnsureLogger(nil).WithName(fmt.Sprintf("Worker-%d", id)),
 	}
+}
+
+func (w *Worker) WithLogger(loggerIn core.ILogger) *Worker {
+	loggerIn = logger.EnsureLogger(loggerIn)
+	w.logger = loggerIn.WithName(fmt.Sprintf("Worker-%d", w.ID))
+	return w
 }
 
 // Handles listen for any incoming work in workQueue
@@ -98,7 +108,7 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 			defer dCancel()
 		}
 
-		// abort if req is cancelled. captured baseCtx is stable here.
+		// abort if req is cancelled
 		go func() {
 			select {
 			case <-reqCtx.Done():
