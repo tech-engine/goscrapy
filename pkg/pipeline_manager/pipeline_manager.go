@@ -74,19 +74,18 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 	// ensure everything is closed on exit
 	defer pm.stop()
 
-	var wg sync.WaitGroup
-
 	// start workers
 	concurrency := pm.opts.maxProcessItemConcurrency
 	if concurrency == 0 {
 		concurrency = 1
 	}
 
+	var wg sync.WaitGroup
 	wg.Add(int(concurrency))
 	// wait for all goroutines
 	defer wg.Wait()
 
-	for i := uint64(0); i < concurrency; i++ {
+	for i := 0; i < int(concurrency); i++ {
 		go func() {
 			defer wg.Done()
 			for {
@@ -110,7 +109,7 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 	// so we close queue to signal workers
 	close(pm.outputQueue)
 
-	// draining remaining items in outputQueue
+	// draining remaining items, if any in outputQueue
 	for out := range pm.outputQueue {
 		pm.processItem(out)
 	}
