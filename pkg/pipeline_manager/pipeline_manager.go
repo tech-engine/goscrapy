@@ -96,8 +96,8 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 					if !ok {
 						return
 					}
-					pm.processItem(out)
-				}
+				pm.processItem(out)
+			}
 			}
 		}()
 	}
@@ -135,15 +135,13 @@ func (pm *PipelineManager[OUT]) stop() {
 }
 
 func (pm *PipelineManager[OUT]) Push(original core.IOutput[OUT]) {
-	if len(pm.pipelines) <= 0 {
+	if len(pm.pipelines) == 0 {
 		return
 	}
 
 	select {
 	case pm.outputQueue <- original:
-		pm.logger.Debug("📦 Item pushed to pipeline queue")
 	default:
-		pm.logger.Warn("⚠️ Pipeline queue full, blocking push")
 		pm.outputQueue <- original
 	}
 }
