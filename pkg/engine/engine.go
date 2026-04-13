@@ -73,7 +73,7 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 		for _, fn := range m.onShutdown {
 			fn()
 		}
-		m.logger.Infof("Engine shutdown complete.")
+		m.logger.Infof("shutdown complete.")
 	}()
 
 	g, gCtx := errgroup.WithContext(ctx)

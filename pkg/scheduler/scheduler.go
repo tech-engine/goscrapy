@@ -75,7 +75,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 	defer func() {
 		wCancel()
 		wg.Wait()
-		s.logger.Info("Scheduler stopped")
+		s.logger.Info("stopped")
 	}()
 
 	var recorders []ts.IStatsRecorder
@@ -103,7 +103,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			s.stopping.Store(true)
-			s.logger.Infof("Scheduler received context cancellation: %v", ctx.Err())
+			s.logger.Infof("received context cancellation: %v", ctx.Err())
 			return nil
 		case work := <-s.workQueue:
 			select {
@@ -111,7 +111,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 				worker <- work
 			case <-ctx.Done():
 				s.stopping.Store(true)
-				s.logger.Infof("Scheduler received context cancellation during work dispatch: %v", ctx.Err())
+				s.logger.Infof("received context cancellation during work dispatch: %v", ctx.Err())
 				return nil
 			}
 		}
