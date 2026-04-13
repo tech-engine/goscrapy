@@ -68,7 +68,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 
 	var wg sync.WaitGroup
 	// worker lifecycle context
-	wCtx, wCancel := context.WithCancel(context.Background())
+	wCtx, wCancel := context.WithCancel(ctx)
 
 	wg.Add(int(s.opts.numWorkers))
 
