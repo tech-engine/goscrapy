@@ -5,15 +5,19 @@ import (
 	"net/http"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/logger"
+	"github.com/tech-engine/goscrapy/pkg/scheduler"
 )
 
 type Executor struct {
 	adapter IExecutorAdapter
+	logger  core.ILogger
 }
 
 func New(adapter IExecutorAdapter) *Executor {
 	return &Executor{
 		adapter: adapter,
+		logger:  logger.EnsureLogger(nil).WithName("Executor"),
 	}
 }
 
@@ -48,6 +52,9 @@ func (e *Executor) WithAdapter(adapter IExecutorAdapter) {
 	e.adapter = adapter
 }
 
-func (e *Executor) WithLogger(logger core.ILogger) {
-	e.adapter.WithLogger(logger)
+func (e *Executor) WithLogger(loggerIn core.ILogger) scheduler.IExecutor {
+	loggerIn = logger.EnsureLogger(loggerIn)
+	e.logger = loggerIn.WithName("Executor")
+	e.adapter.WithLogger(loggerIn)
+	return e
 }
