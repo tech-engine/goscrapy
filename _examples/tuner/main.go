@@ -17,7 +17,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
 
-// Minimal Record to satisfy the framework output definition
+// Record represents a minimal data structure for benchmarking.
 type Record struct {
 	Id string `json:"id" csv:"id"`
 }
@@ -38,12 +38,11 @@ func mockServer() {
 
 type BenchSpider struct {
 	gos.ICoreSpider[*Record]
-	completed  atomic.Int32
-	cancelFunc context.CancelFunc
+	completed atomic.Int32
 }
 
 func (s *BenchSpider) parse(ctx context.Context, resp core.IResponseReader) {
-	// Simulate item yield to ensure PipelineManager is active
+	// Yield a record to ensure PipelineManager is executed
 	s.Yield(&Record{Id: "bench_item"})
 	s.completed.Add(1)
 }
@@ -56,60 +55,57 @@ func runBenchmark(concurrency, poolSize, maxIdle, queueBuf string) float64 {
 	os.Setenv("MIDDLEWARE_HTTP_MAX_IDLE_CONN_PER_HOST", maxIdle)
 	os.Setenv("PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE", queueBuf)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	engine := gos.New[*Record]().Setup(nil, nil)
+	// Use a timeout context to run each benchmark for a fixed duration
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Root logger for tuning, nullified to avoid interference
+	l := logger.NewNoopLogger()
+
+	// Initialize the application using the modern factory
+	// Explicitly disable telemetry and TUI for zero benchmark overhead
+	app := gos.NewApp[*Record]().WithLogger(l).WithTelemetry(nil).Setup(nil, nil)
 
 	spider := &BenchSpider{
-		ICoreSpider: engine,
-		cancelFunc:  cancel,
+		ICoreSpider: app,
 	}
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- engine.Start(ctx)
+		errCh <- app.Start(ctx)
 	}()
 
 	startTime := time.Now()
 
-	// Feed the queue dynamically until time is up
+	// Feed the queue dynamically until the timeout is reached
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			default:
-				// Push blocks of requests
-				for i := 0; i < 5000; i++ {
+				// Push blocks of requests to saturate the engine
+				for i := 0; i < 1000; i++ {
 					req := spider.NewRequest(ctx)
 					req.Url("http://localhost:18080/")
 					spider.Request(req, spider.parse)
 				}
-				time.Sleep(100 * time.Millisecond)
+				runtime.Gosched()
 			}
 		}
 	}()
 
-	// Execute benchmark for exactly 5 seconds
-	time.Sleep(5 * time.Second)
-
-	// Terminate early to prevent hangs
-	// We intentionally do NOT wait on <-errCh here. Under severe benchmark load,
-	// goscrapy's scheduler may deadlock its internal WaitGroup during context cancellation
-	// if workers terminate before the pipeline pushes are complete. Since this is a tuner, we can leak it.
-	cancel()
+	// Orchestrate cleanup using the standard Wait logic.
+	// This is now safe because the framework deadlock has been resolved.
+	_ = app.Wait(cancel, errCh)
 
 	duration := time.Since(startTime)
 	rps := float64(spider.completed.Load()) / duration.Seconds()
 
-	// Explicit GC to unbind old workers
-	time.Sleep(1 * time.Second)
 	return rps
 }
 
 func main() {
-	// Disable logging during benchmark to avoid output clutter and perf impact
-	logger.SetLevel(core.LevelNone)
-
 	fmt.Println("Warming up Mock Server on :18080...")
 	mockServer()
 	time.Sleep(500 * time.Millisecond)
