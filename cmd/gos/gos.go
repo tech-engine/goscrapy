@@ -15,6 +15,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 	pipelinemanager "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 	"github.com/tech-engine/goscrapy/pkg/scheduler"
+	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 )
 
 func New[OUT any]() *gosBuilder[OUT] {
@@ -52,6 +53,13 @@ func (gos *gosBuilder[OUT]) Setup(
 	gos.PipelineManager.Add(pipelines...)
 	for _, fn := range onShutdown {
 		gos.Engine.WithOnShutdown(fn)
+	}
+	return gos
+}
+
+func (gos *gosBuilder[OUT]) WithStatsRecorderFactory(factory ts.IStatsRecorderFactory) *gosBuilder[OUT] {
+	if gos.Scheduler != nil && factory != nil {
+		gos.Scheduler.WithStatsRecorderFactory(factory)
 	}
 	return gos
 }
