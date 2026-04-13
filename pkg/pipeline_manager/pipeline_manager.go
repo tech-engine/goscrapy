@@ -8,6 +8,7 @@ import (
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 	"golang.org/x/sync/errgroup"
 )
@@ -35,7 +36,7 @@ func New[OUT any](optFuncs ...types.OptFunc[opts]) *PipelineManager[OUT] {
 		outputQueue: make(chan core.IOutput[OUT], opts.outputQueueBuffSize),
 		pipelines:   make([]IPipeline[OUT], 0),
 		itemPool:    rp.NewPooler(rp.WithSize[cmap.CMap[string, any]](opts.itemPoolSize)),
-		logger:      logger.GetLogger(), // default to global logger
+		logger:      logger.EnsureLogger(nil).WithName("PipelineManager"),
 	}
 }
 
@@ -43,76 +44,82 @@ func (pm *PipelineManager[OUT]) Add(pipeline ...IPipeline[OUT]) {
 	pm.pipelines = append(pm.pipelines, pipeline...)
 }
 
-func (pm *PipelineManager[OUT]) WithLogger(logger core.ILogger) {
-	pm.logger = logger
+func (pm *PipelineManager[OUT]) WithLogger(loggerIn core.ILogger) engine.IPipelineManager[OUT] {
+	loggerIn = logger.EnsureLogger(loggerIn)
+	pm.logger = loggerIn.WithName("PipelineManager")
+	return pm
 }
 
 // runs after the spider's Open func and calls all open function of pipelines
 func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
-
-	var (
-		group    *errgroup.Group
-		groupCtx context.Context
-		err      error
-	)
-
-	if err = ctx.Err(); err != nil {
-		return err
+	if len(pm.pipelines) == 0 {
+		pm.logger.Warn("No pipelines registered, items will be dropped")
 	}
 
-	// Below code ensures that we return an error in case any of the pipelines open
-	// funtion returns and error if opts.openMust has been set to true
+	pm.logger.Infof("Starting pipeline manager with %d pipelines", len(pm.pipelines))
 
-	group, groupCtx = errgroup.WithContext(ctx)
-
+	// open all pipelines
+	group, groupCtx := errgroup.WithContext(ctx)
 	for _, pipeline := range pm.pipelines {
 		group.Go(func() error {
 			return pipeline.Open(groupCtx)
 		})
 	}
 
-	// we return early as there would be no point in processing items on the
-	if err = group.Wait(); err != nil {
+	if err := group.Wait(); err != nil {
+		pm.logger.Errorf("Failed to open pipelines: %v", err)
 		return err
 	}
 
-	// upon exiting, stop pipeline manager
+	// ensure everything is closed on exit
 	defer pm.stop()
 
-	// Below we listen on the outputQueue for new yield outputs
-
 	var wg sync.WaitGroup
+
+	// start workers
+	concurrency := pm.opts.maxProcessItemConcurrency
+	if concurrency == 0 {
+		concurrency = 1
+	}
+
+	wg.Add(int(concurrency))
+	// wait for all goroutines
 	defer wg.Wait()
 
-	for i := uint64(0); i < pm.opts.maxProcessItemConcurrency; i++ {
-		wg.Add(1)
+	for i := uint64(0); i < concurrency; i++ {
 		go func() {
 			defer wg.Done()
 			for {
 				select {
-				case item, ok := <-pm.outputQueue:
+				case <-ctx.Done():
+					return
+				case out, ok := <-pm.outputQueue:
 					if !ok {
 						return
 					}
-					pm.processItem(item)
-				case <-ctx.Done():
-					// after cancellation, keep draining outputQueue until empty.
-					for item := range pm.outputQueue {
-						pm.processItem(item)
-					}
-					return
+					pm.processItem(out)
 				}
 			}
 		}()
 	}
 
+	// wait for framework shutdown
 	<-ctx.Done()
+
 	// no more items will be pushed, scheduler has finished
+	// so we close queue to signal workers
 	close(pm.outputQueue)
-	return ctx.Err()
+
+	// draining remaining items in outputQueue
+	for out := range pm.outputQueue {
+		pm.processItem(out)
+	}
+
+	pm.logger.Infof("stopped")
+	return nil
 }
 
-// Stoping manager would call the close function of every pipeline
+// stop calls the close function of every pipeline
 func (pm *PipelineManager[OUT]) stop() {
 	var wg sync.WaitGroup
 
@@ -132,11 +139,17 @@ func (pm *PipelineManager[OUT]) Push(original core.IOutput[OUT]) {
 	if len(pm.pipelines) <= 0 {
 		return
 	}
-	pm.logger.Debug("📦 PipelineManager: item pushed to queue")
-	pm.outputQueue <- original
+
+	select {
+	case pm.outputQueue <- original:
+		pm.logger.Debug("📦 Item pushed to pipeline queue")
+	default:
+		pm.logger.Warn("⚠️ Pipeline queue full, blocking push")
+		pm.outputQueue <- original
+	}
 }
 
-// Below function passes each yield output through our pipelines
+// processItem passes each yield output through our pipelines
 func (pm *PipelineManager[OUT]) processItem(original core.IOutput[OUT]) {
 
 	// call sync pipelines
@@ -164,5 +177,6 @@ func (pm *PipelineManager[OUT]) processItem(original core.IOutput[OUT]) {
 			return
 		}
 	}
-	pm.logger.Debug("✅ PipelineManager: item processed successfully")
+
+	pm.logger.Debug("✅ Item processed successfully")
 }
