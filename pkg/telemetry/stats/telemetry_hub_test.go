@@ -54,7 +54,9 @@ func TestHub_Broadcast(t *testing.T) {
 	
 	go func() {
 		err := h.Start(ctx)
-		assert.NoError(t, err)
+		if err != nil && err != context.Canceled {
+			assert.NoError(t, err)
+		}
 	}()
 
 	time.Sleep(interval * 2)

@@ -1,4 +1,4 @@
-// Note: AI generated bench
+// Note: generated benchmark
 package scheduler
 
 import (
@@ -16,10 +16,10 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
 
-// Measures the MEMORY COST of idle workers.
+// Measures the memory cost of idle workers.
 // If idle workers are cheap, dynamic scaling adds complexity for no benefit.
 func TestIdleWorkerCost(t *testing.T) {
-	logger.SetLevel(core.LevelNone)
+	l := logger.NewNoopLogger()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -51,7 +51,7 @@ func TestIdleWorkerCost(t *testing.T) {
 			WithWorkers(numWorkers),
 			WithReqResPoolSize(256),
 			WithWorkQueueSize(256),
-		)
+		).WithLogger(l)
 
 		go sched.Start(ctx)
 		time.Sleep(200 * time.Millisecond) // let workers spin up
@@ -79,10 +79,10 @@ func TestIdleWorkerCost(t *testing.T) {
 	fmt.Println("=================================================================")
 }
 
-// Measures THROUGHPUT under different worker counts with the SAME workload.
+// Measures throughput under different worker counts with the same workload.
 // This shows if fewer workers can handle the same load efficiently.
 func TestWorkerCountVsThroughput(t *testing.T) {
-	logger.SetLevel(core.LevelNone)
+	l := logger.NewNoopLogger()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -109,7 +109,7 @@ func TestWorkerCountVsThroughput(t *testing.T) {
 			WithWorkers(numWorkers),
 			WithReqResPoolSize(uint64(totalRequests)),
 			WithWorkQueueSize(uint64(totalRequests)),
-		)
+		).WithLogger(l)
 
 		go sched.Start(ctx)
 		time.Sleep(100 * time.Millisecond)
@@ -147,7 +147,7 @@ func TestWorkerCountVsThroughput(t *testing.T) {
 // Measures BURST-IDLE-BURST behavior: how quickly the system adapts
 // when load drops to zero then spikes again.
 func TestBurstIdleBurstLatency(t *testing.T) {
-	logger.SetLevel(core.LevelNone)
+	l := logger.NewNoopLogger()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -164,7 +164,7 @@ func TestBurstIdleBurstLatency(t *testing.T) {
 		WithWorkers(32),
 		WithReqResPoolSize(1024),
 		WithWorkQueueSize(1024),
-	)
+	).WithLogger(l)
 
 	go sched.Start(ctx)
 	time.Sleep(100 * time.Millisecond)
@@ -211,7 +211,7 @@ func TestBurstIdleBurstLatency(t *testing.T) {
 // Measures overhead of creating a scheduler with many workers quickly
 // to see if startup cost is a concern.
 func BenchmarkSchedulerStartup(b *testing.B) {
-	logger.SetLevel(core.LevelNone)
+	l := logger.NewNoopLogger()
 
 	executor := &benchExecutor{client: http.DefaultClient}
 
@@ -225,7 +225,7 @@ func BenchmarkSchedulerStartup(b *testing.B) {
 					WithWorkers(n),
 					WithReqResPoolSize(256),
 					WithWorkQueueSize(256),
-				)
+				).WithLogger(l)
 				go sched.Start(ctx)
 				// let workers actually spawn
 				runtime.Gosched()

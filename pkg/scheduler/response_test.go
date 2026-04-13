@@ -17,7 +17,7 @@ func newTestResponse() *response {
 }
 
 func TestResponse_Request(t *testing.T) {
-	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost", nil)
 	require.NoError(t, err)
 
 	resp := newTestResponse()
@@ -232,7 +232,7 @@ func TestResponse_Reset(t *testing.T) {
 func TestResponse_Detach(t *testing.T) {
 	resp := newTestResponse()
 
-	// 1. Fill response with data
+	// Fill response with data
 	resp.WriteStatusCode(200)
 	header := http.Header{"Content-Type": {"text/plain"}}
 	resp.WriteHeader(header)
@@ -242,13 +242,13 @@ func TestResponse_Detach(t *testing.T) {
 	meta.Set("key", "val")
 	resp.WriteMeta(meta)
 
-	// 2. Detach
+	// Detach
 	detached := resp.Detach()
 
-	// 3. Reset original
+	// Reset original
 	resp.Reset()
 
-	// 4. Verify detached still has data
+	// Verify detached still has data
 	assert.Equal(t, 200, detached.StatusCode())
 	assert.Equal(t, "original body", string(detached.Bytes()))
 	assert.Equal(t, "text/plain", detached.Header().Get("Content-Type"))
@@ -258,7 +258,7 @@ func TestResponse_Detach(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "val", val)
 
-	// 5. Verify body can be read again from detached
+	// Verify body can be read again from detached
 	body, err := io.ReadAll(detached.Body())
 	assert.NoError(t, err)
 	assert.Equal(t, "original body", string(body))

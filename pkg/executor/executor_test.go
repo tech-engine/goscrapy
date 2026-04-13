@@ -108,7 +108,7 @@ func TestExecutor_Execute(t *testing.T) {
 	mockAdapter := new(MockExecutorAdapter)
 	exec := New(mockAdapter)
 
-	u, _ := url.Parse("http://example.com")
+	u, _ := url.Parse("http://localhost")
 	ctx := context.Background()
 	header := http.Header{"User-Agent": []string{"test"}}
 
@@ -124,7 +124,7 @@ func TestExecutor_Execute(t *testing.T) {
 
 	mockAdapter.On("Do", mockRes, mock.MatchedBy(func(req *http.Request) bool {
 		return req.Method == "POST" && 
-			req.URL.String() == "http://example.com" &&
+			req.URL.String() == "http://localhost" &&
 			req.Header.Get("User-Agent") == "test" &&
 			core.ExtractCtxValue(req.Context(), "GOSCookieJarKey") == "session1"
 	})).Return(nil)

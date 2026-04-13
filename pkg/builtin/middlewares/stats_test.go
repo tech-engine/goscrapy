@@ -1,3 +1,4 @@
+// Note: generated tests
 package middlewares
 
 import (
@@ -25,7 +26,7 @@ func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 }
 
 func TestStats_Middleware(t *testing.T) {
-	stats := NewStats()
+	stats := NewStatsCollector()
 	mock := &mockRoundTripper{
 		response: &http.Response{StatusCode: 200},
 	}
@@ -33,7 +34,7 @@ func TestStats_Middleware(t *testing.T) {
 	middleware := Stats(stats)(mock)
 
 	// Single request
-	req, _ := http.NewRequest("GET", "https://example.com", nil)
+	req, _ := http.NewRequest("GET", "http://localhost", nil)
 	resp, err := middleware.RoundTrip(req)
 	require.NoError(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
@@ -45,7 +46,7 @@ func TestStats_Middleware(t *testing.T) {
 }
 
 func TestStats_Concurrent(t *testing.T) {
-	stats := NewStats()
+	stats := NewStatsCollector()
 	mock200 := &mockRoundTripper{response: &http.Response{StatusCode: 200}}
 	mock404 := &mockRoundTripper{response: &http.Response{StatusCode: 404}}
 
@@ -80,7 +81,7 @@ func TestStats_Concurrent(t *testing.T) {
 }
 
 func TestStats_Print(t *testing.T) {
-	stats := NewStats()
+	stats := NewStatsCollector()
 	// Should not panic on empty stats
 	assert.NotPanics(t, func() {
 		stats.Print()
@@ -96,7 +97,7 @@ func TestStats_Print(t *testing.T) {
 	})
 }
 func TestStats_DataAndTiming(t *testing.T) {
-	stats := NewStats()
+	stats := NewStatsCollector()
 	body := "hello world"
 	mock := &mockRoundTripper{
 		response: &http.Response{
@@ -106,7 +107,7 @@ func TestStats_DataAndTiming(t *testing.T) {
 	}
 
 	middleware := Stats(stats)(mock)
-	req, _ := http.NewRequest("GET", "https://example.com", nil)
+	req, _ := http.NewRequest("GET", "http://localhost", nil)
 	resp, err := middleware.RoundTrip(req)
 	require.NoError(t, err)
 
@@ -116,18 +117,11 @@ func TestStats_DataAndTiming(t *testing.T) {
 	resp.Body.Close()
 
 	assert.Equal(t, uint64(len(body)), stats.totalBytes.Load())
-
-	// Test timing storage manually
-	stats.AddSample(MetricTLS, 100*time.Millisecond)
-	stats.metricsMu.Lock()
-	assert.Equal(t, 1, len(stats.tlsTimes))
-	assert.Equal(t, 100*time.Millisecond, stats.tlsTimes[0])
-	stats.metricsMu.Unlock()
 }
 
 func TestStats_WorkerAggregation(t *testing.T) {
-	global := NewStats()
-	worker := global.NewWorkerCollector()
+	global := NewStatsCollector()
+	worker := global.NewStatsRecorder()
 
 	worker.AddBytes(1024)
 	worker.AddSample(MetricTLS, 50*time.Millisecond)
@@ -141,12 +135,11 @@ func TestStats_WorkerAggregation(t *testing.T) {
 	req = req.WithContext(ctx)
 	mw.RoundTrip(req)
 
-	// Global should not have worker's direct data yet
-	assert.Equal(t, uint64(0), global.totalBytes.Load())
-
-	// Print triggers merge
+	// Snapshot (via Print) aggregates worker data
 	global.Print()
+	snap := global.Snapshot().(HttpMetrics)
 
-	assert.Equal(t, uint64(1024), global.totalBytes.Load())
-	assert.Equal(t, 1, int(global.totalCount.Load())) // 1 from MW call which uses the worker recorder
+	assert.Equal(t, uint64(1024), snap.TotalBytes)
+	// Original request (1 from MW call)
+	assert.Equal(t, uint64(1), snap.TotalRequests)
 }

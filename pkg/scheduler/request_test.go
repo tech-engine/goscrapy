@@ -1,4 +1,4 @@
-// Note: Tests generated using AI
+// Note: generated tests
 package scheduler
 
 import (
@@ -17,7 +17,7 @@ func newTestRequest(ctx context.Context) *request {
 	return &request{
 		method: "GET",
 		header: make(http.Header),
-		ctx: ctx,
+		ctx:    ctx,
 	}
 }
 
@@ -44,7 +44,7 @@ func TestRequest_Method_TableDriven(t *testing.T) {
 func TestRequest_Url(t *testing.T) {
 	req := newTestRequest(context.Background())
 
-	testUrl := "https://example.com/path?foo=bar"
+	testUrl := "http://localhost/path?foo=bar"
 	req.Url(testUrl)
 
 	parsedUrl, err := url.Parse(testUrl)
@@ -58,7 +58,7 @@ func TestRequest_Url_TableDriven(t *testing.T) {
 		input       string
 		shouldPanic bool
 	}{
-		{"valid url", "https://example.com", false},
+		{"valid url", "http://localhost", false},
 		{"invalid url", "://invalid\x7f", true},
 	}
 
@@ -179,7 +179,7 @@ func TestRequest_Meta_TableDriven(t *testing.T) {
 func TestRequest_Reset(t *testing.T) {
 	req := newTestRequest(context.Background())
 	req.Method(http.MethodDelete)
-	req.Url("https://example.com")
+	req.Url("http://localhost")
 	req.Header(http.Header{"Cache-Control": []string{"no-cache"}})
 	req.Body([]byte("data"))
 	req.CookieJar("jar1")
@@ -206,7 +206,7 @@ func TestRequest_Chaining(t *testing.T) {
 	// All writer methods should return the request itself for chaining
 	result := req.
 		Method("POST").
-		Url("https://example.com").
+		Url("http://localhost").
 		Header(http.Header{}).
 		Body("data").
 		CookieJar("jar").
