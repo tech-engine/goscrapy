@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/executor"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
 
@@ -14,14 +15,14 @@ type HTTPAdapter struct {
 	logger core.ILogger
 }
 
-func NewHTTPClientAdapter(client *http.Client, poolSize uint64) *HTTPAdapter {
+func NewHTTPClientAdapter(client *http.Client) *HTTPAdapter {
 	if client == nil {
 		client = http.DefaultClient
 	}
 
 	return &HTTPAdapter{
 		client: client,
-		logger: logger.GetLogger(), // default to global logger
+		logger: logger.EnsureLogger(nil).WithName("HTTPAdapter"),
 	}
 }
 
@@ -29,8 +30,10 @@ func (r *HTTPAdapter) WithClient(client *http.Client) {
 	r.client = client
 }
 
-func (r *HTTPAdapter) WithLogger(logger core.ILogger) {
-	r.logger = logger
+func (r *HTTPAdapter) WithLogger(loggerIn core.ILogger) executor.IExecutorAdapter {
+	loggerIn = logger.EnsureLogger(loggerIn)
+	r.logger = loggerIn.WithName("HTTPAdapter")
+	return r
 }
 
 func (r *HTTPAdapter) Do(res core.IResponseWriter, req *http.Request) error {
@@ -39,13 +42,12 @@ func (r *HTTPAdapter) Do(res core.IResponseWriter, req *http.Request) error {
 
 	if err != nil {
 		if ctxErr := req.Context().Err(); ctxErr != nil {
-			return fmt.Errorf("Do: request aborted %w", ctxErr)
+			return ctxErr
 		}
-		r.logger.Errorf("❌ Request failed: %v", err)
-		return fmt.Errorf("Do: error dispatching request %w", err)
+		return fmt.Errorf("HTTP error: %v", err)
 	}
 
-	r.logger.Debugf("📩 Response received: %d %s", source.StatusCode, req.URL.String())
+	r.logger.Debugf("✅ Response received: %d %s", source.StatusCode, req.URL.String())
 	res.WriteRequest(req)
 	HTTPRequestAdapterResponse(res, source)
 	return nil
