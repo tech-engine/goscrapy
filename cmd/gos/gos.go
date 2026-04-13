@@ -17,7 +17,6 @@ import (
 	pipelinemanager "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 	"github.com/tech-engine/goscrapy/pkg/scheduler"
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
-
 )
 
 func NewApp[OUT any]() *app[OUT] {
@@ -35,8 +34,9 @@ func NewApp[OUT any]() *app[OUT] {
 	mm := middlewaremanager.New(httpClient)
 	pm := pipelinemanager.New[OUT]()
 
+	l := logger.NewLogger()
 	eng := engine.New(scheduler, pm).
-		WithLogger(logger.NewLogger())
+		WithLogger(l)
 
 	app := &app[OUT]{
 		Core:              core.New(eng),
@@ -44,6 +44,9 @@ func NewApp[OUT any]() *app[OUT] {
 		MiddlewareManager: mm,
 		PipelineManager:   pm,
 		Scheduler:         scheduler,
+		Executor:          executor,
+		logger:            l.WithName("GOS"),
+		hub:               ts.NewTelemetryHub(),
 	}
 
 	return app
@@ -87,8 +90,6 @@ func (gos *app[OUT]) Telemetry() *ts.TelemetryHub {
 func (gos *app[OUT]) Logger() core.ILogger {
 	return gos.logger
 }
-
-
 
 func (gos *app[OUT]) Start(ctx context.Context) error {
 	if gos.hub != nil {
