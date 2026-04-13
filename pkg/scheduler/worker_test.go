@@ -2,59 +2,34 @@ package scheduler
 
 import (
 	"context"
-	"net/http"
 	"testing"
 
-	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
+	"github.com/stretchr/testify/assert"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-type dummyExecutor struct {
-}
+type dummyExecutor struct{}
 
-func (e *dummyExecutor) Execute(reader core.IRequestReader, writer core.IResponseWriter) error {
+func (e *dummyExecutor) Execute(core.IRequestReader, core.IResponseWriter) error {
 	return nil
 }
 
-func (e *dummyExecutor) WithLogger(logger core.ILogger) {}
+func (e *dummyExecutor) WithLogger(logger core.ILogger) IExecutor { return e }
 
 func TestWorker(t *testing.T) {
 	// create a worker
-	var workerId uint16 = 1
-	var respPoolSize uint64 = 1
-
-	executor := &dummyExecutor{}
 	workerQueue := make(WorkerQueue, 1)
-	schedulerWorkPool := rp.NewPooler(rp.WithSize[schedulerWork](1))
-	requestPool := rp.NewPooler(rp.WithSize[request](1))
-
-	worker := NewWorker(
-		workerId,
-		executor,
-		workerQueue,
-		schedulerWorkPool,
-		requestPool,
-		rp.NewPooler(rp.WithSize[response](respPoolSize)),
-		nil,
-	)
-
-	ctx, cancel := context.WithCancel(context.Background())
+	executor := &dummyExecutor{}
+	worker := NewWorker(1, executor, workerQueue, nil, nil, nil, nil)
 
 	// start the worker
-	go func() {
-		worker.Start(ctx)
-	}()
+	ctx, cancel := context.WithCancel(context.Background())
+	go worker.Start(ctx)
 
-	// create a scheduler work
-	work := &schedulerWork{
-		next: func(ctx context.Context, resp core.IResponseReader) {
-		},
-		request: &request{
-			method: "GET",
-			header: make(http.Header),
-		},
-	}
-	// execute a task
-	worker.execute(ctx, work)
+	// the worker should have added itself to the worker queue
+	w := <-workerQueue
+	assert.NotNil(t, w)
+
+	// stop the worker
 	cancel()
 }
