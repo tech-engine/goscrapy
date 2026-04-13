@@ -42,7 +42,6 @@ func (e *Executor) Execute(req core.IRequestReader, res core.IResponseWriter) er
 		return err
 	}
 
-	request.URL = req.ReadUrl()
 	request.Header = req.ReadHeader()
 
 	return e.adapter.Do(res, request)
