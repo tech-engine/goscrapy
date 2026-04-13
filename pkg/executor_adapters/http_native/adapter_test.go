@@ -50,7 +50,6 @@ func (r *testResponseWriter) WriteMeta(m *fsmap.FixedSizeMap[string, any]) {
 
 func handler() *http.ServeMux {
 	mux := http.NewServeMux()
-	// /get-cookie receives headers from client and set those headers as response cookies
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET", "DELETE":
@@ -85,13 +84,16 @@ func run(t *testing.T, adapter *HTTPAdapter, method string, body io.ReadCloser, 
 
 	assert.NoError(t, err)
 
-	defer resp.body.Close()
+	if resp.body != nil {
+		defer resp.body.Close()
+	}
 
 	assert.Equal(t, 200, resp.statuscode)
 
-	respB, err := io.ReadAll(resp.body)
-
-	assert.NoError(t, err)
+	var respB []byte
+	if resp.body != nil {
+		respB, _ = io.ReadAll(resp.body)
+	}
 
 	assert.Equalf(t, expected, respB, "expected %s, got %s", string(expected), string(respB))
 
@@ -99,7 +101,7 @@ func run(t *testing.T, adapter *HTTPAdapter, method string, body io.ReadCloser, 
 
 func TestAdapterRequest(t *testing.T) {
 
-	adapter := NewHTTPClientAdapter(&http.Client{}, 10)
+	adapter := NewHTTPClientAdapter(&http.Client{})
 	testCases := []testCase{
 		{
 			name:     "GET",
@@ -139,7 +141,7 @@ func TestAdapterRequest(t *testing.T) {
 }
 
 func TestAdapterRequestCtx(t *testing.T) {
-	adapter := NewHTTPClientAdapter(&http.Client{}, 10)
+	adapter := NewHTTPClientAdapter(&http.Client{})
 
 	resp := &testResponseWriter{}
 
