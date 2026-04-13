@@ -171,6 +171,24 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 	return err
 }
 
+func (w *Worker) resetAndRelease(work *schedulerWork) {
+	// release *request to pool
+	req, ok := work.request.(*request)
+
+	if !ok {
+		return
+	}
+
+	req.Reset()
+
+	w.requestPool.Release(req)
+
+	// release *schedulerWork to pool
+	work.Reset()
+
+	w.schedulerWorkPool.Release(work)
+}
+
 // helper to join two context value chains
 // prioritize lifecycle values
 // fallback to spider values
@@ -199,22 +217,4 @@ func (c *callbackContext) Value(key any) any {
 		return val
 	}
 	return c.frameworkCtx.Value(key)
-}
-
-func (w *Worker) resetAndRelease(work *schedulerWork) {
-	// release *request to pool
-	req, ok := work.request.(*request)
-
-	if !ok {
-		return
-	}
-
-	req.Reset()
-
-	w.requestPool.Release(req)
-
-	// release *schedulerWork to pool
-	work.Reset()
-
-	w.schedulerWorkPool.Release(work)
 }
