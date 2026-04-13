@@ -11,13 +11,13 @@
   <a href="https://goreportcard.com/badge/github.com/tech-engine/goscrapy"><img src="https://goreportcard.com/badge/github.com/tech-engine/goscrapy" alt="Go Report Card"></a>
 </p>
 
-**GoScrapy** is a powerful web scraping framework in Go, inspired by Python's Scrapy framework. It offers an easy-to-use Scrapy-like experience for extracting data from websites, making it an ideal tool for various data collection and analysis tasks, especially for those coming from Python and wanting to try scraping in Golang.
+**GoScrapy** is a high-performance web scraping framework for Go, designed with the familiar architecture of Python's Scrapy. It provides a robust, developer-centric experience for building sophisticated data extraction systems, purposefully crafted for those making the leap from Python to the Go ecosystem.
 
 ## Why GoScrapy?
 
-While callback-based scraping libraries are excellent tools and have incredibly valid use cases, a large portion of the web scraping community originates from the Python ecosystem. **GoScrapy** was built to provide these developers with a familiar, "home-like" experience by bringing the battle-tested, pipeline-driven architecture of Python's Scrapy natively to Go.
+While low-level scraping libraries are powerful, many teams require the high-level architectural framework established by Scrapy. **GoScrapy** brings this architectural discipline natively to Go, organizing your request callbacks, middlewares, and pipelines into a structured, manageable workflow.
 
-Instead of writing boilerplate code to handle retries, manage distinct cookie sessions, or export data to databases, GoScrapy offers a structured, plug-and-play framework. This allows you to focus entirely on your extraction logic while effortlessly relying on built-in pipelines and middlewares to do the heavy lifting concurrently.
+Instead of manually orchestrating retries, cookie isolation, or database handoffs, GoScrapy provides the engine that powers your spiders. You focus purely on the extraction logic; the framework manages the high-throughput lifecycle and concurrency in the background.
 
 ## Features
 
@@ -29,7 +29,8 @@ Instead of writing boilerplate code to handle retries, manage distinct cookie se
 - 🔍 **CSS & XPath Selectors** — Flexible HTML parsing with chainable selectors
 - 📦 **Built-in Pipelines** — Export scraped data to CSV, JSON, MongoDB, Google Sheets, and Firebase out of the box
 - 🧩 **Built-in Middleware** — Plug in robust middlewares like Azure TLS and advanced Dupefilters
-- 🔌 **Extensible by Design** — Almost every layer of the framework—pipelines, middlewares, HTTP client, and selectors—is built to be swapped or extended without touching the core
+- 🔌 **Extensible by Design** — Almost every layer of the framework is built to be swapped or extended
+- 🎛️ **Telemetry & Monitoring** — Optional built-in telemetry hub for real-time stats 
 
 ## Architecture
 
@@ -71,7 +72,8 @@ flowchart LR
 
 ## Getting Started
 
-Goscrapy requires **Go version 1.22** or higher to run.
+> [!IMPORTANT]
+> GoScrapy requires **Go 1.22** or higher.
 
 ### 1. Project Initialization
 
@@ -84,7 +86,8 @@ go mod init books_to_scrape
 ```sh
 go install github.com/tech-engine/goscrapy@latest
 ```
-> **Note**: make sure to always keep your goscrapy cli updated.
+> [!TIP]
+> Always use the latest version of the GoScrapy CLI to ensure access to all scaffolding updates.
 
 ### 3. Verify Installation
 
@@ -100,7 +103,7 @@ goscrapy startproject books_to_scrape
 This will create a new project directory with all the files necessary to begin working with **GoScrapy**.
 
 ```sh
-\iyuioy\go\go-test-scrapy> goscrapy startproject books_to_scrape
+\tech-engine\go\go-test-scrapy> goscrapy startproject books_to_scrape
 
 🚀 GoScrapy generating project files. Please wait!
 
@@ -117,7 +120,7 @@ This will create a new project directory with all the files necessary to begin w
 
 ## Quick Look: Powerful Features
 
-GoScrapy minimizes boilerplate by letting you cleanly configure pipelines and middlewares in a dedicated `settings.go` file.
+GoScrapy streamlines your workflow by allowing you to configure middlewares and export pipelines in a centralized `settings.go` file.
 
 ### settings.go
 ```go
@@ -166,13 +169,13 @@ type Spider struct {
 
 func New(ctx context.Context) (*Spider, <-chan error) {
 	// Initialize and configure everything in one go
-	core := gos.New[*Record]().Setup(MIDDLEWARES, PIPELINES, Stats.Print)
+	app := gos.NewApp[*Record]().Setup(MIDDLEWARES, PIPELINES)
 
 	errCh := make(chan error)
-	spider := &Spider{core}
+	spider := &Spider{app}
 
 	go func() {
-		errCh <- core.Start(ctx)
+		errCh <- app.Start(ctx)
 		spider.Close(ctx)
 	}()
 
@@ -236,9 +239,22 @@ Please follow the [official Wiki](https://github.com/tech-engine/goscrapy/wiki) 
 **What does this mean for developers?**  
 We want you to build amazing things with GoScrapy! You are completely free to use this framework in production, build your own commercial SaaS products that rely on it, and scrape data for your business without paying any licensing fees. 
 
-The BSL is simply in place to ensure the sustainability of the project. To protect the core framework, we ask that you respect a few common-sense boundaries: please avoid offering GoScrapy as a competitive, managed "Scraper-as-a-Service," repackaging the framework under a new name, or commercializing direct codebase ports into other languages (whether translated manually or via AI tooling) as your own work.
+The BSL is simply in place to ensure the sustainability of the project. To protect the core framework, we ask that you respect a few common-sense boundaries: please avoid offering GoScrapy as a competitive, managed "Scraper-as-a-Service," repackaging the framework under a new name, or commercializing direct codebase ports into other languages (whether translated manually or AI or via any other tooling) as your own work.
 
 By contributing to the GoScrapy project, you agree to the terms of the license.
+
+
+## Logging
+
+GoScrapy includes a built-in logging system that defaults to `INFO` level. You can control the framework's output using the `GOS_LOG_LEVEL` environment variable:
+
+- `DEBUG`: Detailed execution trace.
+- `INFO`:  Basic startup/shutdown info (Default).
+- `WARN`:  Warnings and retry notifications.
+- `ERROR`: Fatal errors.
+- `NONE`:  Completely disable framework logging.
+
+You can also pass a custom implementation of the `core.ILogger` interface using the `.WithLogger()` method during application setup.
 
 ## Roadmap
 
@@ -247,28 +263,6 @@ By contributing to the GoScrapy project, you agree to the terms of the license.
 - ~~Css & Xpath Selectors~~
 - ~~Logging & Custom Logger Support~~
 - Increasing E2E test coverage
-
-### Logging
-GoScrapy includes a built-in logging system. You can control the logging level via the `GOSCRAPY_LOG_LEVEL` environment variable:
-
-- `DEBUG`: Detailed execution trace (requests, pipeline steps).
-- `INFO`: Basic startup/shutdown info (default).
-- `WARN`: Warnings and retry notifications.
-- `ERROR`: Fatal errors.
-- `NONE`: Disable all framework logging.
-
-#### Custom Loggers
-You can plug in your customer logger implemention with `core.ILogger` interface:
-
-```go
-import "github.com/tech-engine/goscrapy/pkg/logger"
-
-func main() {
-    // ...
-    logger.SetLogger(myCustomZapLogger)
-    // ...
-}
-```
 
 ## Partners
 
