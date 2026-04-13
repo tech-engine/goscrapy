@@ -13,7 +13,7 @@ type opts struct {
 	numWorkers     uint16
 	reqResPoolSize uint64
 	workQueueSize  uint64
-	statsProducer  ts.CollectorProducer
+	statsFactory   ts.IStatsRecorderFactory
 }
 
 func defaultOpts() opts {
@@ -68,8 +68,8 @@ func WithWorkQueueSize(n uint64) types.OptFunc[opts] {
 	}
 }
 
-func WithStats(p ts.CollectorProducer) types.OptFunc[opts] {
+func WithStatsRecorderFactory(p ts.IStatsRecorderFactory) types.OptFunc[opts] {
 	return func(opts *opts) {
-		opts.statsProducer = p
+		opts.statsFactory = p
 	}
 }

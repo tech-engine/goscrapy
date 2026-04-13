@@ -21,11 +21,11 @@ type Worker struct {
 	schedulerWorkPool *rp.Pooler[schedulerWork]
 	responsePool      *rp.Pooler[response]
 	requestPool       *rp.Pooler[request]
-	stats             ts.StatsRecorder
+	stats             ts.IStatsRecorder
 	logger            core.ILogger
 }
 
-func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, schedulerWorkPool *rp.Pooler[schedulerWork], requestPool *rp.Pooler[request], responsePool *rp.Pooler[response], stats ts.StatsRecorder) *Worker {
+func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, schedulerWorkPool *rp.Pooler[schedulerWork], requestPool *rp.Pooler[request], responsePool *rp.Pooler[response], stats ts.IStatsRecorder) *Worker {
 
 	return &Worker{
 		ID:                id,
