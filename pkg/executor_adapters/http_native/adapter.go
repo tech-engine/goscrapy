@@ -3,42 +3,63 @@ package httpnative
 import (
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/executor"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
 
-// HTTPAdapter implements Executor's ExecAdapter interface
-type HTTPAdapter struct {
+// httpAdapter implements Executor's ExecAdapter interface
+type httpAdapter struct {
 	client *http.Client
 	logger core.ILogger
 }
 
-func NewHTTPClientAdapter(client *http.Client) *HTTPAdapter {
-	if client == nil {
-		client = http.DefaultClient
-	}
+type adapterOpts struct {
+	client *http.Client
+	logger core.ILogger
+}
 
-	return &HTTPAdapter{
-		client: client,
-		logger: logger.EnsureLogger(nil).WithName("HTTPAdapter"),
+func defaultOpts() adapterOpts {
+	return adapterOpts{
+		client: &http.Client{
+			Timeout:   30 * time.Second,
+			Transport: http.DefaultTransport.(*http.Transport).Clone(),
+		},
+		logger: logger.NewLogger(),
 	}
 }
 
-func (r *HTTPAdapter) WithClient(client *http.Client) {
-	r.client = client
+func WithClient(cli *http.Client) types.OptFunc[adapterOpts] {
+	return func(o *adapterOpts) {
+		o.client = cli
+	}
 }
 
-func (r *HTTPAdapter) WithLogger(loggerIn core.ILogger) executor.IExecutorAdapter {
+func NewAdapter(opts ...types.OptFunc[adapterOpts]) *httpAdapter {
+	options := defaultOpts()
+
+	for _, opt := range opts {
+		opt(&options)
+	}
+
+	return &httpAdapter{
+		client: options.client,
+		logger: logger.EnsureLogger(options.logger).WithName("HTTPAdapter"),
+	}
+}
+
+func (a *httpAdapter) WithLogger(loggerIn core.ILogger) executor.IExecutorAdapter {
 	loggerIn = logger.EnsureLogger(loggerIn)
-	r.logger = loggerIn.WithName("HTTPAdapter")
-	return r
+	a.logger = loggerIn.WithName("HTTPAdapter")
+	return a
 }
 
-func (r *HTTPAdapter) Do(res core.IResponseWriter, req *http.Request) error {
-	r.logger.Debugf("📡 Sending %s request: %s", req.Method, req.URL.String())
-	source, err := r.client.Do(req)
+func (a *httpAdapter) Do(res core.IResponseWriter, req *http.Request) error {
+	a.logger.Debugf("📡 Sending %s request: %s", req.Method, req.URL.String())
+	source, err := a.client.Do(req)
 
 	if err != nil {
 		if ctxErr := req.Context().Err(); ctxErr != nil {
@@ -47,7 +68,7 @@ func (r *HTTPAdapter) Do(res core.IResponseWriter, req *http.Request) error {
 		return fmt.Errorf("HTTP error: %v", err)
 	}
 
-	r.logger.Debugf("✅ Response received: %d %s", source.StatusCode, req.URL.String())
+	a.logger.Debugf("✅ Response received: %d %s", source.StatusCode, req.URL.String())
 	res.WriteRequest(req)
 	HTTPRequestAdapterResponse(res, source)
 	return nil

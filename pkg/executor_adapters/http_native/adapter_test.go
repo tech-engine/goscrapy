@@ -72,7 +72,7 @@ func handler() *http.ServeMux {
 	return mux
 }
 
-func run(t *testing.T, adapter *HTTPAdapter, method string, body io.ReadCloser, expected []byte) {
+func run(t *testing.T, adapter *httpAdapter, method string, body io.ReadCloser, expected []byte) {
 
 	var err error
 	resp := &testResponseWriter{}
@@ -101,7 +101,7 @@ func run(t *testing.T, adapter *HTTPAdapter, method string, body io.ReadCloser, 
 
 func TestAdapterRequest(t *testing.T) {
 
-	adapter := NewHTTPClientAdapter(&http.Client{})
+	adapter := NewAdapter()
 	testCases := []testCase{
 		{
 			name:     "GET",
@@ -141,7 +141,7 @@ func TestAdapterRequest(t *testing.T) {
 }
 
 func TestAdapterRequestCtx(t *testing.T) {
-	adapter := NewHTTPClientAdapter(&http.Client{})
+	adapter := NewAdapter()
 
 	resp := &testResponseWriter{}
 
