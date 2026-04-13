@@ -11,6 +11,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/logger"
+	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 )
 
 type scheduler struct {
@@ -58,6 +59,10 @@ func (s *scheduler) WithLogger(loggerIn core.ILogger) engine.IScheduler {
 	return s
 }
 
+func (s *scheduler) WithStatsRecorderFactory(f ts.IStatsRecorderFactory) {
+	s.opts.statsFactory = f
+}
+
 func (s *scheduler) Start(ctx context.Context) error {
 	s.logger.Infof("Starting scheduler with %d workers", s.opts.numWorkers)
 
@@ -66,9 +71,19 @@ func (s *scheduler) Start(ctx context.Context) error {
 	defer wg.Wait()
 	wg.Add(int(s.opts.numWorkers))
 
-	for i := uint16(0); i < s.opts.numWorkers; i++ {
+	var recorders []ts.IStatsRecorder
+	if s.opts.statsFactory != nil {
+		recorders = make([]ts.IStatsRecorder, s.opts.numWorkers)
+	}
 
-		worker := NewWorker(i+1, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.responsePool)
+	for i := uint16(0); i < s.opts.numWorkers; i++ {
+		var recorder ts.IStatsRecorder
+		if s.opts.statsFactory != nil {
+			recorder = s.opts.statsFactory.NewStatsRecorder()
+			recorders[i] = recorder
+		}
+
+		worker := NewWorker(i+1, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.responsePool, recorder)
 		worker.WithLogger(s.logger)
 		go func() {
 			defer wg.Done()
