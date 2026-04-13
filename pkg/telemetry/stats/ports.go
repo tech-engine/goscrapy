@@ -5,44 +5,44 @@ import (
 	"time"
 )
 
-// records metrics
+// Represents a component that records metrics
 type IStatsRecorder interface {
 	AddBytes(n uint64)
 	AddSample(metric string, d time.Duration)
 }
 
-// per worker StatsRecorder
+// Represents a factory that create IStatsRecorder
 type IStatsRecorderFactory interface {
 	NewStatsRecorder() IStatsRecorder
 }
 
-// hold a snapshot of the StatsCollector
-type Snapshot struct {
-	TotalRequests uint64
-	TotalDuration time.Duration
-	TotalBytes    uint64
-	StatusCodes   map[int]uint64
-	StartTime     time.Time
-	Uptime        time.Duration
-	AvgLatency    time.Duration
-	AvgTLS        time.Duration
+// Represents a generic interface for individual components to return their state.
+type ComponentSnapshot any
+
+// GlobalSnapshot is broadcasted to all observers.
+type GlobalSnapshot struct {
+	Timestamp  time.Time
+	Uptime     time.Duration
+	Interval   time.Duration
+	Components map[string]ComponentSnapshot
 }
 
-// provide live snapshots
-type ISnapshotter interface {
-	Snapshot() Snapshot
+// Represents a component that generates stats/matrics.
+type IStatsCollector interface {
+	Name() string
+	Snapshot() ComponentSnapshot
 }
 
-// statsObserver receives periodic stats snapshots from a Broadcaster.
+// Represnts a component that receives periodic GlobalSnapshots from a Hub.
 type IStatsObserver interface {
-	OnSnapshot(Snapshot) // OnSnapshot should be non-blocking.
+	OnSnapshot(GlobalSnapshot) // should be non blocking.
 }
 
 type contextKey struct{}
 
 var RecorderKey = contextKey{}
 
-// retrieves a StatRecorder from the context
+// Retrieves a StatRecorder from a passed context
 func FromContext(ctx context.Context) IStatsRecorder {
 	if r, ok := ctx.Value(RecorderKey).(IStatsRecorder); ok {
 		return r
@@ -50,7 +50,7 @@ func FromContext(ctx context.Context) IStatsRecorder {
 	return nil
 }
 
-// injects a StatRecorder into the context
+// Injects a StatRecorder into a passed context
 func WithRecorder(ctx context.Context, r IStatsRecorder) context.Context {
 	return context.WithValue(ctx, RecorderKey, r)
 }
