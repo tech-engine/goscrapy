@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/executor"
@@ -88,4 +89,8 @@ func (gos *gosBuilder[OUT]) Wait(cancel context.CancelFunc, errCh <-chan error) 
 		cancel()
 		return <-errCh
 	}
+}
+
+func NewBroadcaster(s ts.ISnapshotter, options ...types.OptFunc[ts.BroadcasterOpts]) *ts.Broadcaster {
+	return ts.NewBroadcaster(s, options...)
 }
