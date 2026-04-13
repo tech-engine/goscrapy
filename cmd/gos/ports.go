@@ -19,6 +19,8 @@ type ICoreSpider[OUT any] interface {
 	Request(req core.IRequestReader, cb core.ResponseCallback)
 	NewRequest(context.Context) core.IRequestRW
 	Yield(core.IOutput[OUT])
+	Logger() core.ILogger
+	Wait(context.CancelFunc, <-chan error) error
 }
 
 // Separate interface created for configuration purposes
