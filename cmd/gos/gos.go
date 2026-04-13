@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/executor"
@@ -80,11 +81,14 @@ func (gos *app[OUT]) WithLogger(loggerIn core.IConfigurableLogger) *app[OUT] {
 	return gos
 }
 
-func (gos *app[OUT]) Telemetry() *ts.TelemetryHub {
-	if gos.hub == nil {
-		gos.hub = ts.NewTelemetryHub()
+
+func (gos *app[OUT]) WithTelemetry(hub *ts.TelemetryHub, optFuncs ...types.OptFunc[ts.TelemetryHubOpts]) *app[OUT] {
+	if hub == nil {
+		gos.hub = ts.NewTelemetryHub(optFuncs...)
+		return gos
 	}
-	return gos.hub
+	gos.hub = hub
+	return gos
 }
 
 func (gos *app[OUT]) Logger() core.ILogger {
