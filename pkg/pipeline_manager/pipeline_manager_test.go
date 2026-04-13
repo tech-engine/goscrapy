@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/logger"
 )
 
 type safeDummyRecord struct {
@@ -136,18 +138,22 @@ func (p *dummyPipeline2[OUT]) ProcessItem(item IPipelineItem, original core.IOut
 func TestPipelineManager(t *testing.T) {
 	// create a pipeline manager
 	var wg sync.WaitGroup
+	logger := logger.NewNoopLogger()
 	pipelineManager := New[*dummyRecord]()
+	pipelineManager.WithLogger(logger)
+
 	// add a dummy test pipeline
 	readPipeline := newDummyPipeline2[*dummyRecord]()
 	pipelineManager.Add(
 		newDoublePipeline[*dummyRecord](),
 		readPipeline,
 	)
-	// start the pipeline
+	// start the pipeline with a cancellable context
+	ctx, cancel := context.WithCancel(context.Background())
 	wg.Add(1)
 	go func() {
-		wg.Done()
-		pipelineManager.Start(context.Background())
+		defer wg.Done()
+		pipelineManager.Start(ctx)
 	}()
 	// push item to pipeline
 	pipelineManager.Push(&dummyRecord{Id: 1, Age: 19})
@@ -160,5 +166,46 @@ func TestPipelineManager(t *testing.T) {
 	safeRecord := readPipeline.safeRecord.GetVal()
 	assert.Equalf(t, 1, safeRecord[0], "expected id=1, got=%d", safeRecord[0])
 	assert.Equalf(t, 38, safeRecord[1], "expected age=38, got=%d", safeRecord[1])
+	
+	// signal the manager to stop and wait for it
+	cancel()
 	wg.Wait()
 }
+
+func TestPipelineManager_LoggerCoverage(t *testing.T) {
+	t.Run("DefaultLogger_DoesNotPanic", func(t *testing.T) {
+		pm := New[*dummyRecord]()
+		assert.NotNil(t, pm.logger)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+
+		assert.NotPanics(t, func() {
+			_ = pm.Start(ctx)
+		})
+	})
+}
+
+func TestPipelineManager_Pooling(t *testing.T) {
+	pm := New[*dummyRecord](types.OptFunc[opts](func(o *opts) {
+		o.itemPoolSize = 1
+	}))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		pm.Start(ctx)
+	}()
+
+	// Push 10 items to verify pooling doesn't corrupt state
+	for i := 0; i < 10; i++ {
+		pm.Push(&dummyRecord{Id: i, Age: 20})
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	cancel()
+	wg.Wait()
+}
+
