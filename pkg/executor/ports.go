@@ -8,6 +8,5 @@ import (
 
 type IExecutorAdapter interface {
 	Do(core.IResponseWriter, *http.Request) error
-	WithClient(*http.Client)
 	WithLogger(core.ILogger) IExecutorAdapter
 }
