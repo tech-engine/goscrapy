@@ -67,9 +67,16 @@ func (s *scheduler) Start(ctx context.Context) error {
 	s.logger.Infof("Starting scheduler with %d workers", s.opts.numWorkers)
 
 	var wg sync.WaitGroup
+	// worker lifecycle context
+	wCtx, wCancel := context.WithCancel(context.Background())
 
-	defer wg.Wait()
 	wg.Add(int(s.opts.numWorkers))
+
+	defer func() {
+		wCancel()
+		wg.Wait()
+		s.logger.Info("Scheduler stopped")
+	}()
 
 	var recorders []ts.IStatsRecorder
 	if s.opts.statsFactory != nil {
@@ -87,30 +94,28 @@ func (s *scheduler) Start(ctx context.Context) error {
 		worker.WithLogger(s.logger)
 		go func() {
 			defer wg.Done()
-			worker.Start(ctx)
+			// blocking call
+			_ = worker.Start(wCtx)
 		}()
 	}
 
-	// scheduler loop
-	go func() {
-		for {
+	for {
+		select {
+		case <-ctx.Done():
+			s.stopping.Store(true)
+			s.logger.Infof("Scheduler received context cancellation: %v", ctx.Err())
+			return nil
+		case work := <-s.workQueue:
 			select {
-
-			case <-ctx.Done():
-
-				s.stopping.Store(true)
-				return
-			case work := <-s.workQueue:
-				worker := <-s.workerQueue
+			case worker := <-s.workerQueue:
 				worker <- work
-
+			case <-ctx.Done():
+				s.stopping.Store(true)
+				s.logger.Infof("Scheduler received context cancellation during work dispatch: %v", ctx.Err())
+				return nil
 			}
-
 		}
-	}()
-
-	s.logger.Infof("Scheduler stopped")
-	return nil
+	}
 }
 
 func (s *scheduler) Schedule(req core.IRequestReader, next core.ResponseCallback) {
