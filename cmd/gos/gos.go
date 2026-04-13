@@ -2,11 +2,9 @@ package gos
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
@@ -21,11 +19,7 @@ import (
 )
 
 func NewApp[OUT any]() *app[OUT] {
-
-	httpClient := &http.Client{
-		Timeout:   30 * time.Second,
-		Transport: http.DefaultTransport.(*http.Transport).Clone(),
-	}
+	httpClient := DefaultClient()
 
 	adapter := httpAdapter.NewAdapter(
 		httpAdapter.WithClient(httpClient),
