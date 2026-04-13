@@ -47,7 +47,7 @@ func NewApp[OUT any]() *app[OUT] {
 		Scheduler:         scheduler,
 		Executor:          executor,
 		logger:            l.WithName("GOS"),
-		hub:               ts.NewTelemetryHub(),
+		hub:               nil,
 	}
 
 	return app
