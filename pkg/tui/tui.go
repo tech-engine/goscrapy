@@ -18,8 +18,7 @@ var (
 			Bold(true).
 			Foreground(lipgloss.Color("#FAFAFA")).
 			Background(lipgloss.Color("#7D56F4")).
-			Padding(0, 1).
-			MarginBottom(1)
+			Padding(0, 1)
 
 	metricLabelStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#7D56F4")).
@@ -96,12 +95,10 @@ func (m model) View() string {
 	}
 
 	header := titleStyle.Render("GoScrapy TUI Dashboard")
-
 	currHttp, _ := m.currSnap.Components["http"].(middlewares.HttpMetrics)
-
 	uptime := fmt.Sprintf("Uptime: %s", m.currSnap.Uptime.Truncate(time.Second))
 
-	// stats
+	// statistics panels
 	statsRows := []string{
 		fmt.Sprintf("%s %d", metricLabelStyle.Render("Requests:"), currHttp.TotalRequests),
 		fmt.Sprintf("%s %s", metricLabelStyle.Render("Bandwidth:"), formatBytes(currHttp.TotalBytes)),
@@ -110,7 +107,7 @@ func (m model) View() string {
 	}
 	statsBox := boxStyle.Width(m.width/2 - 4).Render(lipgloss.JoinVertical(lipgloss.Left, statsRows...))
 
-	// Status codes
+	// status code breakdown
 	statusRows := []string{metricLabelStyle.Render("Status Codes:")}
 	for code, count := range currHttp.StatusCodes {
 		style := successStyle
@@ -121,21 +118,37 @@ func (m model) View() string {
 		}
 		statusRows = append(statusRows, fmt.Sprintf("  %d: %s", code, style.Render(fmt.Sprint(count))))
 	}
-	statusBox := boxStyle.Width(m.width/2 - 4).Render(lipgloss.JoinVertical(lipgloss.Left, statusRows...))
+	statusBox := boxStyle.Width(m.width/2 - 4).MaxHeight(8).Render(lipgloss.JoinVertical(lipgloss.Left, statusRows...))
 
 	panels := lipgloss.JoinHorizontal(lipgloss.Top, statsBox, statusBox)
+	footer := "Press 'q' or 'Ctrl+C' to exit dashboard and return to terminal"
 
-	// Logs
-	logs := m.logBuffer.GetLogs()
-	logContent := ""
-	maxLogLines := m.height - 15
-	if maxLogLines < 5 {
-		maxLogLines = 5
+	// height budgeting to prevent overflow
+	headerHeight := lipgloss.Height(header)
+	uptimeHeight := lipgloss.Height(uptime)
+	panelsHeight := lipgloss.Height(panels)
+	footerHeight := lipgloss.Height(footer)
+	
+	// total lines taken by non-log components including JoinVertical newlines
+	fixedLines := headerHeight + uptimeHeight + panelsHeight + footerHeight + 4 
+	available := m.height - fixedLines - 1
+
+	if available < 3 {
+		available = 3 
 	}
 
+	// effective height for logs inside the border
+	maxLogs := available - 2
+	if maxLogs < 1 {
+		maxLogs = 1
+	}
+
+	logs := m.logBuffer.GetLogs()
+	logContent := ""
+
 	start := 0
-	if len(logs) > maxLogLines {
-		start = len(logs) - maxLogLines
+	if len(logs) > maxLogs {
+		start = len(logs) - maxLogs
 	}
 
 	for _, l := range logs[start:] {
@@ -150,24 +163,31 @@ func (m model) View() string {
 			color = lipgloss.Color("#FF5F87")
 		}
 
+		// truncate long lines to prevent wrapping
+		limit := m.width - 8
+		if len(l) > limit && limit > 5 {
+			l = l[:limit-3] + "..."
+		}
 		logContent += lipgloss.NewStyle().Foreground(color).Render(l) + "\n"
 	}
 
-	logView := logStyle.Width(m.width - 4).Height(maxLogLines).Render(logContent)
+	logView := logStyle.Width(m.width - 4).Height(maxLogs).Render(logContent)
 
-	footer := "Press 'q' or 'Ctrl+C' to exit dashboard and return to terminal"
-
-	return lipgloss.JoinVertical(
+	// assemble final view
+	totalView := lipgloss.JoinVertical(
 		lipgloss.Left,
 		header,
 		uptime,
-		"\n",
 		panels,
-		"\n",
 		logView,
-		"\n",
 		footer,
 	)
+
+	// ensure the entire view fits the window
+	return lipgloss.NewStyle().
+		MaxWidth(m.width).
+		MaxHeight(m.height).
+		Render(totalView)
 }
 
 // dashboard implements IDashboard.
