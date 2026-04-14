@@ -20,7 +20,11 @@ type ICoreSpider[OUT any] interface {
 	NewRequest(context.Context) core.IRequestRW
 	Yield(core.IOutput[OUT])
 	Logger() core.ILogger
-	Wait(context.CancelFunc, <-chan error) error
+	// Wait blocks until the spider finishes its work or receives a termination signal (Ctrl+C).
+	// If the optional 'autoExit' parameter is set to true, the framework will
+	// automatically initiate a graceful shutdown once it detects that all
+	// scraping tasks and pipeline operations are complete.
+	Wait(...bool) error
 }
 
 // Separate interface created for configuration purposes
@@ -47,6 +51,7 @@ type IEngineConfigurer[OUT any] interface {
 	WithOnShutdown(...func())
 	WithShutdownTimeout(time.Duration)
 	WithLogger(core.ILogger) *engine.Engine[OUT]
+	ActiveCount() int64
 }
 
 // engine.*Engine[OUT] accepts a scheduler that implements engine.IScheduler[OUT] interface which
