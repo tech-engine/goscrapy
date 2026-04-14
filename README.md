@@ -32,6 +32,15 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
 - 🔌 **Extensible by Design** — Almost every layer of the framework is built to be swapped or extended
 - 🎛️ **Telemetry & Monitoring** — Optional built-in telemetry hub for real-time stats 
 
+## Examples
+
+For practical examples and real-world use cases, check the [_examples](./_examples) directory:
+
+- [Google Maps Scraper](./_examples/google_maps_scraper) — Complete scraper for businesses on Google Maps.
+- [Books to Scrape](./_examples/books.toscrape.com) — Standard scraping example for a book catalog.
+- [TUI Stats Integration](./_examples/with_tui_stats) — Example showing how to use the built-in TUI for real-time monitoring.
+- [Fingerprint Spoofing](./_examples/fingerprint_spoofing) — advanced usage for bypassing bot detection.
+
 ## Architecture
 
 GoScrapy's data flow is designed for clarity and concurrent execution:
@@ -223,6 +232,7 @@ func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 <p align="center">
   <img width="600" src="./assets/demo.gif">
 </p>
+
 
 ## Wiki
 Please follow the [official Wiki](https://github.com/tech-engine/goscrapy/wiki) docs for complete details on creating custom pipelines, middlewares, and using the robust selector engine.
