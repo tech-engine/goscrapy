@@ -19,6 +19,7 @@ type PipelineManager[OUT any] struct {
 	outputQueue chan core.IOutput[OUT]
 	pipelines   []IPipeline[OUT]
 	logger      core.ILogger
+	tracker     core.IActivityTracker
 }
 
 func New[OUT any](optFuncs ...types.OptFunc[opts]) *PipelineManager[OUT] {
@@ -47,6 +48,11 @@ func (pm *PipelineManager[OUT]) Add(pipeline ...IPipeline[OUT]) {
 func (pm *PipelineManager[OUT]) WithLogger(loggerIn core.ILogger) engine.IPipelineManager[OUT] {
 	loggerIn = logger.EnsureLogger(loggerIn)
 	pm.logger = loggerIn.WithName("PipelineManager")
+	return pm
+}
+
+func (pm *PipelineManager[OUT]) WithActivityTracker(tracker core.IActivityTracker) engine.IPipelineManager[OUT] {
+	pm.tracker = tracker
 	return pm
 }
 
@@ -96,8 +102,8 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 					if !ok {
 						return
 					}
-				pm.processItem(out)
-			}
+					pm.processItem(out)
+				}
 			}
 		}()
 	}
@@ -164,6 +170,9 @@ func (pm *PipelineManager[OUT]) processItem(original core.IOutput[OUT]) {
 	defer func() {
 		pItem.Clear()
 		pm.itemPool.Release(pItem)
+		if pm.tracker != nil {
+			pm.tracker.Dec()
+		}
 	}()
 
 	for _, pipeline := range pm.pipelines {

@@ -24,6 +24,7 @@ type scheduler struct {
 	workQueue         WorkQueue
 	stopping          atomic.Bool
 	logger            core.ILogger
+	tracker           core.IActivityTracker
 }
 
 func New(executor IExecutor, optFuncs ...types.OptFunc[opts]) *scheduler {
@@ -63,6 +64,11 @@ func (s *scheduler) WithStatsRecorderFactory(f ts.IStatsRecorderFactory) {
 	s.opts.statsFactory = f
 }
 
+func (s *scheduler) WithActivityTracker(tracker core.IActivityTracker) engine.IScheduler {
+	s.tracker = tracker
+	return s
+}
+
 func (s *scheduler) Start(ctx context.Context) error {
 	s.logger.Infof("Starting scheduler with %d workers", s.opts.numWorkers)
 
@@ -92,6 +98,9 @@ func (s *scheduler) Start(ctx context.Context) error {
 
 		worker := NewWorker(i+1, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.responsePool, recorder)
 		worker.WithLogger(s.logger)
+		if s.tracker != nil {
+			worker.WithActivityTracker(s.tracker)
+		}
 		go func() {
 			defer wg.Done()
 			// blocking call

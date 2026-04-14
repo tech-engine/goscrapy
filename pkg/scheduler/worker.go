@@ -23,6 +23,7 @@ type Worker struct {
 	requestPool       *rp.Pooler[request]
 	stats             ts.IStatsRecorder
 	logger            core.ILogger
+	tracker           core.IActivityTracker
 }
 
 func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, schedulerWorkPool *rp.Pooler[schedulerWork], requestPool *rp.Pooler[request], responsePool *rp.Pooler[response], stats ts.IStatsRecorder) *Worker {
@@ -43,6 +44,11 @@ func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, scheduler
 func (w *Worker) WithLogger(loggerIn core.ILogger) *Worker {
 	loggerIn = logger.EnsureLogger(loggerIn)
 	w.logger = loggerIn.WithName(fmt.Sprintf("Worker-%d", w.ID))
+	return w
+}
+
+func (w *Worker) WithActivityTracker(tracker core.IActivityTracker) *Worker {
+	w.tracker = tracker
 	return w
 }
 
@@ -130,6 +136,10 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 
 	if w.stats != nil {
 		reqWriter.Context(ts.WithRecorder(fullCtx, w.stats))
+	}
+
+	if w.tracker != nil {
+		defer w.tracker.Dec()
 	}
 
 	err := w.executor.Execute(work.request, res)
