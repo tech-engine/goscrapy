@@ -10,13 +10,17 @@ import (
 	"go/format"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 
 	"github.com/spf13/cobra"
 )
+
+const minGoVersion = "1.22"
 
 //go:embed templates/*
 var templatesFS embed.FS
@@ -43,84 +47,129 @@ var startprojectCmd = &cobra.Command{
 			return
 		}
 
+		if err := checkGoToolchain(); err != nil {
+			fmt.Printf("❌ Error: Go toolchain not found in PATH. Please install Go (>= %s) to continue.\n", minGoVersion)
+			return
+		}
+
 		fmt.Printf("\n🚀 GoScrapy generating project files. Please wait!\n\n")
 
-		// create [projectName] dir where we will put spider code & pipelines
-		err = createDirIfNotExist(projectName)
-
-		if err != nil {
-			fmt.Printf("❌ Error creating dir '%s', %v", projectName, err)
-			return
+		// Handle go mod init if go.mod doesn't exist
+		if _, err := os.Stat("go.mod"); os.IsNotExist(err) {
+			fmt.Printf("📦 Initializing Go module: %s...\n", projectName)
+			if err := runGoCommand("mod", "init", projectName); err != nil {
+				fmt.Printf("⚠️  Warning: Failed to initialize go module: %v\n", err)
+			}
+		} else {
+			// go.mod exists, check version
+			content, err := os.ReadFile("go.mod")
+			if err == nil {
+				version := getGoVersionFromMod(string(content))
+				if version != "" && !isSupportedGoVersion(version, minGoVersion) {
+					fmt.Printf("⚠️  Warning: Existing go.mod uses Go %s, which is below the minimum required %s. Skipping dependency resolution.\n", version, minGoVersion)
+					// We'll still generate files but won't run tidy
+					generateFiles(projectName, templateFiles)
+					fmt.Printf("\n✨ Congrats, %s created successfully (with warnings).\n", projectName)
+					return
+				}
+			}
 		}
 
-		// create [projectName]/pipelines dir
-		err = createDirIfNotExist(path.Join(projectName, "pipelines"))
+		generateFiles(projectName, templateFiles)
 
-		if err != nil {
-			fmt.Printf("❌ Error creating dir %s/pipelines, %v", projectName, err)
-			return
+		// Ask for confirmation before resolving dependencies
+		fmt.Printf("\n📦 Do you want to resolve dependencies now (go mod tidy)? (Y/N): ")
+		var input string
+		fmt.Scan(&input)
+
+		if strings.ToLower(input) == "y" {
+			fmt.Printf("📦 Resolving dependencies...\n")
+			if err := runGoCommand("mod", "tidy"); err != nil {
+				fmt.Printf("⚠️  Warning: Failed to resolve dependencies: %v\n", err)
+				fmt.Printf("You may need to run 'go mod tidy' manually.\n")
+			}
+		} else {
+			fmt.Println("⏭️  Skipping dependency resolution. You can run 'go mod tidy' manually later.")
 		}
 
-		var sourceFilename string
-
-		// Parse and execute each template
-		for _, templateFile := range templateFiles {
-
-			if templateFile == "templates/pipeline.tmpl" {
-				continue
-			}
-
-			tmplContent, err := templatesFS.ReadFile(templateFile)
-
-			if err != nil {
-				fmt.Printf("❌  Error reading template: %v", err)
-				return
-			}
-
-			tmplName := filepath.Base(templateFile)
-			tmpl, err := template.New(tmplName).Parse(string(tmplContent))
-
-			if err != nil {
-				fmt.Printf("❌  Error parsing template: %v", err)
-				return
-			}
-
-			buffer := &bytes.Buffer{}
-
-			err = tmpl.Execute(buffer, projectName)
-
-			if err != nil {
-				fmt.Printf("❌  Error executing template: '%s', %v", tmpl.Name(), err)
-				return
-			}
-
-			formattedCode, err := format.Source(buffer.Bytes())
-
-			if err != nil {
-				fmt.Printf("❌  Error formatting sourcecode '%s', %v", tmpl.Name(), err)
-				return
-			}
-
-			filename := strings.TrimSuffix(tmpl.Name(), ".tmpl") + ".go"
-
-			if templateFile == "templates/main.tmpl" {
-				sourceFilename = filename
-			} else {
-				sourceFilename = filepath.Join(projectName, filename)
-			}
-
-			err = writeToFile(sourceFilename, formattedCode)
-
-			if err != nil {
-				fmt.Printf("❌  Error creating %s.", sourceFilename)
-				return
-			}
-
-			fmt.Printf("✔️  %s\n", sourceFilename)
-
-		}
-		fmt.Printf("\n✨ Congrates, %s created successfully.", projectName)
+		fmt.Printf("\n✨ Congrats, %s created successfully.", projectName)
 	},
+}
+
+func generateFiles(projectName string, templateFiles []string) {
+	// create [projectName] dir where we will put spider code & pipelines
+	err := createDirIfNotExist(projectName)
+
+	if err != nil {
+		fmt.Printf("❌ Error creating dir '%s', %v\n", projectName, err)
+		return
+	}
+
+	// create [projectName]/pipelines dir
+	err = createDirIfNotExist(path.Join(projectName, "pipelines"))
+
+	if err != nil {
+		fmt.Printf("❌ Error creating dir %s/pipelines, %v\n", projectName, err)
+		return
+	}
+
+	var sourceFilename string
+
+	// Parse and execute each template
+	for _, templateFile := range templateFiles {
+
+		if templateFile == "templates/pipeline.tmpl" {
+			continue
+		}
+
+		tmplContent, err := templatesFS.ReadFile(templateFile)
+
+		if err != nil {
+			fmt.Printf("❌  Error reading template: %v\n", err)
+			return
+		}
+
+		tmplName := filepath.Base(templateFile)
+		tmpl, err := template.New(tmplName).Parse(string(tmplContent))
+
+		if err != nil {
+			fmt.Printf("❌  Error parsing template: %v\n", err)
+			return
+		}
+
+		buffer := &bytes.Buffer{}
+
+		err = tmpl.Execute(buffer, projectName)
+
+		if err != nil {
+			fmt.Printf("❌  Error executing template: '%s', %v\n", tmpl.Name(), err)
+			return
+		}
+
+		formattedCode, err := format.Source(buffer.Bytes())
+
+		if err != nil {
+			fmt.Printf("❌  Error formatting sourcecode '%s', %v\n", tmpl.Name(), err)
+			return
+		}
+
+		filename := strings.TrimSuffix(tmpl.Name(), ".tmpl") + ".go"
+
+		if templateFile == "templates/main.tmpl" {
+			sourceFilename = filename
+		} else {
+			sourceFilename = filepath.Join(projectName, filename)
+		}
+
+		err = writeToFile(sourceFilename, formattedCode)
+
+		if err != nil {
+			fmt.Printf("❌  Error creating %s.\n", sourceFilename)
+			return
+		}
+
+		fmt.Printf("✔️  %s\n", sourceFilename)
+	}
 }
 
 func init() {
@@ -155,4 +204,58 @@ func createDirIfNotExist(dir string) error {
 	}
 
 	return os.MkdirAll(dir, os.ModePerm)
+}
+func runGoCommand(args ...string) error {
+	cmd := exec.Command("go", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func checkGoToolchain() error {
+	if _, err := exec.LookPath("go"); err != nil {
+		return err
+	}
+
+	// Verify the version of the installed binary
+	out, err := exec.Command("go", "version").Output()
+	if err != nil {
+		return fmt.Errorf("failed to check go version: %v", err)
+	}
+
+	// Output format is typically: "go version go1.22.1 windows/amd64"
+	fields := strings.Fields(string(out))
+	if len(fields) < 3 || !strings.HasPrefix(fields[2], "go") {
+		return fmt.Errorf("unexpected 'go version' output: %s", string(out))
+	}
+
+	version := strings.TrimPrefix(fields[2], "go")
+	if !isSupportedGoVersion(version, minGoVersion) {
+		return fmt.Errorf("installed Go version %s is below the minimum required %s", version, minGoVersion)
+	}
+
+	return nil
+}
+
+func getGoVersionFromMod(content string) string {
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "go ") {
+			return strings.TrimPrefix(line, "go ")
+		}
+	}
+	return ""
+}
+
+func isSupportedGoVersion(current, min string) bool {
+	c, m := strings.Split(current, "."), strings.Split(min, ".")
+	for i := 0; i < len(c) && i < len(m); i++ {
+		cv, _ := strconv.Atoi(c[i])
+		mv, _ := strconv.Atoi(m[i])
+		if cv != mv {
+			return cv > mv
+		}
+	}
+	return len(c) >= len(m)
 }
