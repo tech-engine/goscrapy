@@ -87,14 +87,16 @@ flowchart LR
 ### 1. Install GoScrapy CLI
 
 ```sh
-go install github.com/tech-engine/goscrapy@latest
+go install github.com/tech-engine/goscrapy/cmd/...@latest
 ```
 > [!TIP]
-> Always use the latest version of the GoScrapy CLI to ensure access to all scaffolding updates.
+> This command installs both `goscrapy` and the shorter `gos` alias. You can use either command to run the scaffolding tool!
 
 ### 2. Verify Installation
 
 ```sh
+gos -v
+# or
 goscrapy -v
 ```
 
@@ -167,7 +169,7 @@ package myspider
 
 import (
 	"context"
-	"github.com/tech-engine/goscrapy/cmd/gos"
+	"github.com/tech-engine/goscrapy/pkg/gos"
 )
 
 type Spider struct {
