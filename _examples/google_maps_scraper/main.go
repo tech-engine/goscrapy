@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	// replace with your own project name
 	"google_maps_scraper/google_maps_scraper"
@@ -29,12 +28,10 @@ func main() {
 	fmt.Println("🕷️  GoScrapy spider is running. Press Ctrl+C to stop.")
 
 	// wait for completion
-	err := spider.Wait(cancel, errCh)
 
-	if err != nil && !errors.Is(err, context.Canceled) {
-		fmt.Fprintf(os.Stderr, "❌ Engine finished with error: %v\n", err)
-		os.Exit(1)
+	if err := spider.Wait(cancel, errCh); err != nil && !errors.Is(err, context.Canceled) {
+		fmt.Printf("❌ Engine finished with error: %v\n", err)
+	} else {
+		fmt.Println("✨ Engine finished successfully.")
 	}
-
-	fmt.Println("✨ Engine finished successfully.")
 }
