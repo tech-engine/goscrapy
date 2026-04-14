@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"os"
+
 	"github.com/tech-engine/goscrapy/pkg/gos"
 	// replace with your own project name
 	"{{.}}/{{.}}"
@@ -15,7 +17,7 @@ func main() {
 	defer cancel()
 
 	// start spider
-	spider, errCh := {{.}}.New(ctx)
+	spider := {{.}}.New(ctx)
 
 	// start the scraper with a job, currently nil is passed but you can pass your job here
 	spider.StartRequest(ctx, nil)
@@ -23,9 +25,14 @@ func main() {
 	fmt.Println("🕷️  GoScrapy spider is running. Press Ctrl+C to stop.")
 
 	// wait for completion
-	if err := spider.Wait(cancel, errCh); err != nil && !errors.Is(err, context.Canceled) {
-		fmt.Printf("❌ Engine finished with error: %v\n", err)
-	} else {
-		fmt.Println("✨ Engine finished successfully.")
+	// By default autoExit is set to false, which means the engine will shut down 
+	// automatically when all work is finished.
+	// If you want the engine to continue running indefinitely (e.g., if it's 
+	// accepting jobs from an external source), don't pass true to Wait().
+	if err := spider.Wait(true); err != nil && !errors.Is(err, context.Canceled) {
+		fmt.Fprintf(os.Stderr, "❌ Engine finished with error: %v\n", err)
+		os.Exit(1)
 	}
+
+	fmt.Println("✨ Engine finished successfully.")
 }
