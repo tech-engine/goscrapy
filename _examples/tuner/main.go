@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tech-engine/goscrapy/cmd/gos"
+	"github.com/tech-engine/goscrapy/pkg/gos"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )

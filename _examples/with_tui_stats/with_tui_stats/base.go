@@ -3,7 +3,7 @@ package with_tui_stats
 import (
 	"context"
 
-	"github.com/tech-engine/goscrapy/cmd/gos"
+	"github.com/tech-engine/goscrapy/pkg/gos"
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 	"github.com/tech-engine/goscrapy/pkg/tui"
 )

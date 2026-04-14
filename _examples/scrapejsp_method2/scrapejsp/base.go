@@ -3,7 +3,7 @@ package scrapejsp
 import (
 	"context"
 
-	"github.com/tech-engine/goscrapy/cmd/gos"
+	"github.com/tech-engine/goscrapy/pkg/gos"
 )
 
 type Spider struct {
