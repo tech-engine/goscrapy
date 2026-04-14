@@ -15,7 +15,7 @@ func main() {
 	defer cancel()
 
 	// start spider
-	spider, errCh := books_to_scrape.New(ctx)
+	spider := books_to_scrape.New(ctx)
 
 	// start the scraper with a job, currently nil is passed but you can pass your job here
 	spider.StartRequest(ctx, nil)
@@ -23,9 +23,7 @@ func main() {
 	fmt.Println("🕷️  GoScrapy spider is running. Press Ctrl+C to stop.")
 
 	// wait for completion
-	err := spider.Wait(cancel, errCh)
-
-	if err != nil && !errors.Is(err, context.Canceled) {
+	if err := spider.Wait(true); err != nil && !errors.Is(err, context.Canceled) {
 		fmt.Fprintf(os.Stderr, "❌ Engine finished with error: %v\n", err)
 		os.Exit(1)
 	}

@@ -12,7 +12,7 @@ type Spider struct {
 }
 
 // New initializes the spider with minimal setup (no TUI, no stats collection).
-func New(ctx context.Context) (*Spider, <-chan error) {
+func New(ctx context.Context) *Spider {
 	app := gos.NewApp[*Record]().
 		Setup(MIDDLEWARES, PIPELINES)
 
@@ -21,11 +21,10 @@ func New(ctx context.Context) (*Spider, <-chan error) {
 		baseUrl:     "https://books.toscrape.com",
 	}
 
-	errCh := make(chan error, 1)
 	go func() {
-		errCh <- app.Start(ctx)
+		_ = app.Start(ctx)
 		spider.Close(ctx)
 	}()
 
-	return spider, errCh
+	return spider
 }

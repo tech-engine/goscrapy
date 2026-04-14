@@ -14,7 +14,7 @@ type Spider struct {
 }
 
 // New initializes the spider with optional TUI and stats collection enabled.
-func New(ctx context.Context, tuiEnabled bool) (*Spider, <-chan error) {
+func New(ctx context.Context, tuiEnabled bool) *Spider {
 	app := gos.NewApp[*Record]().
 		Setup(MIDDLEWARES, PIPELINES)
 
@@ -22,8 +22,6 @@ func New(ctx context.Context, tuiEnabled bool) (*Spider, <-chan error) {
 		ICoreSpider: app,
 		baseUrl:     "https://books.toscrape.com",
 	}
-
-	errCh := make(chan error, 1)
 
 	if tuiEnabled {
 		// Explicitly wire the user stats collector to framework engines
@@ -44,15 +42,15 @@ func New(ctx context.Context, tuiEnabled bool) (*Spider, <-chan error) {
 		app.WithTelemetry(hub)
 
 		go func() {
-			errCh <- gos.StartWithTUI(ctx, app, dashboard)
+			_ = gos.StartWithTUI(ctx, app, dashboard)
 			spider.Close(ctx) // Optional finalizer for spider
 		}()
 	} else {
 		go func() {
-			errCh <- app.Start(ctx)
+			_ = app.Start(ctx)
 			spider.Close(ctx) // Optional finalizer for spider
 		}()
 	}
 
-	return spider, errCh
+	return spider
 }
