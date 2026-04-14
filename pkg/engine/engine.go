@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 
+	"sync/atomic"
 	"time"
 
 	"github.com/tech-engine/goscrapy/internal/types"
@@ -27,6 +28,7 @@ type Engine[OUT any] struct {
 	scheduler       IScheduler
 	pipelineManager IPipelineManager[OUT]
 	logger          core.ILogger
+	activeCount     atomic.Int64
 }
 
 func New[OUT any](schd IScheduler, pm IPipelineManager[OUT], optFuncs ...types.OptFunc[opts]) *Engine[OUT] {
@@ -67,6 +69,10 @@ func (m *Engine[OUT]) WithPipelineManager(pm IPipelineManager[OUT]) {
 func (m *Engine[OUT]) Start(ctx context.Context) error {
 	m.logger.Infof("Engine starting...")
 
+	// Wire up activity tracking
+	m.scheduler.WithActivityTracker(m)
+	m.pipelineManager.WithActivityTracker(m)
+
 	// run all shutdown hooks before returning
 	defer func() {
 		m.logger.Infof("Shutting down engine...")
@@ -104,6 +110,7 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 }
 
 func (m *Engine[OUT]) Schedule(req core.IRequestReader, next core.ResponseCallback) {
+	m.activeCount.Add(1)
 	m.scheduler.Schedule(req, next)
 }
 
@@ -112,7 +119,20 @@ func (m *Engine[OUT]) NewRequest(ctx context.Context) core.IRequestRW {
 }
 
 func (m *Engine[OUT]) Yield(v core.IOutput[OUT]) {
+	m.activeCount.Add(1)
 	m.pipelineManager.Push(v)
+}
+
+func (m *Engine[OUT]) Inc() {
+	m.activeCount.Add(1)
+}
+
+func (m *Engine[OUT]) Dec() {
+	m.activeCount.Add(-1)
+}
+
+func (m *Engine[OUT]) ActiveCount() int64 {
+	return m.activeCount.Load()
 }
 
 func (m *Engine[OUT]) WithLogger(loggerIn core.ILogger) *Engine[OUT] {
