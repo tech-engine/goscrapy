@@ -177,15 +177,14 @@ type Spider struct {
 	gos.ICoreSpider[*Record]
 }
 
-func New(ctx context.Context) (*Spider, <-chan error) {
+func New(ctx context.Context) *Spider {
 	// Initialize and configure everything in one go
 	app := gos.NewApp[*Record]().Setup(MIDDLEWARES, PIPELINES)
 
-	errCh := make(chan error)
 	spider := &Spider{app}
 
 	go func() {
-		errCh <- app.Start(ctx)
+		_ = app.Start(ctx)
 		spider.Close(ctx)
 	}()
 
