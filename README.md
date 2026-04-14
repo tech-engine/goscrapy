@@ -84,13 +84,7 @@ flowchart LR
 > [!IMPORTANT]
 > GoScrapy requires **Go 1.22** or higher.
 
-### 1. Project Initialization
-
-```sh
-go mod init books_to_scrape
-```
-
-### 2. Install GoScrapy CLI
+### 1. Install GoScrapy CLI
 
 ```sh
 go install github.com/tech-engine/goscrapy@latest
@@ -98,24 +92,25 @@ go install github.com/tech-engine/goscrapy@latest
 > [!TIP]
 > Always use the latest version of the GoScrapy CLI to ensure access to all scaffolding updates.
 
-### 3. Verify Installation
+### 2. Verify Installation
 
 ```sh
 goscrapy -v
 ```
 
-### 4. Create a New Project
+### 3. Create a New Project
 
 ```sh
 goscrapy startproject books_to_scrape
 ```
-This will create a new project directory with all the files necessary to begin working with **GoScrapy**.
+This will automatically initialize a new Go module and generate all necessary files. You will also be prompted to resolve dependencies (`go mod tidy`) instantly.
 
 ```sh
 \tech-engine\go\go-test-scrapy> goscrapy startproject books_to_scrape
 
 🚀 GoScrapy generating project files. Please wait!
 
+📦 Initializing Go module: books_to_scrape...
 ✔️  books_to_scrape\base.go
 ✔️  books_to_scrape\constants.go
 ✔️  books_to_scrape\errors.go
@@ -123,6 +118,9 @@ This will create a new project directory with all the files necessary to begin w
 ✔️  main.go
 ✔️  books_to_scrape\record.go
 ✔️  books_to_scrape\spider.go
+
+📦 Do you want to resolve dependencies now (go mod tidy)? (Y/N): Y
+📦 Resolving dependencies...
 
 ✨ Congrats, books_to_scrape created successfully.
 ```
