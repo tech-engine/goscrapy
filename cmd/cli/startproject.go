@@ -4,6 +4,7 @@ Copyright © 2023 Tech Engine
 package cli
 
 import (
+	"bufio"
 	"bytes"
 	"embed"
 	"fmt"
@@ -77,12 +78,8 @@ var startprojectCmd = &cobra.Command{
 
 		generateFiles(projectName, templateFiles)
 
-		// Ask for confirmation before resolving dependencies
-		fmt.Printf("\n📦 Do you want to resolve dependencies now (go mod tidy)? (Y/N): ")
-		var input string
-		fmt.Scan(&input)
-
-		if strings.ToLower(input) == "y" {
+		// ask for confirmation before resolving dependencies
+		if confirm("\n📦 Do you want to resolve dependencies now (go mod tidy)?", true) {
 			fmt.Printf("📦 Resolving dependencies...\n")
 			if err := runGoCommand("mod", "tidy"); err != nil {
 				fmt.Printf("⚠️  Warning: Failed to resolve dependencies: %v\n", err)
@@ -190,15 +187,7 @@ func writeToFile(filename string, data []byte) error {
 func createDirIfNotExist(dir string) error {
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		// Directory exists, prompt user for confirmation
-		fmt.Printf("Directory '%s' already exists. Continue? (Y/N): ", dir)
-		var input string
-		_, err := fmt.Scan(&input)
-
-		if err != nil {
-			return err
-		}
-
-		if strings.ToLower(input) != "y" {
+		if !confirm(fmt.Sprintf("Directory '%s' already exists. Continue?", dir), true) {
 			return nil
 		}
 	}
@@ -210,6 +199,24 @@ func runGoCommand(args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func confirm(prompt string, defaultValue bool) bool {
+	choices := "Y/n"
+	if !defaultValue {
+		choices = "y/N"
+	}
+
+	fmt.Printf("%s [%s]: ", prompt, choices)
+
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(strings.ToLower(input))
+
+	if input == "" {
+		return defaultValue
+	}
+	return input == "y" || input == "yes"
 }
 
 func checkGoToolchain() error {
