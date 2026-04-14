@@ -2,7 +2,7 @@ module scrapejsp
 
 go 1.25.0
 
-require github.com/tech-engine/goscrapy v0.20.0
+require github.com/tech-engine/goscrapy v0.21.2
 
 require (
 	cel.dev/expr v0.25.1 // indirect
