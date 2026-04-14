@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 
+	"errors"
 	"sync/atomic"
 	"time"
 
@@ -10,6 +11,10 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 	"golang.org/x/sync/errgroup"
+)
+
+var (
+	ErrAlreadyStarted = errors.New("engine already started")
 )
 
 type opts struct {
@@ -29,6 +34,7 @@ type Engine[OUT any] struct {
 	pipelineManager IPipelineManager[OUT]
 	logger          core.ILogger
 	activeCount     atomic.Int64
+	started         atomic.Bool
 }
 
 func New[OUT any](schd IScheduler, pm IPipelineManager[OUT], optFuncs ...types.OptFunc[opts]) *Engine[OUT] {
@@ -67,6 +73,10 @@ func (m *Engine[OUT]) WithPipelineManager(pm IPipelineManager[OUT]) {
 }
 
 func (m *Engine[OUT]) Start(ctx context.Context) error {
+	if m.started.Swap(true) {
+		return ErrAlreadyStarted
+	}
+
 	m.logger.Infof("Engine starting...")
 
 	// Wire up activity tracking
@@ -80,6 +90,7 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 			fn()
 		}
 		m.logger.Infof("shutdown complete.")
+		m.started.Store(false)
 	}()
 
 	g, gCtx := errgroup.WithContext(ctx)

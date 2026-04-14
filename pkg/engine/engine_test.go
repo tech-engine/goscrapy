@@ -59,14 +59,13 @@ func newMockScheduler() *mockScheduler {
 func (m *mockScheduler) Start(ctx context.Context) error {
 	m.mu.Lock()
 	m.started = true
-	m.mu.Unlock()
-
 	select {
 	case <-m.startReady:
 		// already closed
 	default:
 		close(m.startReady)
 	}
+	m.mu.Unlock()
 
 	if m.startError != nil {
 		return m.startError
@@ -121,14 +120,13 @@ func newMockPipelineManager() *mockPipelineManager {
 func (m *mockPipelineManager) Start(ctx context.Context) error {
 	m.mu.Lock()
 	m.started = true
-	m.mu.Unlock()
-
 	select {
 	case <-m.startReady:
 		// already closed
 	default:
 		close(m.startReady)
 	}
+	m.mu.Unlock()
 
 	if m.startError != nil {
 		return m.startError
@@ -340,14 +338,16 @@ func TestEngine_Start_Idempotent(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go eng.Start(ctx)
+	go func() {
+		_ = eng.Start(ctx)
+	}()
 
-	// second call should not panic (but may no-op or error)
-	assert.NotPanics(t, func() {
-		go eng.Start(ctx)
-	})
+	// wait a bit for the first one to take the lock
+	time.Sleep(50 * time.Millisecond)
 
-	time.Sleep(100 * time.Millisecond)
+	// second call should return ErrAlreadyStarted
+	err := eng.Start(ctx)
+	assert.ErrorIs(t, err, ErrAlreadyStarted)
 }
 
 func TestEngine_LoggerCoverage(t *testing.T) {
