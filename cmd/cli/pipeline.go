@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/format"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -15,6 +16,8 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+const maxSearchDepth = 4
 
 var pipelineCmd = &cobra.Command{
 	Use:   "pipeline [pipeline-name]",
@@ -63,7 +66,20 @@ var pipelineCmd = &cobra.Command{
 			return
 		}
 
-		sourceFilename := filepath.Join("pipelines", strings.TrimSuffix(tmpl.Name(), ".tmpl")+".go")
+		// determine the correct path for pipelines
+		targetDir, found := findPipelinesPath()
+		if !found {
+			fmt.Println("❌ Error: a project is required to use the pipeline command")
+			return
+		}
+
+		sourceFilename := filepath.Join(targetDir, strings.TrimSuffix(tmpl.Name(), ".tmpl")+".go")
+
+		// ensure pipelines dir exists
+		if err := createDirIfNotExist(targetDir); err != nil {
+			fmt.Printf("❌  Error creating pipelines directory: %v", err)
+			return
+		}
 
 		// write go file
 		err = writeToFile(sourceFilename, formattedCode)
@@ -81,6 +97,63 @@ var pipelineCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(pipelineCmd)
+}
+
+// findPipelinesPath attempts to locate the correct pipelines directory within a GoScrapy project.
+// Returns the path and a boolean indicating if a valid project structure was found.
+func findPipelinesPath() (string, bool) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", false
+	}
+
+	// Search upwards for go.mod to find the project root
+	root := cwd
+	hasMod := false
+	for depth := 0; depth < maxSearchDepth; depth++ {
+		if _, err := os.Stat(filepath.Join(root, "go.mod")); err == nil {
+			hasMod = true
+			break
+		}
+		parent := filepath.Dir(root)
+		if parent == root {
+			break
+		}
+		root = parent
+	}
+
+	if !hasMod {
+		return "", false
+	}
+
+	// Search for the project source subdirectory inside the root
+	// We look for a folder that contains 'base.go' and an existing 'pipelines' folder
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return "", false
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			subPath := filepath.Join(root, entry.Name())
+			// Check if this subfolder is the project folder
+			if _, err := os.Stat(filepath.Join(subPath, "base.go")); err == nil {
+				// We found a folder with base.go, return its pipelines subfolder
+				return filepath.Join(subPath, "pipelines"), true
+			}
+		}
+	}
+
+	// Fallback: check if we are already inside a pipelines directory AND it's part of a project
+	// Check if parent has base.go
+	parent := filepath.Dir(cwd)
+	if filepath.Base(cwd) == "pipelines" {
+		if _, err := os.Stat(filepath.Join(parent, "base.go")); err == nil {
+			return ".", true
+		}
+	}
+
+	return "", false
 }
 
 func capitalizeFirstLetter(s string) string {
