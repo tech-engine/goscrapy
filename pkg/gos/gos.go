@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
@@ -75,7 +76,6 @@ func (gos *app[OUT]) WithLogger(loggerIn core.IConfigurableLogger) *app[OUT] {
 	return gos
 }
 
-
 func (gos *app[OUT]) WithTelemetry(hub *ts.TelemetryHub, optFuncs ...types.OptFunc[ts.TelemetryHubOpts]) *app[OUT] {
 	if hub == nil {
 		gos.hub = ts.NewTelemetryHub(optFuncs...)
@@ -90,25 +90,58 @@ func (gos *app[OUT]) Logger() core.ILogger {
 }
 
 func (gos *app[OUT]) Start(ctx context.Context) error {
+	// Create internal cancellable context based on provided context
+	// This allows the framework to signal its own shutdown
+	gos.cancelableSignal = newCancelableSignal(ctx)
+	defer gos.cancelableSignal.cancel()
+
 	if gos.hub != nil {
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-		go gos.hub.Start(ctx)
+		go gos.hub.Start(gos.cancelableSignal.ctx)
 	}
-	return gos.Engine.Start(ctx)
+	gos.lastErr = gos.Engine.Start(gos.cancelableSignal.ctx)
+	return gos.lastErr
 }
 
-// Wait for completion or termination
-func (gos *app[OUT]) Wait(cancel context.CancelFunc, errCh <-chan error) error {
+// Wait for completion or termination. If autoExit is true, the engine will
+// shut down automatically when all work is finished.
+func (gos *app[OUT]) Wait(autoExit ...bool) error {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
+	if len(autoExit) > 0 && autoExit[0] {
+		// Start auto-exit monitor
+		go func() {
+			// Wait for initial start
+			time.Sleep(500 * time.Millisecond)
+			ticker := time.NewTicker(200 * time.Millisecond)
+			defer func() {
+				if gos.cancelableSignal != nil {
+					gos.cancelableSignal.cancel()
+				}
+				ticker.Stop()
+			}()
+
+			for range ticker.C {
+				if gos.Engine.ActiveCount() <= 0 {
+					gos.logger.Info("✅ Scraping complete. Automatic shutdown initiated.")
+					return
+				}
+			}
+		}()
+	} else {
+		gos.logger.Info("🕷️  GoScrapy spider is running. Press Ctrl+C to stop.")
+	}
+
 	select {
-	case err := <-errCh:
-		return err
+	case <-gos.cancelableSignal.ctx.Done():
+		return gos.lastErr
 	case sig := <-sigCh:
 		gos.logger.Infof("Received termination signal: %v", sig)
-		cancel()
-		return <-errCh
+		if gos.cancelableSignal != nil {
+			gos.cancelableSignal.cancel()
+		}
+		// Wait for engine to finish cleanup and set lastErr
+		<-gos.cancelableSignal.ctx.Done()
+		return gos.lastErr
 	}
 }
