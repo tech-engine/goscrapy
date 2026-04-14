@@ -10,6 +10,7 @@ type IPipelineManager[OUT any] interface {
 	Start(context.Context) error
 	Push(core.IOutput[OUT])
 	WithLogger(core.ILogger) IPipelineManager[OUT]
+	WithActivityTracker(core.IActivityTracker) IPipelineManager[OUT]
 }
 
 type Resetter interface {
@@ -21,4 +22,5 @@ type IScheduler interface {
 	Schedule(core.IRequestReader, core.ResponseCallback)
 	NewRequest(context.Context) core.IRequestRW
 	WithLogger(core.ILogger) IScheduler
+	WithActivityTracker(core.IActivityTracker) IScheduler
 }

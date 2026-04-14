@@ -10,6 +10,11 @@ import (
 	"golang.org/x/net/html"
 )
 
+type IActivityTracker interface {
+	Inc()
+	Dec()
+}
+
 type IEngine[OUT any] interface {
 	Start(context.Context) error
 	NewRequest(context.Context) IRequestRW
