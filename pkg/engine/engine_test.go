@@ -95,6 +95,10 @@ func (m *mockScheduler) WithLogger(logger core.ILogger) IScheduler {
 	return m
 }
 
+func (m *mockScheduler) WithActivityTracker(tracker core.IActivityTracker) IScheduler {
+	return m
+}
+
 //
 // --- Mock Pipeline Manager ---
 //
@@ -145,6 +149,10 @@ func (m *mockPipelineManager) WithLogger(logger core.ILogger) IPipelineManager[a
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.logger = logger
+	return m
+}
+
+func (m *mockPipelineManager) WithActivityTracker(tracker core.IActivityTracker) IPipelineManager[any] {
 	return m
 }
 
