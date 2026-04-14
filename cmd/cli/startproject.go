@@ -23,6 +23,8 @@ import (
 
 const minGoVersion = "1.22"
 
+var stdinReader = bufio.NewReader(os.Stdin)
+
 //go:embed templates/*
 var templatesFS embed.FS
 
@@ -39,6 +41,13 @@ var startprojectCmd = &cobra.Command{
 		if projectName == "" {
 			fmt.Printf("⚠️ please provide a projectname")
 			return
+		}
+
+		// Check if project directory already exists
+		if _, err := os.Stat(projectName); !os.IsNotExist(err) {
+			if !confirm(fmt.Sprintf("Directory '%s' already exists. Continue?", projectName), true) {
+				return
+			}
 		}
 
 		templateFiles, err := fs.Glob(templatesFS, "templates/*.tmpl")
@@ -185,13 +194,6 @@ func writeToFile(filename string, data []byte) error {
 }
 
 func createDirIfNotExist(dir string) error {
-	if _, err := os.Stat(dir); !os.IsNotExist(err) {
-		// Directory exists, prompt user for confirmation
-		if !confirm(fmt.Sprintf("Directory '%s' already exists. Continue?", dir), true) {
-			return nil
-		}
-	}
-
 	return os.MkdirAll(dir, os.ModePerm)
 }
 func runGoCommand(args ...string) error {
@@ -209,8 +211,7 @@ func confirm(prompt string, defaultValue bool) bool {
 
 	fmt.Printf("%s [%s]: ", prompt, choices)
 
-	reader := bufio.NewReader(os.Stdin)
-	input, _ := reader.ReadString('\n')
+	input, _ := stdinReader.ReadString('\n')
 	input = strings.TrimSpace(strings.ToLower(input))
 
 	if input == "" {
