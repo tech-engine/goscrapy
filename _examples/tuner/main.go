@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tech-engine/goscrapy/pkg/gos"
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/gos"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
 
@@ -86,9 +86,9 @@ func runBenchmark(concurrency, poolSize, maxIdle, queueBuf string) float64 {
 			default:
 				// Push blocks of requests to saturate the engine
 				for i := 0; i < 1000; i++ {
-					req := spider.NewRequest(ctx)
+					req := spider.Request(ctx)
 					req.Url("http://localhost:18080/")
-					spider.Request(req, spider.parse)
+					spider.Parse(req, spider.parse)
 				}
 				runtime.Gosched()
 			}

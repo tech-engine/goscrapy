@@ -12,12 +12,12 @@ import (
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 
 	// for each request we must call NewRequest() and never reuse it
-	req := s.NewRequest(ctx)
+	req := s.Request(ctx)
 
 	// GET is the default method
 	req.Url(s.baseUrl)
 
-	s.Request(req, s.parse)
+	s.Parse(req, s.parse)
 }
 
 // can be called when spider is about to close
@@ -28,7 +28,7 @@ func (s *Spider) Close(ctx context.Context) {
 func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 	s.Logger().Infof("GET: %d %s", resp.StatusCode(), resp.Request().URL.String())
 	for _, productUrl := range resp.Css("article.product_pod h3 a").Attr("href") {
-		req := s.NewRequest(ctx)
+		req := s.Request(ctx)
 
 		if strings.HasPrefix(productUrl, "catalogue/") {
 			productUrl = fmt.Sprintf("%s/%s", s.baseUrl, productUrl)
@@ -37,7 +37,7 @@ func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 		}
 
 		req.Url(productUrl)
-		s.Request(req, s.parseProduct)
+		s.Parse(req, s.parseProduct)
 		s.Logger().Infof("GET: %s", productUrl)
 	}
 
@@ -54,9 +54,9 @@ func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 		nextUrl = fmt.Sprintf("%s/catalogue/%s", s.baseUrl, nextUrls[0])
 	}
 
-	req := s.NewRequest(ctx)
+	req := s.Request(ctx)
 	req.Url(nextUrl)
-	s.Request(req, s.parse)
+	s.Parse(req, s.parse)
 }
 
 func (s *Spider) parseProduct(ctx context.Context, resp core.IResponseReader) {

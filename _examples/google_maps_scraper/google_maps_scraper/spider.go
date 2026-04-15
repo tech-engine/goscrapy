@@ -15,14 +15,14 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 
 	if job.loc == nil {
 		s.Logger().Infof("Geocoding query: %s", job.query)
-		req := prepareRequest(s.NewRequest(ctx), generateGeocodingUrl("https://www.google.com", *job), *job)
-		s.Request(req, s.parseGeocoding)
+		req := prepareRequest(s.Request(ctx), generateGeocodingUrl("https://www.google.com", *job), *job)
+		s.Parse(req, s.parseGeocoding)
 		return
 	}
 
 	// call the next parse method
-	req := prepareRequest(s.NewRequest(ctx), generateSearchUrl("https://www.google.com", *job), *job)
-	s.Request(req, s.parseMapListing)
+	req := prepareRequest(s.Request(ctx), generateSearchUrl("https://www.google.com", *job), *job)
+	s.Parse(req, s.parseMapListing)
 }
 
 // can be called when spider is about to close
@@ -44,8 +44,8 @@ func (s *Spider) parseGeocoding(ctx context.Context, resp core.IResponseReader) 
 	job.setLocation(lat, lng)
 	s.Logger().Infof("Location found for %s: %f, %f", job.query, lat, lng)
 
-	req := prepareRequest(s.NewRequest(ctx), generateSearchUrl("https://www.google.com", job), job)
-	s.Request(req, s.parseMapListing)
+	req := prepareRequest(s.Request(ctx), generateSearchUrl("https://www.google.com", job), job)
+	s.Parse(req, s.parseMapListing)
 }
 
 func (s *Spider) parseMapListing(ctx context.Context, resp core.IResponseReader) {
@@ -70,6 +70,6 @@ func (s *Spider) parseMapListing(ctx context.Context, resp core.IResponseReader)
 		s.Yield(&record)
 	}
 
-	req := prepareRequest(s.NewRequest(ctx), generateSearchUrl("https://www.google.com", job), job)
-	s.Request(req, s.parseMapListing)
+	req := prepareRequest(s.Request(ctx), generateSearchUrl("https://www.google.com", job), job)
+	s.Parse(req, s.parseMapListing)
 }
