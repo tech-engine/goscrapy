@@ -12,7 +12,7 @@ import (
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 
     // for each request we must call NewRequest() and never reuse it
-	req := s.NewRequest(ctx)
+	req := s.Request(ctx)
 
     var headers http.Header
 
@@ -29,7 +29,7 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
     */
     
     // call the next parse method
-	s.Request(req, s.parse)
+	s.Parse(req, s.parse)
 }
 
 // can be called when spider is about to close
