@@ -2,7 +2,7 @@ module fingerprint_spoofing
 
 go 1.25.1
 
-require github.com/tech-engine/goscrapy v0.23.0
+require github.com/tech-engine/goscrapy v0.23.1
 
 require (
 	cel.dev/expr v0.25.1 // indirect
@@ -59,7 +59,7 @@ require (
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.3.14 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.15 // indirect
 	github.com/googleapis/gax-go/v2 v2.22.0 // indirect
 	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect

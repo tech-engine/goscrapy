@@ -174,6 +174,8 @@ github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/googleapis/enterprise-certificate-proxy v0.3.14 h1:yh8ncqsbUY4shRD5dA6RlzjJaT4hi3kII+zYw8wmLb8=
 github.com/googleapis/enterprise-certificate-proxy v0.3.14/go.mod h1:vqVt9yG9480NtzREnTlmGSBmFrA+bzb0yl0TxoBQXOg=
+github.com/googleapis/enterprise-certificate-proxy v0.3.15 h1:xolVQTEXusUcAA5UgtyRLjelpFFHWlPQ4XfWGc7MBas=
+github.com/googleapis/enterprise-certificate-proxy v0.3.15/go.mod h1:vqVt9yG9480NtzREnTlmGSBmFrA+bzb0yl0TxoBQXOg=
 github.com/googleapis/gax-go/v2 v2.21.0 h1:h45NjjzEO3faG9Lg/cFrBh2PgegVVgzqKzuZl/wMbiI=
 github.com/googleapis/gax-go/v2 v2.21.0/go.mod h1:But/NJU6TnZsrLai/xBAQLLz+Hc7fHZJt/hsCz3Fih4=
 github.com/googleapis/gax-go/v2 v2.22.0 h1:PjIWBpgGIVKGoCXuiCoP64altEJCj3/Ei+kSU5vlZD4=
@@ -233,6 +235,8 @@ github.com/tech-engine/goscrapy v0.22.0 h1:3OZ5WClC+kPArowkX4f8h83zkPcSZB3JYonPK
 github.com/tech-engine/goscrapy v0.22.0/go.mod h1:zJUNrQQeUPC76spMrzFsWO3PcIZhSaWIZNTDSy08ph0=
 github.com/tech-engine/goscrapy v0.23.0 h1:UukuhnBMABPhymtT/2ux4xF1xyT8QrZdv7GdPIPgJSw=
 github.com/tech-engine/goscrapy v0.23.0/go.mod h1:zJUNrQQeUPC76spMrzFsWO3PcIZhSaWIZNTDSy08ph0=
+github.com/tech-engine/goscrapy v0.23.1 h1:Qtex5957Zv4eY9+RhDk0WESoG5Kr1b3bS81cyMMmrWo=
+github.com/tech-engine/goscrapy v0.23.1/go.mod h1:zJUNrQQeUPC76spMrzFsWO3PcIZhSaWIZNTDSy08ph0=
 github.com/tidwall/gjson v1.18.0 h1:FIDeeyB800efLX89e5a8Y0BNH+LOngJyGrIWxG2FKQY=
 github.com/tidwall/gjson v1.18.0/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
 github.com/tidwall/match v1.1.1 h1:+Ho715JplO36QYgwN9PGYNhgZvoUSc9X2c80KVTi+GA=

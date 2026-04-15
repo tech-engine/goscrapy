@@ -2,7 +2,7 @@ module tuner
 
 go 1.25.1
 
-require github.com/tech-engine/goscrapy v0.23.0
+require github.com/tech-engine/goscrapy v0.23.1
 
 require (
 	github.com/Noooste/azuretls-client v1.12.12 // indirect
