@@ -1,4 +1,4 @@
-.PHONY: test test-race test-verbose cover cover-html cover-func clean
+.PHONY: test test-race test-verbose cover cover-html cover-func clean update-examples tidy-examples
 
 # Run all tests
 test:
@@ -45,3 +45,16 @@ cover-html:
 clean:
 	@echo "Running clean..."
 	@rm -f coverage.out coverage.html
+
+# Get list of example directories that contain a go.mod file
+EXAMPLE_DIRS := $(dir $(wildcard _examples/*/go.mod))
+
+# Update GoScrapy in all examples
+update-examples:
+	@echo Updating GoScrapy in all examples...
+	@$(foreach dir,$(EXAMPLE_DIRS),echo Updating $(dir)... && go -C $(dir) get -u github.com/tech-engine/goscrapy@latest && go -C $(dir) mod tidy &&) echo Done
+
+# Run go mod tidy in all examples
+tidy-examples:
+	@echo Tidying all examples...
+	@$(foreach dir,$(EXAMPLE_DIRS),echo Tidying $(dir)... && go -C $(dir) mod tidy &&) echo Done
