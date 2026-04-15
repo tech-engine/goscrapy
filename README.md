@@ -207,12 +207,10 @@ import (
 
 // StartRequest is the entrypoint to the spider
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
-	req := s.NewRequest(ctx)
+	// Create a new request. This request must not be reused.
+	req := s.Request(ctx)
 	req.Url("https://httpbin.org/get")
-	s.Request(req, s.parse)
-}
-
-func (s *Spider) Close(ctx context.Context) {
+	s.Parse(req, s.parse)
 }
 
 func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
@@ -226,6 +224,9 @@ func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 
 	// Yield sends the data securely to your configured pipelines
 	s.Yield(&data)
+}
+
+func (s *Spider) Close(ctx context.Context) {
 }
 ```
 
