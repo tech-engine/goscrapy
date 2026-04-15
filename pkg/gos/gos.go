@@ -43,6 +43,7 @@ func NewApp[OUT any]() *app[OUT] {
 		Executor:          executor,
 		logger:            l.WithName("GOS"),
 		hub:               nil,
+		cancelableSignal:  newCancelableSignal(context.Background()),
 	}
 
 	return app
@@ -90,10 +91,13 @@ func (gos *app[OUT]) Logger() core.ILogger {
 }
 
 func (gos *app[OUT]) Start(ctx context.Context) error {
-	// Create internal cancellable context based on provided context
-	// This allows the framework to signal its own shutdown
-	gos.cancelableSignal = newCancelableSignal(ctx)
-	defer gos.cancelableSignal.cancel()
+	// Bridge the external context to the internal lifecycle
+	// We do this instead of creating a child context to prevent
+	// a race condition between Start and Wait.
+	stop := context.AfterFunc(ctx, func() {
+		gos.cancelableSignal.cancel()
+	})
+	defer stop()
 
 	if gos.hub != nil {
 		go gos.hub.Start(gos.cancelableSignal.ctx)
