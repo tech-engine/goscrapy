@@ -1,3 +1,7 @@
+// GOS is the app build using the goscrapy components.
+// This where the components are stitch together to form a complete GOS application
+// This is the package that majority is not all spider will be using.
+// Unless you may want to tweak the individual components.
 package gos
 
 import (
