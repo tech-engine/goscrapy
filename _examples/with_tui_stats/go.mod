@@ -2,7 +2,7 @@ module with_tui_stats
 
 go 1.25.1
 
-require github.com/tech-engine/goscrapy v0.23.0
+require github.com/tech-engine/goscrapy v0.23.1
 
 require (
 	cel.dev/expr v0.25.1 // indirect
