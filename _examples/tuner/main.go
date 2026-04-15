@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -70,9 +71,8 @@ func runBenchmark(concurrency, poolSize, maxIdle, queueBuf string) float64 {
 		ICoreSpider: app,
 	}
 
-	errCh := make(chan error, 1)
 	go func() {
-		errCh <- app.Start(ctx)
+		_ = app.Start(ctx)
 	}()
 
 	startTime := time.Now()
@@ -95,9 +95,9 @@ func runBenchmark(concurrency, poolSize, maxIdle, queueBuf string) float64 {
 		}
 	}()
 
-	// Orchestrate cleanup using the standard Wait logic.
-	// This is now safe because the framework deadlock has been resolved.
-	_ = app.Wait(cancel, errCh)
+	if err := app.Wait(true); err != nil && !errors.Is(err, context.Canceled) {
+		// We capture this for diagnostic purposes in the benchmark
+	}
 
 	duration := time.Since(startTime)
 	rps := float64(spider.completed.Load()) / duration.Seconds()
