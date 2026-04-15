@@ -19,6 +19,11 @@ While low-level scraping libraries are powerful, many teams require the high-lev
 
 Instead of manually orchestrating retries, cookie isolation, or database handoffs, GoScrapy provides the engine that powers your spiders. You focus purely on the extraction logic; the framework manages the high-throughput lifecycle and concurrency in the background.
 
+<p align="center">
+  <img width="800" src="./docs/assets/tui.gif">
+</p>
+
+
 ## Features
 
 - 🚀 **Blazing Fast** — Built on Go's concurrency model for high-throughput parallel scraping
