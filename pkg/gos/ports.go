@@ -16,8 +16,10 @@ import (
 
 // Any custom spider created using GoScrapy Framework must implement ICoreSpider[OUT any] interface
 type ICoreSpider[OUT any] interface {
-	Request(req core.IRequestReader, cb core.ResponseCallback)
-	NewRequest(context.Context) core.IRequestRW
+	// Parse schedules a request and passed the processed response to the callback
+	Parse(req core.IRequestReader, cb core.ResponseCallback)
+	// Request creates a new request
+	Request(context.Context) core.IRequestRW
 	Yield(core.IOutput[OUT])
 	Logger() core.ILogger
 	// Wait blocks until the spider finishes its work or receives a termination signal (Ctrl+C).

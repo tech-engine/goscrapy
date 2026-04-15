@@ -14,11 +14,13 @@ func New[OUT any](engine IEngine[OUT]) *Core[OUT] {
 	}
 }
 
-func (c *Core[OUT]) Request(req IRequestReader, cb ResponseCallback) {
+// Parse schedules a request and passed the processed response to the callback
+func (c *Core[OUT]) Parse(req IRequestReader, cb ResponseCallback) {
 	c.engine.Schedule(req, cb)
 }
 
-func (c *Core[OUT]) NewRequest(ctx context.Context) IRequestRW {
+// Request creates a new request
+func (c *Core[OUT]) Request(ctx context.Context) IRequestRW {
 	return c.engine.NewRequest(ctx)
 }
 
