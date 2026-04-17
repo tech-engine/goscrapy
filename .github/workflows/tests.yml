@@ -8,6 +8,9 @@ on:
     branches:
       - "main"
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Run Go Tests
@@ -19,10 +22,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
 
@@ -38,18 +41,23 @@ jobs:
       - name: Send notification
         env:
           WEBHOOK_URL: ${{ secrets.GOS_DISCORD_WEBHOOK_SECRET }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           TITLE="📦 New Commit Pushed"
-          DESC="${{ github.event.head_commit.message }}"
+          DESC="$COMMIT_MSG"
 
           PAYLOAD=$(jq -n \
             --arg title "$TITLE" \
             --arg desc "$DESC" \
             --argjson color 3066993 \
-            --arg repo "${{ github.repository }}" \
-            --arg branch "${{ github.ref_name }}" \
-            --arg actor "${{ github.actor }}" \
-            --arg url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --arg repo "$REPO" \
+            --arg branch "$BRANCH" \
+            --arg actor "$ACTOR" \
+            --arg url "https://github.com/$REPO/actions/runs/$RUN_ID" \
             '{
               username: "GitHub Actions",
               embeds: [{
