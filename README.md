@@ -147,7 +147,7 @@ import (
 	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 	"github.com/tech-engine/goscrapy/pkg/builtin/middlewares"
-	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines"
+	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines/csv"
 )
 
 // Add Azure TLS client and Retry functionality seamlessly
@@ -157,7 +157,7 @@ var MIDDLEWARES = []middlewaremanager.Middleware{
 }
 
 // Prepare CSV export pipeline
-var export2CSV = pipelines.Export2CSV[*Record](pipelines.Export2CSVOpts{
+var export2CSV = csv.New[*Record](csv.Options{
 	Filename: "itstimeitsnowornever.csv",
 })
 
