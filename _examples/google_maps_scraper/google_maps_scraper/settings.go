@@ -4,7 +4,8 @@ import (
 	"os"
 
 	"github.com/tech-engine/goscrapy/pkg/builtin/middlewares"
-	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines"
+	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines/csv"
+	// "github.com/tech-engine/goscrapy/pkg/builtin/pipelines/json"
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 )
@@ -70,12 +71,12 @@ var MIDDLEWARES = []middlewaremanager.Middleware{
 	middlewares.DupeFilter,
 }
 
-var export2CSV = pipelines.Export2CSV[*Record](pipelines.Export2CSVOpts{
+var export2CSV = csv.New[*Record](csv.Options{
 	Filename: "itstimeitsnowornever.csv",
 })
 
 // use export 2 json pipeline
-// var export2Json = pipelines.Export2JSON[*Record](pipelines.Export2JSONOpts{
+// var export2Json = json.New[*Record](json.Options{
 // 	Filename:  "itstimeitsnowornever.json",
 // 	Immediate: true,
 // })
