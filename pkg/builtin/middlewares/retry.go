@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"math"
 	"net/http"
 	"os"
 	"slices"
@@ -122,7 +121,7 @@ func Retry(opts ...RetryOpts) func(http.RoundTripper) http.RoundTripper {
 					select {
 					case <-timer.C:
 						// calculate next delay
-						timer.Reset(time.Duration(math.Pow(2, float64(i))) * retryOpts.BaseDelay)
+						timer.Reset(time.Duration(int64(1)<<i) * retryOpts.BaseDelay)
 						continue
 					}
 				}
@@ -134,7 +133,7 @@ func Retry(opts ...RetryOpts) func(http.RoundTripper) http.RoundTripper {
 				select {
 				case <-timer.C:
 					// calculate next delay
-					timer.Reset(time.Duration(math.Pow(2, float64(i))) * retryOpts.BaseDelay)
+					timer.Reset(time.Duration(int64(1)<<i) * retryOpts.BaseDelay)
 				}
 			}
 
