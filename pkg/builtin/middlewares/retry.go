@@ -14,13 +14,13 @@ import (
 
 const MIDDLEWARE_HTTP_RETRY_MAX_RETRIES = 3
 
-var MIDDLEWARE_HTTP_RETRY_CODES = []int{500, 502, 503, 504, 522, 524, 408, 429}
+var MIDDLEWARE_HTTP_RETRY_CODES = []uint16{500, 502, 503, 504, 522, 524, 408, 429}
 
 type RetryCb func(*http.Request, uint8) bool
 
 type RetryOpts struct {
 	MaxRetries uint8
-	Codes      []int
+	Codes      []uint16
 	BaseDelay  time.Duration
 	Cb         RetryCb
 }
@@ -32,24 +32,19 @@ func defaultRetryOpts() *RetryOpts {
 		BaseDelay:  1 * time.Second,
 	}
 
-	value, ok := os.LookupEnv("MIDDLEWARE_HTTP_RETRY_MAX_RETRIES")
-
-	if ok {
-		maxRetries, err := strconv.Atoi(value)
-		if err == nil {
+	if value, ok := os.LookupEnv("MIDDLEWARE_HTTP_RETRY_MAX_RETRIES"); ok {
+		if maxRetries, err := strconv.ParseUint(value, 10, 8); err == nil {
 			opts.MaxRetries = uint8(maxRetries)
 		}
 	}
 
-	value, ok = os.LookupEnv("MIDDLEWARE_HTTP_RETRY_CODES")
-
-	if ok {
+	if value, ok := os.LookupEnv("MIDDLEWARE_HTTP_RETRY_CODES"); ok {
 		codesStr := strings.Split(value, ",")
-		codes := make([]int, 0, len(codesStr))
+		codes := make([]uint16, 0, len(codesStr))
 
 		for _, codeStr := range codesStr {
-			if code, err := strconv.Atoi(strings.TrimSpace(codeStr)); err == nil {
-				codes = append(codes, code)
+			if code, err := strconv.ParseUint(strings.TrimSpace(codeStr), 10, 16); err == nil {
+				codes = append(codes, uint16(code))
 			}
 		}
 
@@ -59,9 +54,7 @@ func defaultRetryOpts() *RetryOpts {
 
 	}
 
-	value, ok = os.LookupEnv("MIDDLEWARE_HTTP_RETRY_BASE_DELAY")
-
-	if ok {
+	if value, ok := os.LookupEnv("MIDDLEWARE_HTTP_RETRY_BASE_DELAY"); ok {
 		baseDelay, err := time.ParseDuration(value)
 		if err == nil {
 			opts.BaseDelay = baseDelay
@@ -107,8 +100,9 @@ func Retry(opts ...RetryOpts) func(http.RoundTripper) http.RoundTripper {
 			retryHeader := req.Header.Get("X-Goscrapy-Middleware-Max-Retry")
 
 			if retryHeader != "" {
-				r, _ := strconv.Atoi(retryHeader)
-				retries = uint8(r)
+				if r, err := strconv.ParseUint(retryHeader, 10, 8); err == nil {
+					retries = uint8(r)
+				}
 				req.Header.Del("X-Goscrapy-Middleware-Max-Retry")
 			}
 
@@ -133,7 +127,7 @@ func Retry(opts ...RetryOpts) func(http.RoundTripper) http.RoundTripper {
 					}
 				}
 
-				if !slices.Contains(retryOpts.Codes, resp.StatusCode) {
+				if !slices.Contains(retryOpts.Codes, uint16(resp.StatusCode)) {
 					break
 				}
 

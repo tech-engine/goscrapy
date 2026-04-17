@@ -90,7 +90,7 @@ func TestRetryWithHttpCodes(t *testing.T) {
 	client := &http.Client{
 		Transport: Retry(RetryOpts{
 			MaxRetries: retryCnt,
-			Codes:      []int{467},
+			Codes:      []uint16{467},
 			Cb: func(r *http.Request, retry uint8) bool {
 				actualRetryCnt = retry
 				return true
