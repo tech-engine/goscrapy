@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
@@ -26,6 +27,7 @@ type export2JSON[OUT any] struct {
 	file           io.WriteCloser
 	buff           *bufio.Writer
 	immediateFlush bool
+	mu             sync.Mutex
 }
 
 func Export2JSON[OUT any](opts ...Export2JSONOpts) *export2JSON[OUT] {
@@ -68,6 +70,9 @@ func (p *export2JSON[OUT]) Open(ctx context.Context) error {
 }
 
 func (p *export2JSON[OUT]) Close() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	// flushed data to writer
 	p.buff.Flush()
 	p.file.Close()
@@ -76,14 +81,17 @@ func (p *export2JSON[OUT]) Close() {
 func (p *export2JSON[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
 
 	jsonEncoder := json.NewEncoder(p.buff)
+	record := original.Record()
 
-	// Encode and write the JSON data
-	if err := jsonEncoder.Encode(original.Record()); err != nil {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if err := jsonEncoder.Encode(record); err != nil {
 		return err
 	}
 
 	if p.immediateFlush {
-		p.buff.Flush()
+		return p.buff.Flush()
 	}
 
 	return nil

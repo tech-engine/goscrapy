@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/gocarina/gocsv"
@@ -21,6 +22,7 @@ type Export2CSVOpts struct {
 type export2CSV[OUT any] struct {
 	filename string
 	file     *os.File
+	mu       sync.Mutex
 }
 
 func Export2CSV[OUT any](opts ...Export2CSVOpts) *export2CSV[OUT] {
@@ -58,10 +60,15 @@ func (p *export2CSV[OUT]) Open(ctx context.Context) error {
 }
 
 func (p *export2CSV[OUT]) Close() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.file.Close()
 }
 
 func (p *export2CSV[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	fileInfo, err := p.file.Stat()
 
