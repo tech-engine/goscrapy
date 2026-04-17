@@ -11,7 +11,7 @@ type {{.}}[OUT any] struct {
 	// add your custom fields here
 }
 
-func {{ capitalizeFirstLetter .}}[OUT any](args ...string) *{{.}}[OUT] {
+func New[OUT any](args ...string) *{{.}}[OUT] {
 	// your custom initialization code goes here
 	return &{{.}}[OUT]{}
 }
