@@ -20,9 +20,10 @@ type Export2CSVOpts struct {
 }
 
 type export2CSV[OUT any] struct {
-	filename string
-	file     *os.File
-	mu       sync.Mutex
+	filename  string
+	file      *os.File
+	mu        sync.Mutex
+	fileEmpty bool
 }
 
 func Export2CSV[OUT any](opts ...Export2CSVOpts) *export2CSV[OUT] {
@@ -56,6 +57,13 @@ func (p *export2CSV[OUT]) Open(ctx context.Context) error {
 	}
 
 	p.file = file
+
+	// pre-check if file is not empty
+	info, err := file.Stat()
+	if err == nil {
+		p.fileEmpty = info.Size() > 0
+	}
+
 	return nil
 }
 
@@ -67,24 +75,18 @@ func (p *export2CSV[OUT]) Close() {
 
 func (p *export2CSV[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
 
+	data := []OUT{original.Record()}
+
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	fileInfo, err := p.file.Stat()
-
-	if err != nil {
-		return err
+	var err error
+	if p.fileEmpty {
+		return gocsv.MarshalWithoutHeaders(data, p.file)
 	}
 
-	size := fileInfo.Size()
-
-	data := []OUT{original.Record()}
-
-	if size > 0 {
-		err = gocsv.MarshalWithoutHeaders(data, p.file)
-	} else {
-		err = gocsv.MarshalFile(data, p.file)
-	}
+	err = gocsv.MarshalFile(data, p.file)
+	p.fileEmpty = true
 
 	return err
 }
