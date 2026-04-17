@@ -23,3 +23,4 @@ go.work
 *.csv
 *.json
 *.html
+tmp/*
