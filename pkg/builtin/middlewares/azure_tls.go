@@ -130,7 +130,7 @@ func (a *azureTLS) roundTrip(req *http.Request) (*http.Response, error) {
 
 	// map http.Header to fhttp.Header
 	azureHeaders := make(fhttp.Header, len(req.Header))
-	fmt.Println("my headers", req.Header)
+
 	maps.Copy(azureHeaders, req.Header)
 
 	azureResp, err := tlsSession.Do(&azuretls.Request{
