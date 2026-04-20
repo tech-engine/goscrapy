@@ -184,7 +184,9 @@ type Spider struct {
 
 func New(ctx context.Context) *Spider {
 	// Initialize and configure everything in one go
-	app := gos.NewApp[*Record]().Setup(MIDDLEWARES, PIPELINES)
+	app := gos.NewApp[*Record]().
+		WithMiddlewares(MIDDLEWARES...).
+		WithPipelines(PIPELINES...)
 
 	spider := &Spider{app}
 
