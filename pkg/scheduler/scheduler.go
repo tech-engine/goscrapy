@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 	"github.com/tech-engine/goscrapy/internal/types"
@@ -25,6 +26,14 @@ type scheduler struct {
 	stopping          atomic.Bool
 	logger            core.ILogger
 	tracker           core.IActivityTracker
+
+	// worker lifecycle
+	currentWorkerCnt atomic.Int32
+	lastWorkerID     atomic.Uint32
+	workerWG         sync.WaitGroup
+
+	// adaptive scaling, nil when disabled
+	autoscaler *autoscaler
 }
 
 func New(executor IExecutor, optFuncs ...types.OptFunc[opts]) *scheduler {
@@ -37,16 +46,39 @@ func New(executor IExecutor, optFuncs ...types.OptFunc[opts]) *scheduler {
 		fn(&opts)
 	}
 
-	return &scheduler{
+	// when adaptive scaling is on, size the workerQueue for the upper bound
+	// so dynamically spawned workers can always register themselves
+	queueCap := opts.numWorkers
+	if opts.adaptiveScaling && opts.maxWorkers > queueCap {
+		queueCap = opts.maxWorkers
+	}
+
+	s := &scheduler{
 		opts:              opts,
 		executor:          executor,
 		schedulerWorkPool: rp.NewPooler(rp.WithSize[schedulerWork](opts.reqResPoolSize)),
 		requestPool:       rp.NewPooler(rp.WithSize[request](opts.reqResPoolSize)),
 		responsePool:      rp.NewPooler(rp.WithSize[response](opts.reqResPoolSize)),
-		workerQueue:       make(WorkerQueue, opts.numWorkers),
+		workerQueue:       make(WorkerQueue, queueCap),
 		workQueue:         make(WorkQueue, opts.workQueueSize),
 		logger:            logger.EnsureLogger(nil).WithName("Scheduler"),
 	}
+
+	if opts.adaptiveScaling {
+		s.autoscaler = newAutoscaler(autoscalerConfig{
+			minWorkers:         opts.minWorkers,
+			maxWorkers:         opts.maxWorkers,
+			scalingFactor:      opts.scalingFactor,
+			scalingWindow:      opts.scalingWindow,
+			emaAlpha:           opts.emaAlpha,
+			currentWorkerCntFn: s.currentWorkerCnt.Load,
+			spawnWorkerFn:      s.spawnWorker,
+			workerQueue:        s.workerQueue,
+			logger:             s.logger,
+		})
+	}
+
+	return s
 }
 
 func (s *scheduler) WithExecutor(executor IExecutor) {
@@ -72,40 +104,25 @@ func (s *scheduler) WithActivityTracker(tracker core.IActivityTracker) engine.IS
 func (s *scheduler) Start(ctx context.Context) error {
 	s.logger.Infof("Starting scheduler with %d workers", s.opts.numWorkers)
 
-	var wg sync.WaitGroup
-	// worker lifecycle context
+	// worker lifecycle context, cancelled in defer to signal all workers
 	wCtx, wCancel := context.WithCancel(ctx)
-
-	wg.Add(int(s.opts.numWorkers))
 
 	defer func() {
 		wCancel()
-		wg.Wait()
+		s.workerWG.Wait()
 		s.logger.Info("stopped")
 	}()
 
-	var recorders []ts.IStatsRecorder
-	if s.opts.statsFactory != nil {
-		recorders = make([]ts.IStatsRecorder, s.opts.numWorkers)
+	if s.autoscaler != nil {
+		s.autoscaler.SetDesired(uint32(s.opts.numWorkers))
 	}
 
 	for i := uint16(0); i < s.opts.numWorkers; i++ {
-		var recorder ts.IStatsRecorder
-		if s.opts.statsFactory != nil {
-			recorder = s.opts.statsFactory.NewStatsRecorder()
-			recorders[i] = recorder
-		}
+		s.spawnWorker(wCtx)
+	}
 
-		worker := NewWorker(i+1, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.responsePool, recorder)
-		worker.WithLogger(s.logger)
-		if s.tracker != nil {
-			worker.WithActivityTracker(s.tracker)
-		}
-		go func() {
-			defer wg.Done()
-			// blocking call
-			_ = worker.Start(wCtx)
-		}()
+	if s.autoscaler != nil {
+		go s.autoscaler.Start(wCtx)
 	}
 
 	for {
@@ -132,6 +149,10 @@ func (s *scheduler) Schedule(req core.IRequestReader, next core.ResponseCallback
 		return
 	}
 
+	if s.autoscaler != nil {
+		s.autoscaler.OnTaskArrival()
+	}
+
 	work := s.schedulerWorkPool.Acquire()
 
 	if work == nil {
@@ -154,4 +175,37 @@ func (s *scheduler) NewRequest(ctx context.Context) core.IRequestRW {
 	}
 	req.ctx = ctx
 	return req
+}
+
+func (s *scheduler) spawnWorker(ctx context.Context) {
+	s.workerWG.Add(1)
+	s.currentWorkerCnt.Add(1)
+	id := uint16(s.lastWorkerID.Add(1))
+
+	var recorder ts.IStatsRecorder
+	if s.opts.statsFactory != nil {
+		recorder = s.opts.statsFactory.NewStatsRecorder()
+	}
+
+	// wire autoscaler callbacks if enabled
+	var onTaskDone func(time.Duration)
+	var shouldExit func() bool
+
+	if s.autoscaler != nil {
+		onTaskDone = s.autoscaler.OnTaskDone
+		shouldExit = s.autoscaler.ShouldExit
+	}
+
+	worker := NewWorker(id, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.responsePool, recorder, onTaskDone, shouldExit)
+
+	worker.WithLogger(s.logger)
+	if s.tracker != nil {
+		worker.WithActivityTracker(s.tracker)
+	}
+
+	go func() {
+		defer s.workerWG.Done()
+		defer s.currentWorkerCnt.Add(-1)
+		_ = worker.Start(ctx)
+	}()
 }
