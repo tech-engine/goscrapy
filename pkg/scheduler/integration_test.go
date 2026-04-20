@@ -31,7 +31,7 @@ func TestWorker_ContextIntegration(t *testing.T) {
 		executor := &blockingExecutor{startBlock: make(chan struct{})}
 		workerQueue := make(WorkerQueue, 1)
 
-		worker := NewWorker(1, executor, workerQueue, nil, nil, nil, nil)
+		worker := NewWorker(1, executor, workerQueue, nil, nil, nil, nil, nil, nil)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		go worker.Start(ctx)
