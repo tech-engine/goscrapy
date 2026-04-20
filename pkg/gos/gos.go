@@ -72,7 +72,7 @@ func (gos *app[OUT]) WithPipelines(pipelines ...pipelinemanager.IPipeline[OUT]) 
 }
 
 // registers a function to be called when the engine is shutting down
-func (gos *app[OUT]) WithOnShutdown(onShutdown ...func()) *app[OUT] {
+func (gos *app[OUT]) WithOnEngineShutdown(onShutdown ...func()) *app[OUT] {
 	for _, fn := range onShutdown {
 		gos.Engine.WithOnShutdown(fn)
 	}
