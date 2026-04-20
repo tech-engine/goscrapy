@@ -209,3 +209,28 @@ func (s *scheduler) spawnWorker(ctx context.Context) {
 		_ = worker.Start(ctx)
 	}()
 }
+
+// For the telemetry hub
+type SchedulerSnapshot struct {
+	CurrentWorkerCnt uint16  `json:"current_workers"`
+	DesiredWorkers   uint16  `json:"desired_workers"`
+	TaskArrivalRate  float64 `json:"task_arrival_rate_ema"`
+	TaskServiceTime  float64 `json:"task_service_time_ema"`
+}
+
+// implements IStatsCollector
+func (s *scheduler) Name() string {
+	return "Scheduler"
+}
+
+func (s *scheduler) Snapshot() ts.ComponentSnapshot {
+	snap := SchedulerSnapshot{
+		CurrentWorkerCnt: uint16(s.currentWorkerCnt.Load()),
+	}
+	if s.autoscaler != nil {
+		snap.DesiredWorkers = uint16(s.autoscaler.desiredWorkerCnt.Load())
+		snap.TaskArrivalRate = s.autoscaler.lambdaEMA.Value()
+		snap.TaskServiceTime = s.autoscaler.serviceTimeEMA.Value()
+	}
+	return snap
+}
