@@ -65,7 +65,7 @@ func runBenchmark(concurrency, poolSize, maxIdle, queueBuf string) float64 {
 
 	// Initialize the application using the modern factory
 	// Explicitly disable telemetry and TUI for zero benchmark overhead
-	app := gos.NewApp[*Record]().WithLogger(l).WithTelemetry(nil).Setup(nil, nil)
+	app := gos.NewApp[*Record]().WithLogger(l)
 
 	spider := &BenchSpider{
 		ICoreSpider: app,

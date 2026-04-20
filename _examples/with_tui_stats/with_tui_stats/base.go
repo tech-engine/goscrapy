@@ -16,7 +16,8 @@ type Spider struct {
 // New initializes the spider with optional TUI and stats collection enabled.
 func New(ctx context.Context, tuiEnabled bool) *Spider {
 	app := gos.NewApp[*Record]().
-		Setup(MIDDLEWARES, PIPELINES)
+		WithMiddlewares(MIDDLEWARES...).
+		WithPipelines(PIPELINES...)
 
 	spider := &Spider{
 		ICoreSpider: app,
@@ -25,13 +26,13 @@ func New(ctx context.Context, tuiEnabled bool) *Spider {
 
 	if tuiEnabled {
 		// Explicitly wire the user stats collector to framework engines
-		app.Scheduler.WithStatsRecorderFactory(HttpStats)
+		app.WithStatsRecorderFactory(HttpStats)
 
 		// Configure Telemetry
 		hub := ts.NewTelemetryHub()
 		hub.AddCollector(HttpStats)
 
-		app.Engine.WithOnShutdown(func() {
+		app.WithOnEngineShutdown(func() {
 			// Output stats cleanly at the end
 			// We can have any other cleanup code here
 			HttpStats.Print()

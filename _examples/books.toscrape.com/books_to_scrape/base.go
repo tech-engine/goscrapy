@@ -14,7 +14,8 @@ type Spider struct {
 // New initializes the spider with minimal setup (no TUI, no stats collection).
 func New(ctx context.Context) *Spider {
 	app := gos.NewApp[*Record]().
-		Setup(MIDDLEWARES, PIPELINES)
+		WithMiddlewares(MIDDLEWARES...).
+		WithPipelines(PIPELINES...)
 
 	spider := &Spider{
 		ICoreSpider: app,
