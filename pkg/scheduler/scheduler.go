@@ -27,7 +27,6 @@ type scheduler struct {
 	logger            core.ILogger
 	tracker           core.IActivityTracker
 
-	// worker lifecycle
 	currentWorkerCnt atomic.Int32
 	lastWorkerID     atomic.Uint32
 	workerWG         sync.WaitGroup
@@ -49,8 +48,8 @@ func New(executor IExecutor, optFuncs ...types.OptFunc[opts]) *scheduler {
 	// when adaptive scaling is on, size the workerQueue for the upper bound
 	// so dynamically spawned workers can always register themselves
 	queueCap := opts.numWorkers
-	if opts.adaptiveScaling && opts.maxWorkers > queueCap {
-		queueCap = opts.maxWorkers
+	if opts.adaptive != nil && opts.adaptive.MaxWorkers > queueCap {
+		queueCap = opts.adaptive.MaxWorkers
 	}
 
 	s := &scheduler{
@@ -64,13 +63,13 @@ func New(executor IExecutor, optFuncs ...types.OptFunc[opts]) *scheduler {
 		logger:            logger.EnsureLogger(nil).WithName("Scheduler"),
 	}
 
-	if opts.adaptiveScaling {
+	if opts.adaptive != nil {
 		s.autoscaler = newAutoscaler(autoscalerConfig{
-			minWorkers:         opts.minWorkers,
-			maxWorkers:         opts.maxWorkers,
-			scalingFactor:      opts.scalingFactor,
-			scalingWindow:      opts.scalingWindow,
-			emaAlpha:           opts.emaAlpha,
+			minWorkers:         opts.adaptive.MinWorkers,
+			maxWorkers:         opts.adaptive.MaxWorkers,
+			scalingFactor:      opts.adaptive.ScalingFactor,
+			scalingWindow:      opts.adaptive.ScalingWindow,
+			emaAlpha:           opts.adaptive.EMAAlpha,
 			currentWorkerCntFn: s.currentWorkerCnt.Load,
 			spawnWorkerFn:      s.spawnWorker,
 			workerQueue:        s.workerQueue,

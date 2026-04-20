@@ -11,16 +11,20 @@ import (
 )
 
 type opts struct {
-	numWorkers      uint16
-	reqResPoolSize  uint64
-	workQueueSize   uint64
-	statsFactory    ts.IStatsRecorderFactory
-	adaptiveScaling bool
-	minWorkers      uint16
-	maxWorkers      uint16
-	scalingFactor   float32
-	emaAlpha        float32
-	scalingWindow   time.Duration
+	numWorkers     uint16
+	reqResPoolSize uint64
+	workQueueSize  uint64
+	statsFactory   ts.IStatsRecorderFactory
+	adaptive       *AdaptiveScalingConfig
+}
+
+// Holds all configs for adaptive worker scaling
+type AdaptiveScalingConfig struct {
+	MinWorkers    uint16
+	MaxWorkers    uint16
+	ScalingFactor float32
+	EMAAlpha      float32
+	ScalingWindow time.Duration
 }
 
 func defaultOpts() opts {
@@ -55,14 +59,6 @@ func defaultOpts() opts {
 		}
 	}
 
-	// adaptive scaling defaults
-	opts.adaptiveScaling = false
-	opts.minWorkers = opts.numWorkers
-	opts.maxWorkers = opts.numWorkers * 5
-	opts.scalingFactor = 1.2 // 20% headroom
-	opts.emaAlpha = 0.3
-	opts.scalingWindow = time.Second
-
 	return opts
 }
 
@@ -90,38 +86,25 @@ func WithStatsRecorderFactory(p ts.IStatsRecorderFactory) types.OptFunc[opts] {
 	}
 }
 
-func WithAdaptiveScaling(enabled bool) types.OptFunc[opts] {
+// All adaptive scaling config field under AdaptiveScalingConfig
+func WithAdaptiveScaling(cfg AdaptiveScalingConfig) types.OptFunc[opts] {
 	return func(opts *opts) {
-		opts.adaptiveScaling = enabled
-	}
-}
 
-func WithMinWorkers(n uint16) types.OptFunc[opts] {
-	return func(opts *opts) {
-		opts.minWorkers = n
-	}
-}
-
-func WithMaxWorkers(n uint16) types.OptFunc[opts] {
-	return func(opts *opts) {
-		opts.maxWorkers = n
-	}
-}
-
-func WithScalingFactor(f float32) types.OptFunc[opts] {
-	return func(opts *opts) {
-		opts.scalingFactor = f
-	}
-}
-
-func WithEMAAlpha(a float32) types.OptFunc[opts] {
-	return func(opts *opts) {
-		opts.emaAlpha = a
-	}
-}
-
-func WithScalingWindow(d time.Duration) types.OptFunc[opts] {
-	return func(opts *opts) {
-		opts.scalingWindow = d
+		if cfg.MinWorkers == 0 {
+			cfg.MinWorkers = opts.numWorkers
+		}
+		if cfg.MaxWorkers == 0 {
+			cfg.MaxWorkers = opts.numWorkers * 5
+		}
+		if cfg.ScalingFactor == 0 {
+			cfg.ScalingFactor = 1.2
+		}
+		if cfg.EMAAlpha == 0 {
+			cfg.EMAAlpha = 0.3
+		}
+		if cfg.ScalingWindow == 0 {
+			cfg.ScalingWindow = time.Second
+		}
+		opts.adaptive = &cfg
 	}
 }
