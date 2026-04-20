@@ -19,8 +19,20 @@ import (
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 )
 
-func NewApp[OUT any]() *app[OUT] {
-	httpClient := DefaultClient()
+// deprecated: use New instead
+// kept for backward compatibility and to be removed in future versions
+func NewApp[OUT any](optFuncs ...types.OptFunc[appOpts]) *app[OUT] {
+	return New[OUT](optFuncs...)
+}
+
+func New[OUT any](optFuncs ...types.OptFunc[appOpts]) *app[OUT] {
+
+	opts := defaultAppOpts()
+	for _, fn := range optFuncs {
+		fn(&opts)
+	}
+
+	httpClient := opts.client
 
 	adapter := httpAdapter.NewAdapter(
 		httpAdapter.WithClient(httpClient),
@@ -49,6 +61,26 @@ func NewApp[OUT any]() *app[OUT] {
 	return app
 }
 
+func (gos *app[OUT]) WithMiddlewares(middlewares ...middlewaremanager.Middleware) *app[OUT] {
+	gos.MiddlewareManager.Add(middlewares...)
+	return gos
+}
+
+func (gos *app[OUT]) WithPipelines(pipelines ...pipelinemanager.IPipeline[OUT]) *app[OUT] {
+	gos.PipelineManager.Add(pipelines...)
+	return gos
+}
+
+// registers a function to be called when the engine is shutting down
+func (gos *app[OUT]) WithOnShutdown(onShutdown ...func()) *app[OUT] {
+	for _, fn := range onShutdown {
+		gos.Engine.WithOnShutdown(fn)
+	}
+	return gos
+}
+
+// deprecated: use WithMiddlewares, WithPipelines and WithOnShutdown
+// kept for backward compatibility and to be removed in future versions
 func (gos *app[OUT]) Setup(
 	middlewares []middlewaremanager.Middleware,
 	pipelines []pipelinemanager.IPipeline[OUT],
