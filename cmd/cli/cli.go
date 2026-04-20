@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const VERSION = "0.14.2"
+const VERSION = "0.14.3"
 
 const BANNER_MSG = `
 _________       ________                                         
