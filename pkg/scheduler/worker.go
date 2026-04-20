@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"time"
 
 	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
 	"github.com/tech-engine/goscrapy/pkg/core"
@@ -24,9 +25,11 @@ type Worker struct {
 	stats             ts.IStatsRecorder
 	logger            core.ILogger
 	tracker           core.IActivityTracker
+	onTaskDone        func(time.Duration)
+	shouldExit        func() bool // returns true if this worker should exit (adaptive scaling)
 }
 
-func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, schedulerWorkPool *rp.Pooler[schedulerWork], requestPool *rp.Pooler[request], responsePool *rp.Pooler[response], stats ts.IStatsRecorder) *Worker {
+func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, schedulerWorkPool *rp.Pooler[schedulerWork], requestPool *rp.Pooler[request], responsePool *rp.Pooler[response], stats ts.IStatsRecorder, onTaskDone func(time.Duration), shouldExit func() bool) *Worker {
 
 	return &Worker{
 		ID:                id,
@@ -37,6 +40,8 @@ func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, scheduler
 		requestPool:       requestPool,
 		responsePool:      responsePool,
 		stats:             stats,
+		onTaskDone:        onTaskDone,
+		shouldExit:        shouldExit,
 		logger:            logger.EnsureLogger(nil).WithName(fmt.Sprintf("Worker-%d", id)),
 	}
 }
@@ -67,11 +72,22 @@ func (w *Worker) Start(ctx context.Context) error {
 
 	for {
 
+		// if the autoscaler says we're surplus, exit before re-registering
+		if w.shouldExit != nil && w.shouldExit() {
+			w.logger.Debug("exiting: surplus worker (cooperative scale-down)")
+			return nil
+		}
+
 		// make this worker available again
 		w.workerQueue <- w.workQueue
 
 		select {
 		case work := <-w.workQueue:
+
+			if work == nil {
+				w.logger.Debug("received shutdown signal")
+				return nil
+			}
 
 			if err = ctx.Err(); err != nil {
 				return err
@@ -80,7 +96,11 @@ func (w *Worker) Start(ctx context.Context) error {
 			wg.Add(1)
 
 			// we don't want the workers to crash, so we ignore the error from execute
+			start := time.Now()
 			_ = w.execute(ctx, work)
+			if w.onTaskDone != nil {
+				w.onTaskDone(time.Since(start))
+			}
 			wg.Done()
 
 		case <-ctx.Done():

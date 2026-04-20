@@ -4,6 +4,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/tech-engine/goscrapy/internal/types"
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
@@ -14,6 +15,16 @@ type opts struct {
 	reqResPoolSize uint64
 	workQueueSize  uint64
 	statsFactory   ts.IStatsRecorderFactory
+	adaptive       *AdaptiveScalingConfig
+}
+
+// Holds all configs for adaptive worker scaling
+type AdaptiveScalingConfig struct {
+	MinWorkers    uint16
+	MaxWorkers    uint16
+	ScalingFactor float32
+	EMAAlpha      float32
+	ScalingWindow time.Duration
 }
 
 func defaultOpts() opts {
@@ -47,6 +58,7 @@ func defaultOpts() opts {
 			opts.workQueueSize = workQueueSize
 		}
 	}
+
 	return opts
 }
 
@@ -71,5 +83,28 @@ func WithWorkQueueSize(n uint64) types.OptFunc[opts] {
 func WithStatsRecorderFactory(p ts.IStatsRecorderFactory) types.OptFunc[opts] {
 	return func(opts *opts) {
 		opts.statsFactory = p
+	}
+}
+
+// All adaptive scaling config field under AdaptiveScalingConfig
+func WithAdaptiveScaling(cfg AdaptiveScalingConfig) types.OptFunc[opts] {
+	return func(opts *opts) {
+
+		if cfg.MinWorkers == 0 {
+			cfg.MinWorkers = opts.numWorkers
+		}
+		if cfg.MaxWorkers == 0 {
+			cfg.MaxWorkers = opts.numWorkers * 5
+		}
+		if cfg.ScalingFactor == 0 {
+			cfg.ScalingFactor = 1.2
+		}
+		if cfg.EMAAlpha == 0 {
+			cfg.EMAAlpha = 0.3
+		}
+		if cfg.ScalingWindow == 0 {
+			cfg.ScalingWindow = time.Second
+		}
+		opts.adaptive = &cfg
 	}
 }

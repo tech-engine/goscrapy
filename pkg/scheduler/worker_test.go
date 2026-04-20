@@ -20,7 +20,7 @@ func TestWorker(t *testing.T) {
 	// create a worker
 	workerQueue := make(WorkerQueue, 1)
 	executor := &dummyExecutor{}
-	worker := NewWorker(1, executor, workerQueue, nil, nil, nil, nil)
+	worker := NewWorker(1, executor, workerQueue, nil, nil, nil, nil, nil, nil)
 
 	// start the worker
 	ctx, cancel := context.WithCancel(context.Background())
