@@ -21,7 +21,7 @@ jobs:
       - name: Push to Gitea
         env:
           SOURCE_REPO: "https://${{ github.repository_owner }}:${{ github.token }}@github.com/${{ github.repository }}.git"
-          DESTINATION_REPO: ${{ secrets.GITEA_REMOTE_URL }}
+          DESTINATION_REPO: "https://techengine:${{ secrets.GITEA_TOKEN }}@gitea.com/techengine/goscrapy.git"
         uses: wei/git-sync@v3
         with:
           source_repo: ${{ env.SOURCE_REPO }}
