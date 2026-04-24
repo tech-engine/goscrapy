@@ -6,6 +6,6 @@ import (
 
 // An executor must implement the IExecutor interface to be used by the scheduler
 type IExecutor interface {
-	Execute(core.IRequestReader, core.IResponseWriter) error
+	Execute(*core.Request, core.IResponseWriter) error
 	WithLogger(core.ILogger) IExecutor
 }
