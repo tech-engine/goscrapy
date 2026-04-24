@@ -19,8 +19,7 @@ type Resetter interface {
 
 type IScheduler interface {
 	Start(context.Context) error
-	Schedule(core.IRequestReader, core.ResponseCallback)
-	NewRequest(context.Context) core.IRequestRW
+	Schedule(*core.Request, core.ResponseCallback)
 	WithLogger(core.ILogger) IScheduler
 	WithActivityTracker(core.IActivityTracker) IScheduler
 }
