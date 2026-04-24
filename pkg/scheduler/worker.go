@@ -21,7 +21,7 @@ type Worker struct {
 	workQueue         WorkQueue
 	schedulerWorkPool *rp.Pooler[schedulerWork]
 	responsePool      *rp.Pooler[response]
-	requestPool       *rp.Pooler[request]
+	requestPool       core.IRequestPool
 	stats             ts.IStatsRecorder
 	logger            core.ILogger
 	tracker           core.IActivityTracker
@@ -29,7 +29,7 @@ type Worker struct {
 	shouldExit        func() bool // returns true if this worker should exit (adaptive scaling)
 }
 
-func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, schedulerWorkPool *rp.Pooler[schedulerWork], requestPool *rp.Pooler[request], responsePool *rp.Pooler[response], stats ts.IStatsRecorder, onTaskDone func(time.Duration), shouldExit func() bool) *Worker {
+func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, schedulerWorkPool *rp.Pooler[schedulerWork], responsePool *rp.Pooler[response], requestPool core.IRequestPool, stats ts.IStatsRecorder, onTaskDone func(time.Duration), shouldExit func() bool) *Worker {
 
 	return &Worker{
 		ID:                id,
@@ -37,8 +37,8 @@ func NewWorker(id uint16, executor IExecutor, workerQueue WorkerQueue, scheduler
 		executor:          executor,
 		workQueue:         make(WorkQueue),
 		schedulerWorkPool: schedulerWorkPool,
-		requestPool:       requestPool,
 		responsePool:      responsePool,
+		requestPool:       requestPool,
 		stats:             stats,
 		onTaskDone:        onTaskDone,
 		shouldExit:        shouldExit,
@@ -116,7 +116,7 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 	}
 
 	// merge framework lifecycle and req context
-	reqCtx := work.request.ReadContext()
+	reqCtx := work.request.Ctx
 	if reqCtx == nil {
 		reqCtx = context.Background()
 	}
@@ -148,14 +148,10 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 
 	// For later reference if I forgot for any reason, which is very likely.
 	// inject recorder + unified context
-	// although work.request is of type core.IRequestReader, but under the hood it is actually as
-	// core.IRequestWriter because Scheduler.NewRequest returns a core.IRequestRW, which is what
-	// work.request is actually.
-	reqWriter := work.request.(core.IRequestWriter)
-	reqWriter.Context(fullCtx)
+	work.request.Ctx = fullCtx
 
 	if w.stats != nil {
-		reqWriter.Context(ts.WithRecorder(fullCtx, w.stats))
+		work.request.Ctx = ts.WithRecorder(fullCtx, w.stats)
 	}
 
 	if w.tracker != nil {
@@ -167,7 +163,7 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 	if err == nil {
 		next := work.next
 		if next != nil {
-			res.WriteMeta(work.request.ReadMeta())
+			res.WriteMeta(work.request.Meta)
 
 			// build persistent callback context isolated from exec cancellation
 			cbCtx := &callbackContext{
@@ -178,7 +174,7 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 
 			// revert request context for safety
 			// the network phase is over, this request is now bound to the long-lived session context again
-			reqWriter.Context(cbValCtx)
+			work.request.Ctx = cbValCtx
 
 			// sync native http request context for consistency if available
 			if r := res.Request(); r != nil {
@@ -202,16 +198,8 @@ func (w *Worker) execute(ctx context.Context, work *schedulerWork) error {
 }
 
 func (w *Worker) resetAndRelease(work *schedulerWork) {
-	// release *request to pool
-	req, ok := work.request.(*request)
-
-	if !ok {
-		return
-	}
-
-	req.Reset()
-
-	w.requestPool.Release(req)
+	// release request to core pool
+	w.requestPool.Release(work.request)
 
 	// release *schedulerWork to pool
 	work.Reset()

@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"context"
-	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,8 +18,8 @@ type scheduler struct {
 	opts
 	executor          IExecutor
 	schedulerWorkPool *rp.Pooler[schedulerWork]
-	requestPool       *rp.Pooler[request]
 	responsePool      *rp.Pooler[response]
+	requestPool       core.IRequestPool
 	workerQueue       WorkerQueue
 	workQueue         WorkQueue
 	stopping          atomic.Bool
@@ -35,7 +34,7 @@ type scheduler struct {
 	autoscaler *autoscaler
 }
 
-func New(executor IExecutor, optFuncs ...types.OptFunc[opts]) *scheduler {
+func New(executor IExecutor, requestPool core.IRequestPool, optFuncs ...types.OptFunc[opts]) *scheduler {
 
 	// set default options
 	opts := defaultOpts()
@@ -56,8 +55,8 @@ func New(executor IExecutor, optFuncs ...types.OptFunc[opts]) *scheduler {
 		opts:              opts,
 		executor:          executor,
 		schedulerWorkPool: rp.NewPooler(rp.WithSize[schedulerWork](opts.reqResPoolSize)),
-		requestPool:       rp.NewPooler(rp.WithSize[request](opts.reqResPoolSize)),
 		responsePool:      rp.NewPooler(rp.WithSize[response](opts.reqResPoolSize)),
+		requestPool:       requestPool,
 		workerQueue:       make(WorkerQueue, queueCap),
 		workQueue:         make(WorkQueue, opts.workQueueSize),
 		logger:            logger.EnsureLogger(nil).WithName("Scheduler"),
@@ -143,7 +142,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 	}
 }
 
-func (s *scheduler) Schedule(req core.IRequestReader, next core.ResponseCallback) {
+func (s *scheduler) Schedule(req *core.Request, next core.ResponseCallback) {
 	if s.stopping.Load() {
 		return
 	}
@@ -162,18 +161,6 @@ func (s *scheduler) Schedule(req core.IRequestReader, next core.ResponseCallback
 	work.next = next
 
 	s.workQueue <- work
-}
-
-func (s *scheduler) NewRequest(ctx context.Context) core.IRequestRW {
-	req := s.requestPool.Acquire()
-	if req == nil {
-		req = &request{
-			method: "GET",
-			header: make(http.Header),
-		}
-	}
-	req.ctx = ctx
-	return req
 }
 
 func (s *scheduler) spawnWorker(ctx context.Context) {
@@ -195,7 +182,7 @@ func (s *scheduler) spawnWorker(ctx context.Context) {
 		shouldExit = s.autoscaler.ShouldExit
 	}
 
-	worker := NewWorker(id, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.responsePool, recorder, onTaskDone, shouldExit)
+	worker := NewWorker(id, s.executor, s.workerQueue, s.schedulerWorkPool, s.responsePool, s.requestPool, recorder, onTaskDone, shouldExit)
 
 	worker.WithLogger(s.logger)
 	if s.tracker != nil {
