@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"net/url"
 
 	"github.com/tech-engine/goscrapy/internal/fsmap"
 	"golang.org/x/net/html"
@@ -15,37 +14,15 @@ type IActivityTracker interface {
 	Dec()
 }
 
+type IRequestPool interface {
+	Acquire(context.Context) *Request
+	Release(*Request)
+}
+
 type IEngine[OUT any] interface {
 	Start(context.Context) error
-	NewRequest(context.Context) IRequestRW
-	Schedule(IRequestReader, ResponseCallback)
+	Schedule(*Request, ResponseCallback)
 	Yield(IOutput[OUT])
-}
-
-type IRequestReader interface {
-	ReadContext() context.Context
-	ReadUrl() *url.URL
-	ReadHeader() http.Header
-	ReadMethod() string
-	ReadBody() io.ReadCloser
-	ReadMeta() *fsmap.FixedSizeMap[string, any]
-	ReadCookieJar() string
-}
-
-type IRequestWriter interface {
-	Context(context.Context) IRequestWriter
-	Url(string) IRequestWriter
-	Header(http.Header) IRequestWriter
-	Method(string) IRequestWriter
-	Body(any) IRequestWriter
-	Meta(string, any) IRequestWriter
-	CookieJar(string) IRequestWriter
-}
-
-type IRequestRW interface {
-	IRequestReader
-	IRequestWriter
-	Reset()
 }
 
 type IResponseReader interface {
