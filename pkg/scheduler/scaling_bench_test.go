@@ -7,11 +7,13 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/tech-engine/goscrapy/internal/request"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
@@ -47,7 +49,7 @@ func TestIdleWorkerCost(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 
-		sched := New(executor,
+		sched := New(executor, request.NewPool(),
 			WithWorkers(numWorkers),
 			WithReqResPoolSize(256),
 			WithWorkQueueSize(256),
@@ -105,7 +107,7 @@ func TestWorkerCountVsThroughput(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 
-		sched := New(executor,
+		sched := New(executor, request.NewPool(),
 			WithWorkers(numWorkers),
 			WithReqResPoolSize(uint64(totalRequests)),
 			WithWorkQueueSize(uint64(totalRequests)),
@@ -118,8 +120,8 @@ func TestWorkerCountVsThroughput(t *testing.T) {
 		start := time.Now()
 
 		for i := 0; i < totalRequests; i++ {
-			req := sched.NewRequest(ctx)
-			req.Url(ts.URL + "/")
+			req := request.NewPool().Acquire(ctx)
+			req.URL, _ = url.Parse(ts.URL + "/")
 			done := make(chan struct{})
 			sched.Schedule(req, func(ctx context.Context, resp core.IResponseReader) {
 				if resp.Body() != nil {
@@ -160,7 +162,7 @@ func TestBurstIdleBurstLatency(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sched := New(executor,
+	sched := New(executor, request.NewPool(),
 		WithWorkers(32),
 		WithReqResPoolSize(1024),
 		WithWorkQueueSize(1024),
@@ -178,8 +180,8 @@ func TestBurstIdleBurstLatency(t *testing.T) {
 		start := time.Now()
 
 		for i := 0; i < burstSize; i++ {
-			req := sched.NewRequest(ctx)
-			req.Url(ts.URL + "/")
+			req := request.NewPool().Acquire(ctx)
+			req.URL, _ = url.Parse(ts.URL + "/")
 			done := make(chan struct{})
 			sched.Schedule(req, func(ctx context.Context, resp core.IResponseReader) {
 				if resp.Body() != nil {
@@ -221,7 +223,7 @@ func BenchmarkSchedulerStartup(b *testing.B) {
 		b.Run(fmt.Sprintf("workers_%d", n), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				ctx, cancel := context.WithCancel(context.Background())
-				sched := New(executor,
+				sched := New(executor, request.NewPool(),
 					WithWorkers(n),
 					WithReqResPoolSize(256),
 					WithWorkQueueSize(256),

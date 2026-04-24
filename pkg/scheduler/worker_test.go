@@ -10,7 +10,7 @@ import (
 
 type dummyExecutor struct{}
 
-func (e *dummyExecutor) Execute(core.IRequestReader, core.IResponseWriter) error {
+func (e *dummyExecutor) Execute(*core.Request, core.IResponseWriter) error {
 	return nil
 }
 

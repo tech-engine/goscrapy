@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tech-engine/goscrapy/internal/request"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
@@ -13,7 +14,7 @@ type mockExecutor struct {
 	execTime time.Duration
 }
 
-func (e *mockExecutor) Execute(req core.IRequestReader, res core.IResponseWriter) error {
+func (e *mockExecutor) Execute(req *core.Request, res core.IResponseWriter) error {
 	time.Sleep(e.execTime)
 	return nil
 }
@@ -30,7 +31,7 @@ func TestAdaptiveScaling(t *testing.T) {
 
 	executor := &mockExecutor{execTime: execTime}
 
-	s := New(executor,
+	s := New(executor, request.NewPool(),
 		WithWorkers(minWorkers),
 		WithAdaptiveScaling(AdaptiveScalingConfig{
 			MinWorkers:    minWorkers,
@@ -60,7 +61,7 @@ func TestAdaptiveScaling(t *testing.T) {
 			case <-stopBurst:
 				return
 			default:
-				req := s.NewRequest(ctx)
+				req := request.NewPool().Acquire(ctx)
 				s.Schedule(req, func(ctx context.Context, res core.IResponseReader) {})
 				time.Sleep(5 * time.Millisecond)
 			}
@@ -92,7 +93,7 @@ func TestAdaptiveScaling(t *testing.T) {
 func TestAdaptiveScaling_DisabledByDefault(t *testing.T) {
 	executor := &mockExecutor{execTime: 10 * time.Millisecond}
 
-	s := New(executor, WithWorkers(4))
+	s := New(executor, request.NewPool(), WithWorkers(4))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -102,7 +103,7 @@ func TestAdaptiveScaling_DisabledByDefault(t *testing.T) {
 
 	// Even with load, worker count should stay fixed
 	for i := 0; i < 100; i++ {
-		req := s.NewRequest(ctx)
+		req := request.NewPool().Acquire(ctx)
 		s.Schedule(req, func(ctx context.Context, res core.IResponseReader) {})
 		time.Sleep(2 * time.Millisecond)
 	}
@@ -117,7 +118,7 @@ func TestAdaptiveScaling_DisabledByDefault(t *testing.T) {
 func TestAdaptiveScaling_Snapshot(t *testing.T) {
 	executor := &mockExecutor{execTime: 10 * time.Millisecond}
 
-	s := New(executor,
+	s := New(executor, request.NewPool(),
 		WithWorkers(4),
 		WithAdaptiveScaling(AdaptiveScalingConfig{
 			MinWorkers: 4,

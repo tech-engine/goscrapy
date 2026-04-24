@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/tech-engine/goscrapy/internal/request"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
@@ -16,7 +17,7 @@ type MockExecutor struct {
 	mock.Mock
 }
 
-func (m *MockExecutor) Execute(req core.IRequestReader, res core.IResponseWriter) error {
+func (m *MockExecutor) Execute(req *core.Request, res core.IResponseWriter) error {
 	args := m.Called(req, res)
 	return args.Error(0)
 }
@@ -28,7 +29,7 @@ func (m *MockExecutor) WithLogger(l core.ILogger) IExecutor {
 
 func TestScheduler_New(t *testing.T) {
 	mockExec := new(MockExecutor)
-	s := New(mockExec)
+	s := New(mockExec, request.NewPool())
 
 	assert.NotNil(t, s)
 	assert.NotNil(t, s.logger)
@@ -37,7 +38,7 @@ func TestScheduler_New(t *testing.T) {
 
 func TestScheduler_WithLogger(t *testing.T) {
 	mockExec := new(MockExecutor)
-	s := New(mockExec)
+	s := New(mockExec, request.NewPool())
 
 	mockLogger := logger.NewNoopLogger()
 	mockExec.On("WithLogger", mock.MatchedBy(func(l core.ILogger) bool { return true })).Return(mockExec)
@@ -48,7 +49,7 @@ func TestScheduler_WithLogger(t *testing.T) {
 
 func TestScheduler_Lifecycle(t *testing.T) {
 	mockExec := new(MockExecutor)
-	s := New(mockExec, WithWorkers(2))
+	s := New(mockExec, request.NewPool(), WithWorkers(2))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	
@@ -61,7 +62,7 @@ func TestScheduler_Lifecycle(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Verify if scheduled jobs are picked up
-	req := s.NewRequest(ctx)
+	req := request.NewPool().Acquire(ctx)
 	callbackCalled := make(chan struct{})
 	
 	mockExec.On("Execute", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
@@ -82,17 +83,4 @@ func TestScheduler_Lifecycle(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestScheduler_NewRequest_Pooling(t *testing.T) {
-	mockExec := new(MockExecutor)
-	s := New(mockExec)
 
-	ctx := context.Background()
-	req1 := s.NewRequest(ctx)
-	assert.NotNil(t, req1)
-	
-	// manually release and re-acquire to verify pooling
-	s.requestPool.Release(req1.(*request))
-	req2 := s.NewRequest(ctx)
-	
-	assert.Equal(t, req1, req2, "Should have acquired the same request from pool")
-}

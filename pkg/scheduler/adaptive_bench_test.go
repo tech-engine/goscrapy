@@ -7,11 +7,13 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/tech-engine/goscrapy/internal/request"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
@@ -50,7 +52,7 @@ func TestFixedVsAdaptive(t *testing.T) {
 		runtime.ReadMemStats(&memBefore)
 
 		ctx, cancel := context.WithCancel(context.Background())
-		sched := New(executor,
+		sched := New(executor, request.NewPool(),
 			WithWorkers(numW),
 			WithReqResPoolSize(uint64(totalRequests)),
 			WithWorkQueueSize(uint64(totalRequests)),
@@ -64,8 +66,8 @@ func TestFixedVsAdaptive(t *testing.T) {
 		start := time.Now()
 
 		for i := 0; i < totalRequests; i++ {
-			req := sched.NewRequest(ctx)
-			req.Url(srv.URL + "/")
+			req := request.NewPool().Acquire(ctx)
+			req.URL, _ = url.Parse(srv.URL + "/")
 			done := make(chan struct{})
 			sched.Schedule(req, func(ctx context.Context, resp core.IResponseReader) {
 				if resp.Body() != nil {
@@ -103,7 +105,7 @@ func TestFixedVsAdaptive(t *testing.T) {
 	runtime.ReadMemStats(&memBefore)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	sched := New(executor,
+	sched := New(executor, request.NewPool(),
 		WithWorkers(4),
 		WithAdaptiveScaling(AdaptiveScalingConfig{
 			MinWorkers:    4,
@@ -124,8 +126,8 @@ func TestFixedVsAdaptive(t *testing.T) {
 	start := time.Now()
 
 	for i := 0; i < totalRequests; i++ {
-		req := sched.NewRequest(ctx)
-		req.Url(srv.URL + "/")
+		req := request.NewPool().Acquire(ctx)
+		req.URL, _ = url.Parse(srv.URL + "/")
 		done := make(chan struct{})
 		sched.Schedule(req, func(ctx context.Context, resp core.IResponseReader) {
 			if resp.Body() != nil {
@@ -192,7 +194,7 @@ func TestIdleMemory_FixedVsAdaptive(t *testing.T) {
 	runtime.ReadMemStats(&memBefore)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	sched := New(executor, WithWorkers(120))
+	sched := New(executor, request.NewPool(), WithWorkers(120))
 	sched.WithLogger(l)
 	go sched.Start(ctx)
 	time.Sleep(300 * time.Millisecond)
@@ -215,7 +217,7 @@ func TestIdleMemory_FixedVsAdaptive(t *testing.T) {
 	runtime.ReadMemStats(&memBefore)
 
 	ctx, cancel = context.WithCancel(context.Background())
-	sched = New(executor,
+	sched = New(executor, request.NewPool(),
 		WithWorkers(4),
 		WithAdaptiveScaling(AdaptiveScalingConfig{
 			MinWorkers:    4,
@@ -230,8 +232,8 @@ func TestIdleMemory_FixedVsAdaptive(t *testing.T) {
 
 	// Brief burst
 	for i := 0; i < 50; i++ {
-		req := sched.NewRequest(ctx)
-		req.Url(srv.URL + "/")
+		req := request.NewPool().Acquire(ctx)
+		req.URL, _ = url.Parse(srv.URL + "/")
 		done := make(chan struct{})
 		sched.Schedule(req, func(ctx context.Context, resp core.IResponseReader) {
 			if resp.Body() != nil {

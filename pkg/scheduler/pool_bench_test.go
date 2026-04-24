@@ -5,8 +5,10 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
+	"github.com/tech-engine/goscrapy/internal/request"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
@@ -14,8 +16,8 @@ type benchExecutor struct {
 	client *http.Client
 }
 
-func (e *benchExecutor) Execute(req core.IRequestReader, res core.IResponseWriter) error {
-	request, _ := http.NewRequestWithContext(context.Background(), "GET", req.ReadUrl().String(), nil)
+func (e *benchExecutor) Execute(req *core.Request, res core.IResponseWriter) error {
+	request, _ := http.NewRequestWithContext(context.Background(), "GET", req.URL.String(), nil)
 	resp, err := e.client.Do(request)
 	if err != nil {
 		return err
@@ -40,7 +42,7 @@ func BenchmarkSchedulerPooling(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ctx, cancel := context.WithCancel(context.Background())
-		sched := New(executor,
+		sched := New(executor, request.NewPool(),
 			WithWorkers(4),
 			WithReqResPoolSize(128),
 			WithWorkQueueSize(128),
@@ -48,8 +50,8 @@ func BenchmarkSchedulerPooling(b *testing.B) {
 
 		go sched.Start(ctx)
 
-		req := sched.NewRequest(ctx)
-		req.Url(ts.URL + "/")
+		req := request.NewPool().Acquire(ctx)
+		req.URL, _ = url.Parse(ts.URL + "/")
 
 		done := make(chan struct{})
 		sched.Schedule(req, func(ctx context.Context, resp core.IResponseReader) {
