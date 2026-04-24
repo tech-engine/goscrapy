@@ -9,8 +9,8 @@ import (
 type IPipelineManager[OUT any] interface {
 	Start(context.Context) error
 	Push(core.IOutput[OUT])
-	WithLogger(core.ILogger) IPipelineManager[OUT]
-	WithActivityTracker(core.IActivityTracker) IPipelineManager[OUT]
+	// WithLogger(core.ILogger) IPipelineManager[OUT]
+	// WithActivityTracker(core.IActivityTracker) IPipelineManager[OUT]
 }
 
 type Resetter interface {
@@ -19,7 +19,15 @@ type Resetter interface {
 
 type IScheduler interface {
 	Start(context.Context) error
-	Schedule(*core.Request, core.ResponseCallback)
-	WithLogger(core.ILogger) IScheduler
-	WithActivityTracker(core.IActivityTracker) IScheduler
+	Schedule(*core.Request, string)
+	// Schedule(*core.Request, core.ResponseCallback)
+	NextRequest() (*core.Request, string, error)
+	// WithLogger(core.ILogger) IScheduler
+	// WithActivityTracker(core.IActivityTracker) IScheduler
+}
+
+type ICallbackRegistry interface {
+	Register(string, core.ResponseCallback)
+	Resolve(string) (core.ResponseCallback, bool)
+	Deregister(string)
 }
