@@ -20,7 +20,6 @@ type IRequestPool interface {
 }
 
 type IEngine[OUT any] interface {
-	Start(context.Context) error
 	Schedule(*Request, ResponseCallback)
 	Yield(IOutput[OUT])
 }
