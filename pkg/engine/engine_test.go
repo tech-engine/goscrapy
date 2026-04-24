@@ -3,16 +3,12 @@ package engine
 import (
 	"context"
 	"errors"
-	"io"
-	"net/http"
-	"net/url"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tech-engine/goscrapy/internal/fsmap"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
@@ -44,7 +40,7 @@ type mockScheduler struct {
 	mu         sync.Mutex
 	started    bool
 	startReady chan struct{}
-	scheduled  []core.IRequestReader
+	scheduled  []*core.Request
 	callbacks  []core.ResponseCallback
 	startError error
 	logger     core.ILogger
@@ -75,7 +71,7 @@ func (m *mockScheduler) Start(ctx context.Context) error {
 	return ctx.Err()
 }
 
-func (m *mockScheduler) Schedule(req core.IRequestReader, cb core.ResponseCallback) {
+func (m *mockScheduler) Schedule(req *core.Request, cb core.ResponseCallback) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -83,9 +79,6 @@ func (m *mockScheduler) Schedule(req core.IRequestReader, cb core.ResponseCallba
 	m.callbacks = append(m.callbacks, cb)
 }
 
-func (m *mockScheduler) NewRequest(ctx context.Context) core.IRequestRW {
-	return &mockRequest{}
-}
 
 func (m *mockScheduler) WithLogger(logger core.ILogger) IScheduler {
 	m.mu.Lock()
@@ -154,29 +147,7 @@ func (m *mockPipelineManager) WithActivityTracker(tracker core.IActivityTracker)
 	return m
 }
 
-//
-// --- Mock Request ---
-//
 
-type mockRequest struct {
-	method string
-}
-
-func (r *mockRequest) ReadContext() context.Context                        { return context.Background() }
-func (r *mockRequest) ReadUrl() *url.URL                                   { return nil }
-func (r *mockRequest) ReadHeader() http.Header                             { return nil }
-func (r *mockRequest) ReadMethod() string                                  { return r.method }
-func (r *mockRequest) ReadBody() io.ReadCloser                             { return nil }
-func (r *mockRequest) ReadMeta() *fsmap.FixedSizeMap[string, any]            { return nil }
-func (r *mockRequest) ReadCookieJar() string                               { return "" }
-func (r *mockRequest) Context(ctx context.Context) core.IRequestWriter { return r }
-func (r *mockRequest) Url(s string) core.IRequestWriter                    { return r }
-func (r *mockRequest) Header(h http.Header) core.IRequestWriter            { return r }
-func (r *mockRequest) Method(m string) core.IRequestWriter                 { r.method = m; return r }
-func (r *mockRequest) Body(b any) core.IRequestWriter                      { return r }
-func (r *mockRequest) Meta(k string, v any) core.IRequestWriter            { return r }
-func (r *mockRequest) CookieJar(k string) core.IRequestWriter              { return r }
-func (r *mockRequest) Reset()                                              {}
 
 //
 // --- Tests ---
@@ -190,11 +161,11 @@ func TestEngine_New(t *testing.T) {
 func TestEngine_Schedule_TableDriven(t *testing.T) {
 	tests := []struct {
 		name string
-		req  core.IRequestReader
+		req  *core.Request
 		cb   core.ResponseCallback
 	}{
-		{"valid request", &mockRequest{}, func(ctx context.Context, r core.IResponseReader) {}},
-		{"nil callback", &mockRequest{}, nil},
+		{"valid request", &core.Request{}, func(ctx context.Context, r core.IResponseReader) {}},
+		{"nil callback", &core.Request{}, nil},
 		{"nil request", nil, func(ctx context.Context, r core.IResponseReader) {}},
 	}
 
@@ -220,7 +191,7 @@ func TestEngine_Schedule_Multiple(t *testing.T) {
 	cb := func(ctx context.Context, resp core.IResponseReader) {}
 
 	for i := 0; i < 5; i++ {
-		eng.Schedule(&mockRequest{}, cb)
+		eng.Schedule(&core.Request{}, cb)
 	}
 
 	sched.mu.Lock()
@@ -230,10 +201,6 @@ func TestEngine_Schedule_Multiple(t *testing.T) {
 	assert.Len(t, sched.callbacks, 5)
 }
 
-func TestEngine_NewRequest(t *testing.T) {
-	eng, _, _ := newTestEngine()
-	assert.NotNil(t, eng.NewRequest(context.Background()))
-}
 
 func TestEngine_Start_Lifecycle(t *testing.T) {
 	eng, sched, pm := newTestEngine()
@@ -320,7 +287,7 @@ func TestEngine_WithOverrides(t *testing.T) {
 	eng.WithScheduler(sched2)
 	eng.WithPipelineManager(pm2)
 
-	req := &mockRequest{}
+	req := &core.Request{}
 	eng.Schedule(req, nil)
 
 	sched1.mu.Lock()
