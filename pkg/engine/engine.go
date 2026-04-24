@@ -120,13 +120,9 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	return err
 }
 
-func (m *Engine[OUT]) Schedule(req core.IRequestReader, next core.ResponseCallback) {
+func (m *Engine[OUT]) Schedule(req *core.Request, next core.ResponseCallback) {
 	m.activeCount.Add(1)
 	m.scheduler.Schedule(req, next)
-}
-
-func (m *Engine[OUT]) NewRequest(ctx context.Context) core.IRequestRW {
-	return m.scheduler.NewRequest(ctx)
 }
 
 func (m *Engine[OUT]) Yield(v core.IOutput[OUT]) {
