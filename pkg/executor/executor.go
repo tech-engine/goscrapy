@@ -21,28 +21,28 @@ func New(adapter IExecutorAdapter) *Executor {
 	}
 }
 
-func (e *Executor) Execute(req core.IRequestReader, res core.IResponseWriter) error {
+func (e *Executor) Execute(req *core.Request, res core.IResponseWriter) error {
 
-	ctx := req.ReadContext()
+	ctx := req.Ctx
 	if ctx == nil {
 		ctx = context.Background()
 	}
 
-	if req.ReadCookieJar() != "" {
-		ctx = core.InjectCtxValue(ctx, "GOSCookieJarKey", req.ReadCookieJar())
+	if req.CookieJarKey != "" {
+		ctx = core.InjectCtxValue(ctx, "GOSCookieJarKey", req.CookieJarKey)
 	}
 
 	method := "GET"
-	if req.ReadMethod() != "" {
-		method = req.ReadMethod()
+	if req.Method != "" {
+		method = req.Method
 	}
 
-	request, err := http.NewRequestWithContext(ctx, method, req.ReadUrl().String(), req.ReadBody())
+	request, err := http.NewRequestWithContext(ctx, method, req.URL.String(), req.Body)
 	if err != nil {
 		return err
 	}
 
-	request.Header = req.ReadHeader()
+	request.Header = req.Header
 
 	return e.adapter.Do(res, request)
 }
