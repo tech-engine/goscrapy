@@ -32,48 +32,7 @@ func (m *MockExecutorAdapter) WithLogger(l core.ILogger) IExecutorAdapter {
 	return args.Get(0).(IExecutorAdapter)
 }
 
-// MockRequestReader implements IRequestReader
-type MockRequestReader struct {
-	mock.Mock
-}
 
-func (m *MockRequestReader) ReadUrl() *url.URL {
-	args := m.Called()
-	return args.Get(0).(*url.URL)
-}
-
-func (m *MockRequestReader) ReadContext() context.Context {
-	args := m.Called()
-	return args.Get(0).(context.Context)
-}
-
-func (m *MockRequestReader) ReadMethod() string {
-	args := m.Called()
-	return args.String(0)
-}
-
-func (m *MockRequestReader) ReadBody() io.ReadCloser {
-	args := m.Called()
-	if args.Get(0) == nil {
-		return nil
-	}
-	return args.Get(0).(io.ReadCloser)
-}
-
-func (m *MockRequestReader) ReadHeader() http.Header {
-	args := m.Called()
-	return args.Get(0).(http.Header)
-}
-
-func (m *MockRequestReader) ReadCookieJar() string {
-	args := m.Called()
-	return args.String(0)
-}
-
-func (m *MockRequestReader) ReadMeta() *fsmap.FixedSizeMap[string, any] {
-	args := m.Called()
-	return args.Get(0).(*fsmap.FixedSizeMap[string, any])
-}
 
 // MockResponseWriter implements IResponseWriter
 type MockResponseWriter struct {
@@ -112,13 +71,13 @@ func TestExecutor_Execute(t *testing.T) {
 	ctx := context.Background()
 	header := http.Header{"User-Agent": []string{"test"}}
 
-	mockReq := new(MockRequestReader)
-	mockReq.On("ReadUrl").Return(u)
-	mockReq.On("ReadContext").Return(ctx)
-	mockReq.On("ReadMethod").Return("POST")
-	mockReq.On("ReadBody").Return(nil)
-	mockReq.On("ReadHeader").Return(header)
-	mockReq.On("ReadCookieJar").Return("session1")
+	req := &core.Request{
+		Ctx:          ctx,
+		URL:          u,
+		Method:       "POST",
+		Header:       header,
+		CookieJarKey: "session1",
+	}
 
 	mockRes := new(MockResponseWriter)
 
@@ -129,9 +88,8 @@ func TestExecutor_Execute(t *testing.T) {
 			core.ExtractCtxValue(req.Context(), "GOSCookieJarKey") == "session1"
 	})).Return(nil)
 
-	err := exec.Execute(mockReq, mockRes)
+	err := exec.Execute(req, mockRes)
 	assert.NoError(t, err)
 
 	mockAdapter.AssertExpectations(t)
-	mockReq.AssertExpectations(t)
 }
