@@ -2,7 +2,6 @@ package engine
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"sync/atomic"
 
@@ -196,10 +195,6 @@ func (m *Engine[OUT]) Schedule(req *core.Request, cb core.ResponseCallback) {
 		m.activeCount.Add(-1)
 	}
 }
-
-var (
-	ErrNoCallbacksFound = errors.New("engine: no valid callback methods found in spider")
-)
 
 // scans the spider for callback methods and registers them
 func (m *Engine[OUT]) RegisterSpider(spider any) error {
