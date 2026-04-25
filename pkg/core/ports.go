@@ -9,6 +9,8 @@ import (
 	"golang.org/x/net/html"
 )
 
+type TaskHandle any
+
 type IActivityTracker interface {
 	Inc()
 	Dec()
@@ -20,8 +22,13 @@ type IRequestPool interface {
 }
 
 type IEngine[OUT any] interface {
+	Start(context.Context) error
 	Schedule(*Request, ResponseCallback)
 	Yield(IOutput[OUT])
+	RegisterSpider(any) error
+	ActiveCount() int64
+	WithLogger(ILogger) IEngine[OUT]
+	WithOnShutdown(func()) IEngine[OUT]
 }
 
 type IResponseReader interface {
