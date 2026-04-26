@@ -4,43 +4,33 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/tech-engine/goscrapy/internal/types"
 )
+
+type TelemetryHubConfig struct {
+	Interval time.Duration
+}
 
 // Coordinates IStatsCollector and IStatsObserver
 type TelemetryHub struct {
 	mu         sync.RWMutex
 	collectors []IStatsCollector
 	observers  []IStatsObserver
-	opts       TelemetryHubOpts
+	config     TelemetryHubConfig
 	startTime  time.Time
 }
 
-type TelemetryHubOpts struct {
-	Interval time.Duration
-}
-
-func defaultOpts() TelemetryHubOpts {
-	return TelemetryHubOpts{
+func NewTelemetryHub(config *TelemetryHubConfig) *TelemetryHub {
+	cfg := TelemetryHubConfig{
 		Interval: 500 * time.Millisecond,
 	}
-}
-
-func WithInterval(d time.Duration) types.OptFunc[TelemetryHubOpts] {
-	return func(o *TelemetryHubOpts) {
-		o.Interval = d
-	}
-}
-
-func NewTelemetryHub(optFuncs ...types.OptFunc[TelemetryHubOpts]) *TelemetryHub {
-	opts := defaultOpts()
-	for _, fn := range optFuncs {
-		fn(&opts)
+	if config != nil {
+		if config.Interval > 0 {
+			cfg.Interval = config.Interval
+		}
 	}
 
 	return &TelemetryHub{
-		opts:       opts,
+		config:     cfg,
 		collectors: make([]IStatsCollector, 0),
 		observers:  make([]IStatsObserver, 0),
 		startTime:  time.Now(),
@@ -60,7 +50,7 @@ func (th *TelemetryHub) AddObserver(obs IStatsObserver) {
 }
 
 func (th *TelemetryHub) Start(ctx context.Context) error {
-	ticker := time.NewTicker(th.opts.Interval)
+	ticker := time.NewTicker(th.config.Interval)
 	defer ticker.Stop()
 
 	for {
@@ -73,6 +63,29 @@ func (th *TelemetryHub) Start(ctx context.Context) error {
 	}
 }
 
+// Snapshot returns a view of all registered collectors.
+func (th *TelemetryHub) Snapshot() GlobalSnapshot {
+	th.mu.RLock()
+	defer th.mu.RUnlock()
+	return th.snapshotLocked()
+}
+
+// must be called with mu.RLock held
+func (th *TelemetryHub) snapshotLocked() GlobalSnapshot {
+	snap := GlobalSnapshot{
+		Timestamp:  time.Now(),
+		Uptime:     time.Since(th.startTime),
+		Interval:   th.config.Interval,
+		Components: make(map[string]ComponentSnapshot),
+	}
+
+	for _, c := range th.collectors {
+		snap.Components[c.Name()] = c.Snapshot()
+	}
+
+	return snap
+}
+
 func (th *TelemetryHub) broadcast() {
 	th.mu.RLock()
 	defer th.mu.RUnlock()
@@ -82,16 +95,7 @@ func (th *TelemetryHub) broadcast() {
 		return
 	}
 
-	snap := GlobalSnapshot{
-		Timestamp:  time.Now(),
-		Uptime:     time.Since(th.startTime),
-		Interval:   th.opts.Interval,
-		Components: make(map[string]ComponentSnapshot),
-	}
-
-	for _, c := range th.collectors {
-		snap.Components[c.Name()] = c.Snapshot()
-	}
+	snap := th.snapshotLocked()
 
 	for _, o := range th.observers {
 		o.OnSnapshot(snap)
