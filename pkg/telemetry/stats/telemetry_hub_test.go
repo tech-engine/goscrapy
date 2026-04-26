@@ -33,7 +33,7 @@ func (m *MockStatsObserver) OnSnapshot(s GlobalSnapshot) {
 
 func TestHub_Broadcast(t *testing.T) {
 	interval := 50 * time.Millisecond
-	h := NewTelemetryHub(WithInterval(interval))
+	h := NewTelemetryHub(&TelemetryHubConfig{Interval: interval})
 
 	mockCollector := new(MockStatsCollector)
 	mockCollector.On("Name").Return("mock")
