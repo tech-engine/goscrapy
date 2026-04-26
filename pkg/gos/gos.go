@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/tech-engine/goscrapy/internal/request"
-	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/executor"
@@ -183,9 +182,9 @@ func (gos *app[OUT]) RegisterSpider(spider any) {
 	gos.Engine.RegisterSpider(spider)
 }
 
-func (gos *app[OUT]) WithTelemetry(hub *ts.TelemetryHub, optFuncs ...types.OptFunc[ts.TelemetryHubOpts]) *app[OUT] {
+func (gos *app[OUT]) WithTelemetry(hub *ts.TelemetryHub, config *ts.TelemetryHubConfig) *app[OUT] {
 	if hub == nil {
-		gos.hub = ts.NewTelemetryHub(optFuncs...)
+		gos.hub = ts.NewTelemetryHub(config)
 		return gos
 	}
 	gos.hub = hub
@@ -206,6 +205,10 @@ func (gos *app[OUT]) Start(ctx context.Context) error {
 	defer stop()
 
 	if gos.hub != nil {
+		// auto register workerpool components as collectors
+		if coll, ok := gos.WorkerPool.(ts.IStatsCollector); ok {
+			gos.hub.AddCollector(coll)
+		}
 		go gos.hub.Start(gos.cancelableSignal.ctx)
 	}
 	gos.lastErr = gos.Engine.Start(gos.cancelableSignal.ctx)
@@ -219,9 +222,9 @@ func (gos *app[OUT]) Wait(autoExit ...bool) error {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	if len(autoExit) > 0 && autoExit[0] {
-		// Start auto-exit monitor
+		// start auto exit monitor
 		go func() {
-			// Wait for initial start
+			// wait for initial start
 			time.Sleep(500 * time.Millisecond)
 			ticker := time.NewTicker(200 * time.Millisecond)
 			defer func() {
