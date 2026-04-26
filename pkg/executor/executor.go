@@ -6,23 +6,38 @@ import (
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/logger"
-	"github.com/tech-engine/goscrapy/pkg/scheduler"
 )
+
+type Config struct {
+	Adapter IExecutorAdapter
+	Logger  core.ILogger
+}
 
 type Executor struct {
 	adapter IExecutorAdapter
 	logger  core.ILogger
 }
 
-func New(adapter IExecutorAdapter) *Executor {
-	return &Executor{
-		adapter: adapter,
-		logger:  logger.EnsureLogger(nil).WithName("Executor"),
+func New(config *Config) (*Executor, error) {
+	if config == nil {
+		config = &Config{}
 	}
+
+	if config.Logger == nil {
+		config.Logger = logger.EnsureLogger(nil).WithName("Executor")
+	}
+
+	if config.Adapter == nil {
+		return nil, ErrAdapterRequired
+	}
+
+	return &Executor{
+		adapter: config.Adapter,
+		logger:  config.Logger,
+	}, nil
 }
 
 func (e *Executor) Execute(req *core.Request, res core.IResponseWriter) error {
-
 	ctx := req.Ctx
 	if ctx == nil {
 		ctx = context.Background()
@@ -45,15 +60,4 @@ func (e *Executor) Execute(req *core.Request, res core.IResponseWriter) error {
 	request.Header = req.Header
 
 	return e.adapter.Do(res, request)
-}
-
-func (e *Executor) WithAdapter(adapter IExecutorAdapter) {
-	e.adapter = adapter
-}
-
-func (e *Executor) WithLogger(loggerIn core.ILogger) scheduler.IExecutor {
-	loggerIn = logger.EnsureLogger(loggerIn)
-	e.logger = loggerIn.WithName("Executor")
-	e.adapter.WithLogger(loggerIn)
-	return e
 }
