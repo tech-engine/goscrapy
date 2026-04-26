@@ -48,16 +48,16 @@ func (e *Executor) Execute(req *core.Request, res core.IResponseWriter) error {
 	}
 
 	method := "GET"
-	if req.Method != "" {
-		method = req.Method
+	if req.Method_ != "" {
+		method = req.Method_
 	}
 
-	request, err := http.NewRequestWithContext(ctx, method, req.URL.String(), req.Body)
+	request, err := http.NewRequestWithContext(ctx, method, req.URL.String(), req.Body_)
 	if err != nil {
 		return err
 	}
 
-	request.Header = req.Header
+	request.Header = req.Header_
 
 	return e.adapter.Do(res, request)
 }

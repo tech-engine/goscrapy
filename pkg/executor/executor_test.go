@@ -74,8 +74,8 @@ func TestExecutor_Execute(t *testing.T) {
 	req := &core.Request{
 		Ctx:          ctx,
 		URL:          u,
-		Method:       "POST",
-		Header:       header,
+		Method_:      "POST",
+		Header_:      header,
 		CookieJarKey: "session1",
 	}
 

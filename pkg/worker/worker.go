@@ -115,8 +115,8 @@ func (w *Worker) execute(ctx context.Context, task *workTask) engine.IResult {
 	err := w.executor.Execute(task.req, resp)
 
 	// we transfer request meta to response so callbacks can access it
-	if task.req.Meta != nil {
-		resp.WriteMeta(task.req.Meta)
+	if task.req.Meta_ != nil {
+		resp.WriteMeta(task.req.Meta_)
 	}
 
 	return &result{

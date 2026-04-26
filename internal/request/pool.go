@@ -28,12 +28,12 @@ func NewPool() *Pool {
 func (p *Pool) Acquire(ctx context.Context) *core.Request {
 	req := p.pool.Get().(*core.Request)
 	req.Ctx = ctx
-	req.Method = http.MethodGet
-	if req.Header == nil {
-		req.Header = make(http.Header)
+	req.Method_ = http.MethodGet
+	if req.Header_ == nil {
+		req.Header_ = make(http.Header)
 	}
-	if req.Meta == nil {
-		req.Meta = fsmap.New[string, any](24)
+	if req.Meta_ == nil {
+		req.Meta_ = fsmap.New[string, any](24)
 	}
 	return req
 }
@@ -44,11 +44,11 @@ func (p *Pool) Release(req *core.Request) {
 	}
 	req.Ctx = nil
 	req.URL = nil
-	req.Body = nil
+	req.Body_ = nil
 	req.CookieJarKey = ""
-	clear(req.Header)
-	if req.Meta != nil {
-		req.Meta.Clear()
+	clear(req.Header_)
+	if req.Meta_ != nil {
+		req.Meta_.Clear()
 	}
 	p.pool.Put(req)
 }
