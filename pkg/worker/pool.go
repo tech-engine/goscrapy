@@ -69,6 +69,9 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 		spawnWorkerFn: func(ctx context.Context) {
 			p.spawnWorker(ctx)
 		},
+		despawnWorkerFn: func() {
+			p.despawnWorker()
+		},
 		logger: config.Logger,
 	}
 
@@ -111,7 +114,7 @@ func (p *workerPool) spawnWorker(ctx context.Context) {
 	id := uint16(p.lastWorkerID.Add(1))
 	p.activeWorkers.Add(1)
 
-	w := NewWorker(id, p.executor, p.workerTaskBuffer, p.results, &p.responsePool, &p.workerTaskPool, p.autoscaler.OnTaskDone, p.autoscaler.ShouldExit)
+	w := NewWorker(id, p.executor, p.workerTaskBuffer, p.results, &p.responsePool, &p.workerTaskPool, p.autoscaler.OnTaskDone)
 
 	p.wg.Add(1)
 	go func() {
@@ -119,6 +122,15 @@ func (p *workerPool) spawnWorker(ctx context.Context) {
 		defer p.activeWorkers.Add(-1)
 		_ = w.Start(ctx)
 	}()
+}
+
+// despawnWorker sends a poison pill (nil) to the task buffer, causing one
+// idle worker to exit its loop and terminate
+func (p *workerPool) despawnWorker() {
+	select {
+	case p.workerTaskBuffer <- nil:
+	default:
+	}
 }
 
 func (p *workerPool) Submit(req *core.Request, callbackName string, handle core.TaskHandle) error {

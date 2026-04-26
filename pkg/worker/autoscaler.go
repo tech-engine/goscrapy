@@ -34,6 +34,7 @@ type autoscaler struct {
 	// scheduler callbacks
 	currentWorkerCntFn func() int32
 	spawnWorkerFn      func(ctx context.Context)
+	despawnWorkerFn    func()
 	logger             core.ILogger
 }
 
@@ -46,6 +47,7 @@ type AutoscalerConfig struct {
 	// Scheduler wiring
 	currentWorkerCntFn func() int32
 	spawnWorkerFn      func(ctx context.Context)
+	despawnWorkerFn    func()
 	logger             core.ILogger
 }
 
@@ -75,6 +77,7 @@ func newAutoscaler(cfg *AutoscalerConfig) *autoscaler {
 		serviceTimeEMA:     newEMA(cfg.EMAAlpha),
 		currentWorkerCntFn: cfg.currentWorkerCntFn,
 		spawnWorkerFn:      cfg.spawnWorkerFn,
+		despawnWorkerFn:    cfg.despawnWorkerFn,
 		logger:             cfg.logger,
 	}
 	return a
@@ -89,12 +92,6 @@ func (a *autoscaler) OnTaskArrival() {
 func (a *autoscaler) OnTaskDone(d time.Duration) {
 	a.cummulativeExecTime.Add(uint64(d))
 	a.doneTaskCnt.Add(1)
-}
-
-// ShouldExit returns true if the calling worker is surplus and should
-// exit cooperatively, called from the worker loop before re registering
-func (a *autoscaler) ShouldExit() bool {
-	return a.currentWorkerCntFn() > int32(a.desiredWorkerCnt.Load())
 }
 
 // initializes the desired worker count on startup
@@ -186,10 +183,11 @@ func (a *autoscaler) adjust(ctx context.Context, target uint16) {
 		for i := uint16(0); i < diff; i++ {
 			a.spawnWorkerFn(ctx)
 		}
-	} else {
-		// give the excess workers a chance to exit
+	} else if target < current {
 		diff := current - target
-		a.logger.Debugf("Scaling DOWN: %d -> %d (-%d workers, cooperative)", current, target, diff)
+		for i := uint16(0); i < diff; i++ {
+			a.despawnWorkerFn()
+		}
 	}
 	a.lastScaleTime.Store(time.Now().UnixNano())
 }
