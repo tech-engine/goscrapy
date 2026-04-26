@@ -48,7 +48,12 @@ type app[OUT any] struct {
 	lastErr           error
 }
 
-func New[OUT any](config *Config) (*app[OUT], error) {
+func New[OUT any](configs ...*Config) (*app[OUT], error) {
+	var config *Config
+	if len(configs) > 0 {
+		config = configs[0]
+	}
+
 	if config == nil {
 		config = DefaultConfig()
 	}
