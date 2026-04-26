@@ -18,6 +18,12 @@ type workTask struct {
 	taskHandle   core.TaskHandle
 }
 
+func (wt *workTask) Reset() {
+	wt.req = nil
+	wt.callbackName = ""
+	wt.taskHandle = nil
+}
+
 type Worker struct {
 	ID               uint16
 	executor         IExecutor
@@ -29,10 +35,9 @@ type Worker struct {
 	logger           core.ILogger
 	tracker          core.IActivityTracker
 	onTaskDone       func(time.Duration)
-	shouldExit       func() bool
 }
 
-func NewWorker(id uint16, executor IExecutor, workerTaskBuffer <-chan *workTask, results chan<- engine.IResult, responsePool *sync.Pool, taskPool *sync.Pool, onTaskDone func(time.Duration), shouldExit func() bool) *Worker {
+func NewWorker(id uint16, executor IExecutor, workerTaskBuffer <-chan *workTask, results chan<- engine.IResult, responsePool *sync.Pool, taskPool *sync.Pool, onTaskDone func(time.Duration)) *Worker {
 	return &Worker{
 		ID:               id,
 		executor:         executor,
@@ -40,10 +45,8 @@ func NewWorker(id uint16, executor IExecutor, workerTaskBuffer <-chan *workTask,
 		workerTaskPool:   taskPool,
 		results:          results,
 		responsePool:     responsePool,
-		// stats:            stats,
-		onTaskDone: onTaskDone,
-		shouldExit: shouldExit,
-		logger:     logger.EnsureLogger(nil).WithName(fmt.Sprintf("Worker-%d", id)),
+		onTaskDone:       onTaskDone,
+		logger:           logger.EnsureLogger(nil).WithName(fmt.Sprintf("Worker-%d", id)),
 	}
 }
 
@@ -52,15 +55,11 @@ func (w *Worker) Start(ctx context.Context) error {
 	defer wg.Wait()
 
 	for {
-		if w.shouldExit != nil && w.shouldExit() {
-			return nil
-		}
-
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case task, ok := <-w.workerTaskBuffer:
-			if !ok {
+			if !ok || task == nil || task.req == nil {
 				return nil
 			}
 
@@ -70,8 +69,7 @@ func (w *Worker) Start(ctx context.Context) error {
 			res := w.execute(ctx, task)
 
 			// return task to pool
-			task.req = nil
-			task.taskHandle = nil
+			task.Reset()
 			w.workerTaskPool.Put(task)
 
 			select {
