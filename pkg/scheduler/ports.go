@@ -1,11 +1,14 @@
 package scheduler
 
 import (
-	"github.com/tech-engine/goscrapy/pkg/core"
+	"context"
+
+	"github.com/tech-engine/goscrapy/pkg/engine"
 )
 
-// An executor must implement the IExecutor interface to be used by the scheduler
-type IExecutor interface {
-	Execute(*core.Request, core.IResponseWriter) error
-	WithLogger(core.ILogger) IExecutor
+type ITaskQueue interface {
+	Push(context.Context, *QueuedTask) error
+	Pull(context.Context) (*QueuedTask, engine.TaskHandle, error)
+	Ack(context.Context, engine.TaskHandle) error
+	Nack(context.Context, engine.TaskHandle) error
 }
