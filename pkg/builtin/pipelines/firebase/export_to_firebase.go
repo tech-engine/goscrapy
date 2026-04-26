@@ -8,7 +8,7 @@ import (
 	firebase "firebase.google.com/go"
 	"firebase.google.com/go/db"
 	"github.com/tech-engine/goscrapy/pkg/core"
-	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
+	"github.com/tech-engine/goscrapy/pkg/engine"
 	"google.golang.org/api/option"
 )
 
@@ -54,7 +54,7 @@ func (p *export2Firebase[OUT]) Close() {
 }
 
 // your custom pipeline processing code goes here
-func (p *export2Firebase[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
+func (p *export2Firebase[OUT]) ProcessItem(item engine.IPipelineItem, original core.IOutput[OUT]) error {
 
 	if _, err := p.ref.Push(p.ctx, original.Record()); err != nil {
 		return fmt.Errorf("Export2FIREBASE: error inserting data to DB %w", err)

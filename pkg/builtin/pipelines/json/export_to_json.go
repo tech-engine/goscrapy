@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
-	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
+	"github.com/tech-engine/goscrapy/pkg/engine"
 )
 
 // Options configuration struct.
@@ -77,7 +77,7 @@ func (p *export2JSON[OUT]) Close() {
 	p.file.Close()
 }
 
-func (p *export2JSON[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
+func (p *export2JSON[OUT]) ProcessItem(item engine.IPipelineItem, original core.IOutput[OUT]) error {
 
 	jsonEncoder := json.NewEncoder(p.buff)
 	record := original.Record()
