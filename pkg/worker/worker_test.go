@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
+	"github.com/tech-engine/goscrapy/pkg/logger"
 )
 
 type dummyExecutor struct{}
@@ -26,6 +27,10 @@ func TestWorker_Lifecycle(t *testing.T) {
 	respPool := &sync.Pool{New: func() any { return &response{} }}
 	workPool := &sync.Pool{New: func() any { return &workTask{} }}
 
+	pool := &workerPool{
+		logger: logger.NewLogger(),
+	}
+
 	w := NewWorker(
 		1,
 		executor,
@@ -33,7 +38,7 @@ func TestWorker_Lifecycle(t *testing.T) {
 		results,
 		respPool,
 		workPool,
-		func(d time.Duration) {},
+		pool,
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())
