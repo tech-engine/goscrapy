@@ -2,54 +2,93 @@ package pipelinemanager
 
 import (
 	"context"
+	"os"
+	"strconv"
 	"sync"
 
 	"github.com/tech-engine/goscrapy/internal/cmap"
-	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
-	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 	"golang.org/x/sync/errgroup"
 )
 
+type Config struct {
+	ItemSize                  uint64
+	OutputQueueBuffSize       uint64
+	MaxProcessItemConcurrency uint64
+	Logger                    core.ILogger
+}
+
+func DefaultConfig() *Config {
+	c := &Config{
+		ItemSize:                  PIPELINEMANAGER_ITEM_SIZE,
+		OutputQueueBuffSize:       PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE,
+		MaxProcessItemConcurrency: PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY,
+	}
+
+	if envVal, ok := os.LookupEnv("PIPELINEMANAGER_ITEM_SIZE"); ok {
+		if v, err := strconv.ParseUint(envVal, 10, 64); err == nil {
+			c.ItemSize = v
+		}
+	}
+
+	if envVal, ok := os.LookupEnv("PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE"); ok {
+		if v, err := strconv.ParseUint(envVal, 10, 64); err == nil {
+			c.OutputQueueBuffSize = v
+		}
+	}
+
+	if envVal, ok := os.LookupEnv("PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY"); ok {
+		if v, err := strconv.ParseUint(envVal, 10, 64); err == nil {
+			c.MaxProcessItemConcurrency = v
+		}
+	}
+
+	return c
+}
+
 type PipelineManager[OUT any] struct {
-	opts
-	itemPool    *rp.Pooler[cmap.CMap[string, any]]
-	outputQueue chan core.IOutput[OUT]
-	pipelines   []IPipeline[OUT]
-	logger      core.ILogger
-	tracker     core.IActivityTracker
+	itemPool                  sync.Pool
+	outputQueue               chan core.IOutput[OUT]
+	pipelines                 []engine.IPipeline[OUT]
+	logger                    core.ILogger
+	tracker                   core.IActivityTracker
+	maxProcessItemConcurrency uint64
 }
 
-func New[OUT any](optFuncs ...types.OptFunc[opts]) *PipelineManager[OUT] {
-
-	// set default options
-	opts := defaultOpts()
-
-	// set custom options
-	for _, fn := range optFuncs {
-		fn(&opts)
+func New[OUT any](config *Config) *PipelineManager[OUT] {
+	if config == nil {
+		config = DefaultConfig()
 	}
 
-	return &PipelineManager[OUT]{
-		opts:        opts,
-		outputQueue: make(chan core.IOutput[OUT], opts.outputQueueBuffSize),
-		pipelines:   make([]IPipeline[OUT], 0),
-		itemPool:    rp.NewPooler(rp.WithSize[cmap.CMap[string, any]](opts.itemPoolSize)),
-		logger:      logger.EnsureLogger(nil).WithName("PipelineManager"),
+	if config.Logger == nil {
+		config.Logger = logger.EnsureLogger(nil).WithName("PipelineManager")
 	}
+
+	pm := &PipelineManager[OUT]{
+		outputQueue:               make(chan core.IOutput[OUT], config.OutputQueueBuffSize),
+		pipelines:                 make([]engine.IPipeline[OUT], 0),
+		logger:                    config.Logger,
+		maxProcessItemConcurrency: config.MaxProcessItemConcurrency,
+	}
+
+	pm.itemPool.New = func() any {
+		return cmap.NewCMap[string, any](cmap.WithSize(int(config.ItemSize)))
+	}
+
+	return pm
 }
 
-func (pm *PipelineManager[OUT]) Add(pipeline ...IPipeline[OUT]) {
+func (pm *PipelineManager[OUT]) Add(pipeline ...engine.IPipeline[OUT]) {
 	pm.pipelines = append(pm.pipelines, pipeline...)
 }
 
-func (pm *PipelineManager[OUT]) WithLogger(loggerIn core.ILogger) engine.IPipelineManager[OUT] {
-	loggerIn = logger.EnsureLogger(loggerIn)
-	pm.logger = loggerIn.WithName("PipelineManager")
-	return pm
-}
+// func (pm *PipelineManager[OUT]) WithLogger(loggerIn core.ILogger) engine.IPipelineManager[OUT] {
+// 	loggerIn = logger.EnsureLogger(loggerIn)
+// 	pm.logger = loggerIn.WithName("PipelineManager")
+// 	return pm
+// }
 
 func (pm *PipelineManager[OUT]) WithActivityTracker(tracker core.IActivityTracker) engine.IPipelineManager[OUT] {
 	pm.tracker = tracker
@@ -78,54 +117,50 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 	}
 
 	// ensure everything is closed on exit
-	defer pm.stop()
+	defer pm.stopPipelines()
 
 	// start workers
-	concurrency := pm.opts.maxProcessItemConcurrency
+	concurrency := pm.maxProcessItemConcurrency
 	if concurrency == 0 {
 		concurrency = 1
 	}
 
 	var wg sync.WaitGroup
 	wg.Add(int(concurrency))
-	// wait for all goroutines
-	defer wg.Wait()
 
 	for i := 0; i < int(concurrency); i++ {
 		go func() {
 			defer wg.Done()
 			for {
 				select {
-				case <-ctx.Done():
-					return
 				case out, ok := <-pm.outputQueue:
 					if !ok {
 						return
 					}
 					pm.processItem(out)
+				case <-ctx.Done():
+					return
 				}
 			}
 		}()
 	}
 
-	// wait for framework shutdown
-	<-ctx.Done()
-
-	// no more items will be pushed, scheduler has finished
-	// so we close queue to signal workers
-	close(pm.outputQueue)
-
-	// draining remaining items, if any in outputQueue
-	for out := range pm.outputQueue {
-		pm.processItem(out)
-	}
+	// wait for all goroutines to finish (after channel is closed)
+	wg.Wait()
 
 	pm.logger.Infof("stopped")
 	return nil
 }
 
-// stop calls the close function of every pipeline
-func (pm *PipelineManager[OUT]) stop() {
+// Stop signals the pipeline manager to shut down by closing the input channel.
+// This implements engine.IPipelineManager.
+func (pm *PipelineManager[OUT]) Stop() {
+	pm.logger.Debug("Stopping pipeline manager...")
+	close(pm.outputQueue)
+}
+
+// stopPipelines calls the close function of every pipeline
+func (pm *PipelineManager[OUT]) stopPipelines() {
 	var wg sync.WaitGroup
 
 	wg.Add(len(pm.pipelines))
@@ -161,15 +196,11 @@ func (pm *PipelineManager[OUT]) processItem(original core.IOutput[OUT]) {
 		err   error
 	)
 
-	pItem = pm.itemPool.Acquire()
-
-	if pItem == nil {
-		pItem = cmap.NewCMap[string, any](cmap.WithSize(int(pm.itemPoolSize)))
-	}
+	pItem = pm.itemPool.Get().(*cmap.CMap[string, any])
 
 	defer func() {
 		pItem.Clear()
-		pm.itemPool.Release(pItem)
+		pm.itemPool.Put(pItem)
 		if pm.tracker != nil {
 			pm.tracker.Dec()
 		}
@@ -178,11 +209,11 @@ func (pm *PipelineManager[OUT]) processItem(original core.IOutput[OUT]) {
 	for _, pipeline := range pm.pipelines {
 
 		// we check if pipeline is a group by checking
-		if err = pipeline.ProcessItem(IPipelineItem(pItem), original); err != nil {
-			pm.logger.Errorf("❌ Pipeline error: %v", err)
+		if err = pipeline.ProcessItem(engine.IPipelineItem(pItem), original); err != nil {
+			pm.logger.Errorf("Pipeline error: %v", err)
 			return
 		}
 	}
 
-	pm.logger.Debug("✅ Item processed successfully")
+	pm.logger.Debug("Item processed successfully")
 }
