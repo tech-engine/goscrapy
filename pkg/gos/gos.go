@@ -2,11 +2,14 @@ package gos
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
+	"github.com/tech-engine/goscrapy/internal/request"
 	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
@@ -17,48 +20,139 @@ import (
 	pipelinemanager "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 	"github.com/tech-engine/goscrapy/pkg/scheduler"
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
+	"github.com/tech-engine/goscrapy/pkg/worker"
 )
 
-// deprecated: use New instead
-// kept for backward compatibility and to be removed in future versions
-func NewApp[OUT any](optFuncs ...types.OptFunc[appOpts]) *app[OUT] {
-	return New[OUT](optFuncs...)
+type Config struct {
+	Client *http.Client
+	Logger core.ILogger
 }
 
-func New[OUT any](optFuncs ...types.OptFunc[appOpts]) *app[OUT] {
+func DefaultConfig() *Config {
+	return &Config{
+		Client: DefaultClient(),
+	}
+}
 
-	opts := defaultAppOpts()
-	for _, fn := range optFuncs {
-		fn(&opts)
+type app[OUT any] struct {
+	*core.Core[OUT]
+	Engine            core.IEngine[OUT]
+	PipelineManager   engine.IPipelineManager[OUT]
+	Scheduler         engine.IScheduler
+	WorkerPool        engine.IWorkerPool
+	Executor          worker.IExecutor
+	MiddlewareManager IMiddlewareManager
+	httpClient        *http.Client
+	logger            core.ILogger
+	hub               *ts.TelemetryHub
+	cancelableSignal  *cancelableSignal
+	lastErr           error
+}
+
+func New[OUT any](config *Config) (*app[OUT], error) {
+	if config == nil {
+		config = DefaultConfig()
 	}
 
-	httpClient := opts.client
+	if config.Logger == nil {
+		config.Logger = logger.NewLogger()
+	}
 
-	adapter := httpAdapter.NewAdapter(
-		httpAdapter.WithClient(httpClient),
-	)
-	executor := executor.New(adapter)
-	scheduler := scheduler.New(executor)
-	mm := middlewaremanager.New(httpClient)
-	pm := pipelinemanager.New[OUT]()
+	l := config.Logger
 
-	l := logger.NewLogger()
-	eng := engine.New(scheduler, pm).
-		WithLogger(l)
+	// create our http adapter
+	adapter, err := httpAdapter.NewAdapter(&httpAdapter.Config{
+		Client: config.Client,
+		Logger: l,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// create our executor
+	exec, err := executor.New(&executor.Config{
+		Adapter: adapter,
+		Logger:  l.WithName("Executor"),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// read from env vars for tuning
+	concurrency := uint32(16)
+	if c := os.Getenv("SCHEDULER_CONCURRENCY"); c != "" {
+		if v, err := strconv.Atoi(c); err == nil {
+			concurrency = uint32(v)
+		}
+	}
+
+	queueSize := uint64(1000)
+	if q := os.Getenv("PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE"); q != "" {
+		if v, err := strconv.ParseUint(q, 10, 64); err == nil && v > 0 {
+			queueSize = v
+		}
+	}
+
+	// create our scheduler
+	sched, err := scheduler.New(&scheduler.Config{
+		WorkQueueSize: queueSize,
+		Logger:        l.WithName("Scheduler"),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// create our worker pool
+	pool, err := worker.NewPool(&worker.Config{
+		Executor: exec,
+		Autoscaler: struct {
+			MaxWorkers    uint32
+			MinWorkers    uint32
+			ScalingFactor float32
+			ScalingWindow time.Duration
+			EMAAlpha      float32
+		}{
+			MinWorkers: concurrency / 2,
+			MaxWorkers: concurrency,
+		},
+		Logger: l.WithName("WorkerPool"),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// create our pipeline manager
+	pmCfg := pipelinemanager.DefaultConfig()
+	pmCfg.OutputQueueBuffSize = queueSize
+	pmCfg.Logger = l.WithName("PipelineManager")
+	pm := pipelinemanager.New[OUT](pmCfg)
+
+	// create our engine
+	eng, err := engine.New(&engine.Config[OUT]{
+		Scheduler:       sched,
+		WorkerPool:      pool,
+		PipelineManager: pm,
+	})
+	if err != nil {
+		return nil, err
+	}
+	eng.WithLogger(l.WithName("Engine"))
 
 	app := &app[OUT]{
-		Core:              core.New(eng),
+		Core:              core.New(eng, request.NewPool()),
 		Engine:            eng,
-		MiddlewareManager: mm,
+		MiddlewareManager: middlewaremanager.New(config.Client),
 		PipelineManager:   pm,
-		Scheduler:         scheduler,
-		Executor:          executor,
+		Scheduler:         sched,
+		WorkerPool:        pool,
+		Executor:          exec,
 		logger:            l.WithName("GOS"),
-		hub:               nil,
 		cancelableSignal:  newCancelableSignal(context.Background()),
 	}
 
-	return app
+	return app, nil
 }
 
 func (gos *app[OUT]) WithMiddlewares(middlewares ...middlewaremanager.Middleware) *app[OUT] {
@@ -66,12 +160,11 @@ func (gos *app[OUT]) WithMiddlewares(middlewares ...middlewaremanager.Middleware
 	return gos
 }
 
-func (gos *app[OUT]) WithPipelines(pipelines ...pipelinemanager.IPipeline[OUT]) *app[OUT] {
+func (gos *app[OUT]) WithPipelines(pipelines ...engine.IPipeline[OUT]) *app[OUT] {
 	gos.PipelineManager.Add(pipelines...)
 	return gos
 }
 
-// registers a function to be called when the engine is shutting down
 func (gos *app[OUT]) WithOnEngineShutdown(onShutdown ...func()) *app[OUT] {
 	for _, fn := range onShutdown {
 		gos.Engine.WithOnShutdown(fn)
@@ -79,34 +172,15 @@ func (gos *app[OUT]) WithOnEngineShutdown(onShutdown ...func()) *app[OUT] {
 	return gos
 }
 
-// deprecated: use WithMiddlewares, WithPipelines and WithOnShutdown
-// kept for backward compatibility and to be removed in future versions
-func (gos *app[OUT]) Setup(
-	middlewares []middlewaremanager.Middleware,
-	pipelines []pipelinemanager.IPipeline[OUT],
-	onShutdown ...func(),
-) *app[OUT] {
-	gos.logger.Infof("Initializing engine with %d middlewares and %d pipelines", len(middlewares), len(pipelines))
-	gos.MiddlewareManager.Add(middlewares...)
-	gos.PipelineManager.Add(pipelines...)
-	for _, fn := range onShutdown {
-		gos.Engine.WithOnShutdown(fn)
-	}
-	return gos
-}
-
-func (gos *app[OUT]) WithStatsRecorderFactory(factory ts.IStatsRecorderFactory) *app[OUT] {
-	if gos.Scheduler != nil && factory != nil {
-		gos.Scheduler.WithStatsRecorderFactory(factory)
-	}
-	return gos
-}
-
 func (gos *app[OUT]) WithLogger(loggerIn core.IConfigurableLogger) *app[OUT] {
 	loggerIn = logger.EnsureLogger(loggerIn).(core.IConfigurableLogger)
 	gos.logger = loggerIn.WithName("GOS")
-	gos.Engine.WithLogger(loggerIn)
+	gos.Engine.WithLogger(gos.logger.WithName("Engine"))
 	return gos
+}
+
+func (gos *app[OUT]) RegisterSpider(spider any) {
+	gos.Engine.RegisterSpider(spider)
 }
 
 func (gos *app[OUT]) WithTelemetry(hub *ts.TelemetryHub, optFuncs ...types.OptFunc[ts.TelemetryHubOpts]) *app[OUT] {
