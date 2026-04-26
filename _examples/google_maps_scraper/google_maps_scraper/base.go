@@ -12,7 +12,7 @@ type Spider struct {
 
 // New initializes the spider with the new v0.20.1 pattern.
 func New(ctx context.Context) *Spider {
-	app := gos.NewApp[*Record]().
+	app, _ := gos.New[*Record]()
 		WithMiddlewares(MIDDLEWARES...).
 		WithPipelines(PIPELINES...)
 

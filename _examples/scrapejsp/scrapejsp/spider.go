@@ -11,11 +11,8 @@ import (
 
 // This is the entrypoint to the spider
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
-
-	req := s.Request(ctx)
+	req := s.Request(ctx).Url("https://jsonplaceholder.typicode.com/todos/1")
 	// req.Meta("JOB", job)
-	req.Url("https://jsonplaceholder.typicode.com/todos/1")
-
 	s.Parse(req, s.parse)
 }
 

@@ -14,8 +14,7 @@ func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 		Browser: middlewares.BrowserFirefox,
 		Proxy:   "http://user:pass@myproxy.com:8080",
 	})
-	req := s.Request(ctx)
-	req.Url("https://tls.peet.ws/api/all")
+	req := s.Request(ctx).Url("https://tls.peet.ws/api/all")
 	s.Parse(req, s.parse)
 }
 

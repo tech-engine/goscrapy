@@ -11,7 +11,7 @@ type Spider struct {
 }
 
 func New(ctx context.Context) *Spider {
-	app := gos.NewApp[*Record]().
+	app, _ := gos.New[*Record]()
 		WithMiddlewares(MIDDLEWARES...).
 		WithPipelines(PIPELINES...)
 

@@ -15,7 +15,7 @@ type Spider struct {
 
 // New initializes the spider with optional TUI and stats collection enabled.
 func New(ctx context.Context, tuiEnabled bool) *Spider {
-	app := gos.NewApp[*Record]().
+	app, _ := gos.New[*Record]()
 		WithMiddlewares(MIDDLEWARES...).
 		WithPipelines(PIPELINES...)
 

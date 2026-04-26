@@ -3,6 +3,7 @@ package books_to_scrape
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -10,13 +11,10 @@ import (
 )
 
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
-
 	// for each request we must call NewRequest() and never reuse it
-	req := s.Request(ctx)
+	req := s.Request(ctx).Url(s.baseUrl)
 
 	// GET is the default method
-	req.Url(s.baseUrl)
-
 	s.Parse(req, s.parse)
 }
 
@@ -28,15 +26,12 @@ func (s *Spider) Close(ctx context.Context) {
 func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 	s.Logger().Infof("GET: %d %s", resp.StatusCode(), resp.Request().URL.String())
 	for _, productUrl := range resp.Css("article.product_pod h3 a").Attr("href") {
-		req := s.Request(ctx)
-
 		if strings.HasPrefix(productUrl, "catalogue/") {
 			productUrl = fmt.Sprintf("%s/%s", s.baseUrl, productUrl)
 		} else {
 			productUrl = fmt.Sprintf("%s/catalogue/%s", s.baseUrl, productUrl)
 		}
-
-		req.Url(productUrl)
+		req := s.Request(ctx).Url(productUrl)
 		s.Parse(req, s.parseProduct)
 		s.Logger().Infof("GET: %s", productUrl)
 	}
@@ -54,14 +49,13 @@ func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 		nextUrl = fmt.Sprintf("%s/catalogue/%s", s.baseUrl, nextUrls[0])
 	}
 
-	req := s.Request(ctx)
-	req.Url(nextUrl)
+	req := s.Request(ctx).Url(nextUrl)
 	s.Parse(req, s.parse)
 }
 
 func (s *Spider) parseProduct(ctx context.Context, resp core.IResponseReader) {
 	product := resp.Css("article.product_page")
-
+	
 	var title string
 	if titles := product.Css(".product_main h1").Text(); len(titles) > 0 {
 		title = titles[0]
