@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/tech-engine/goscrapy/internal/fsmap"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
@@ -31,8 +32,6 @@ func (m *MockExecutorAdapter) WithLogger(l core.ILogger) IExecutorAdapter {
 	args := m.Called(l)
 	return args.Get(0).(IExecutorAdapter)
 }
-
-
 
 // MockResponseWriter implements IResponseWriter
 type MockResponseWriter struct {
@@ -65,7 +64,8 @@ func (m *MockResponseWriter) WriteMeta(meta *fsmap.FixedSizeMap[string, any]) {
 
 func TestExecutor_Execute(t *testing.T) {
 	mockAdapter := new(MockExecutorAdapter)
-	exec := New(mockAdapter)
+	exec, err := New(&Config{Adapter: mockAdapter})
+	require.NoError(t, err)
 
 	u, _ := url.Parse("http://localhost")
 	ctx := context.Background()
@@ -82,13 +82,13 @@ func TestExecutor_Execute(t *testing.T) {
 	mockRes := new(MockResponseWriter)
 
 	mockAdapter.On("Do", mockRes, mock.MatchedBy(func(req *http.Request) bool {
-		return req.Method == "POST" && 
+		return req.Method == "POST" &&
 			req.URL.String() == "http://localhost" &&
 			req.Header.Get("User-Agent") == "test" &&
 			core.ExtractCtxValue(req.Context(), "GOSCookieJarKey") == "session1"
 	})).Return(nil)
 
-	err := exec.Execute(req, mockRes)
+	err = exec.Execute(req, mockRes)
 	assert.NoError(t, err)
 
 	mockAdapter.AssertExpectations(t)
