@@ -10,10 +10,13 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/logger"
+	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 )
 
 type Config struct {
 	Executor   IExecutor
+	Results    chan engine.IResult
+	QueueSize  int
 	Autoscaler struct {
 		MaxWorkers    uint32
 		MinWorkers    uint32
@@ -21,7 +24,46 @@ type Config struct {
 		ScalingWindow time.Duration
 		EMAAlpha      float32
 	}
-	Logger core.ILogger
+	Logger        core.ILogger
+	EnableMetrics bool
+}
+
+// WorkerPoolSnapshot is returned by the worker pool collector.
+type WorkerPoolSnapshot struct {
+	ActiveWorkers  int32
+	QueueDepth     int
+	QueueCapacity  int
+	TasksSubmitted uint64
+	TasksDropped   uint64
+}
+
+// poolMetrics groups telemetry only fields for the worker pool.
+type poolMetrics struct {
+	enabled        bool
+	tasksSubmitted atomic.Uint64
+	tasksDropped   atomic.Uint64
+}
+
+func (m *poolMetrics) recordSubmit() {
+	if m.enabled {
+		m.tasksSubmitted.Add(1)
+	}
+}
+
+func (m *poolMetrics) recordDrop() {
+	if m.enabled {
+		m.tasksDropped.Add(1)
+	}
+}
+
+func (m *poolMetrics) snapshot(activeWorkers int32, queueDepth, queueCap int) WorkerPoolSnapshot {
+	return WorkerPoolSnapshot{
+		ActiveWorkers:  activeWorkers,
+		QueueDepth:     queueDepth,
+		QueueCapacity:  queueCap,
+		TasksSubmitted: m.tasksSubmitted.Load(),
+		TasksDropped:   m.tasksDropped.Load(),
+	}
 }
 
 type workerPool struct {
@@ -35,6 +77,17 @@ type workerPool struct {
 	responsePool     sync.Pool
 	logger           core.ILogger
 	wg               sync.WaitGroup
+	metrics          poolMetrics
+}
+
+func (p *workerPool) Name() string { return "WorkerPool" }
+
+func (p *workerPool) Snapshot() ts.ComponentSnapshot {
+	return p.metrics.snapshot(
+		p.activeWorkers.Load(),
+		len(p.workerTaskBuffer),
+		cap(p.workerTaskBuffer),
+	)
 }
 
 func NewPool(config *Config) (engine.IWorkerPool, error) {
@@ -50,11 +103,23 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 		return nil, ErrExecutorRequired
 	}
 
+	// defaults
+	results := config.Results
+	if results == nil {
+		results = make(chan engine.IResult, 1000)
+	}
+
+	queueSize := config.QueueSize
+	if queueSize <= 0 {
+		queueSize = 1000
+	}
+
 	p := &workerPool{
 		executor:         config.Executor,
-		results:          make(chan engine.IResult, 1000),
-		workerTaskBuffer: make(chan *workTask, 1000),
-		logger:           config.Logger,
+		results:          results,
+		workerTaskBuffer: make(chan *workTask, queueSize),
+		logger:           logger.EnsureLogger(config.Logger).WithName("WorkerPool"),
+		metrics:          poolMetrics{enabled: config.EnableMetrics},
 	}
 
 	autoscalerConfig := &AutoscalerConfig{
@@ -114,7 +179,7 @@ func (p *workerPool) spawnWorker(ctx context.Context) {
 	id := uint16(p.lastWorkerID.Add(1))
 	p.activeWorkers.Add(1)
 
-	w := NewWorker(id, p.executor, p.workerTaskBuffer, p.results, &p.responsePool, &p.workerTaskPool, p.autoscaler.OnTaskDone)
+	w := NewWorker(id, p.executor, p.workerTaskBuffer, p.results, &p.responsePool, &p.workerTaskPool, p)
 
 	p.wg.Add(1)
 	go func() {
@@ -143,8 +208,10 @@ func (p *workerPool) Submit(req *core.Request, callbackName string, handle core.
 
 	select {
 	case p.workerTaskBuffer <- task:
+		p.metrics.recordSubmit()
 		return nil
 	default:
+		p.metrics.recordDrop()
 		task.req = nil
 		task.taskHandle = nil
 		p.workerTaskPool.Put(task)
