@@ -8,8 +8,6 @@ import (
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
-	"github.com/tech-engine/goscrapy/pkg/logger"
-	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 )
 
 type workTask struct {
@@ -28,25 +26,24 @@ type Worker struct {
 	ID               uint16
 	executor         IExecutor
 	workerTaskBuffer <-chan *workTask
-	workerTaskPool   *sync.Pool
 	results          chan<- engine.IResult
+	workerTaskPool   *sync.Pool
 	responsePool     *sync.Pool
-	stats            ts.IStatsRecorder
-	logger           core.ILogger
 	tracker          core.IActivityTracker
-	onTaskDone       func(time.Duration)
+	logger           core.ILogger
+	pool             *workerPool
 }
 
-func NewWorker(id uint16, executor IExecutor, workerTaskBuffer <-chan *workTask, results chan<- engine.IResult, responsePool *sync.Pool, taskPool *sync.Pool, onTaskDone func(time.Duration)) *Worker {
+func NewWorker(id uint16, executor IExecutor, workerTaskBuffer <-chan *workTask, results chan<- engine.IResult, responsePool *sync.Pool, taskPool *sync.Pool, pool *workerPool) *Worker {
 	return &Worker{
 		ID:               id,
 		executor:         executor,
 		workerTaskBuffer: workerTaskBuffer,
-		workerTaskPool:   taskPool,
 		results:          results,
 		responsePool:     responsePool,
-		onTaskDone:       onTaskDone,
-		logger:           logger.EnsureLogger(nil).WithName(fmt.Sprintf("Worker-%d", id)),
+		workerTaskPool:   taskPool,
+		pool:             pool,
+		logger:           pool.logger.WithName(fmt.Sprintf("Worker-%d", id)),
 	}
 }
 
@@ -64,7 +61,6 @@ func (w *Worker) Start(ctx context.Context) error {
 			}
 
 			wg.Add(1)
-			start := time.Now()
 
 			res := w.execute(ctx, task)
 
@@ -72,16 +68,15 @@ func (w *Worker) Start(ctx context.Context) error {
 			task.Reset()
 			w.workerTaskPool.Put(task)
 
-			select {
-			case w.results <- res:
-			case <-ctx.Done():
-				wg.Done()
-				return ctx.Err()
+			if w.results != nil {
+				select {
+				case w.results <- res:
+				case <-ctx.Done():
+					wg.Done()
+					return ctx.Err()
+				}
 			}
 
-			if w.onTaskDone != nil {
-				w.onTaskDone(time.Since(start))
-			}
 			wg.Done()
 		}
 	}
@@ -103,16 +98,17 @@ func (w *Worker) execute(ctx context.Context, task *workTask) engine.IResult {
 	// set our exec context
 	task.req.Ctx = execCtx
 
-	if w.stats != nil {
-		task.req.Ctx = ts.WithRecorder(execCtx, w.stats)
-	}
-
 	if w.tracker != nil {
 		w.tracker.Inc()
 		defer w.tracker.Dec()
 	}
 
+	start := time.Now()
 	err := w.executor.Execute(task.req, resp)
+
+	if w.pool.autoscaler != nil {
+		w.pool.autoscaler.OnTaskDone(time.Since(start))
+	}
 
 	// we transfer request meta to response so callbacks can access it
 	if task.req.Meta_ != nil {
