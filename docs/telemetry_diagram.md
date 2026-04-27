@@ -7,27 +7,34 @@ GoScrapy's telemetry system uses a decoupled, three-layer architecture to enable
 ```mermaid
 flowchart TD
     %% Collection Layer
-    subgraph Collection["Collection Layer (Concurrent)"]
-        W1[Worker 1] -->|Records| R1[IStatsRecorder]
-        W2[Worker 2] -->|Records| R2[IStatsRecorder]
-        W3[Component] -->|Records| R3[IStatsRecorder]
+    subgraph Collection ["Collection Layer (Non-Blocking)"]
+        direction LR
+        SM["Stats Middleware"]
+        SCH["Scheduler"]
+        WP["Worker Pool"]
+        PM["Pipeline Manager"]
     end
 
     %% Aggregation Layer
-    subgraph Aggregation["Aggregation Layer (Periodic)"]
-        R1 & R2 & R3 -.->|Injected via Context| Collector[IStatsCollector]
-        Collector -->|Snapshot| Hub[TelemetryHub]
+    subgraph Aggregation ["Aggregation Layer (Periodic)"]
+        Hub["Telemetry Hub"]
     end
 
     %% Exhibition Layer
-    subgraph Exhibition["Exhibition Layer (Broadcast)"]
-        Hub -->|GlobalSnapshot| Obs1[TUI Observer]
-        Hub -->|GlobalSnapshot| Obs2[External Observer]
+    subgraph Exhibition ["Exhibition Layer (Broadcast)"]
+        Obs["Observers (TUI/Logs)"]
     end
 
-    style Collection fill:#f9f,stroke:#333,stroke-width:2px
-    style Aggregation fill:#bbf,stroke:#333,stroke-width:2px
-    style Exhibition fill:#dfd,stroke:#333,stroke-width:2px
+    %% Connections
+    SM -.->|"Snapshot()"| Hub
+    SCH -.->|"Snapshot()"| Hub
+    WP -.->|"Snapshot()"| Hub
+    PM -.->|"Snapshot()"| Hub
+    Hub -->|"GlobalSnapshot"| Obs
+
+    style Collection fill:#FFDFD3,stroke:#E27D60,stroke-width:2px
+    style Aggregation fill:#B5D4F4,stroke:#185FA5,stroke-width:2px
+    style Exhibition fill:#C0DD97,stroke:#3B6D11,stroke-width:2px
 ```
 
 ## Telemetry Flow Sequence
@@ -36,33 +43,28 @@ The following sequence highlights the decoupling between the high-speed recordin
 
 ```mermaid
 sequenceDiagram
-    participant Worker as Crawler Worker
-    participant Context as context.Context
-    participant Collector as Aggregator (Collector)
+    participant Components as Engine Components (Middleware/Scheduler/etc.)
     participant Hub as TelemetryHub
-    participant Observer as IStatsObserver (TUI/Exposers)
+    participant Observer as Observer (TUI)
 
-    Note over Worker, Collector: Collection Phase (Hot-Path)
-    Worker->>Context: FromContext(ctx)
-    Context-->>Worker: IStatsRecorder
-    Worker->>Worker: Execute Request
-    Worker->>Collector: AddBytes(n) / AddSample(lat)
+    Note over Components: Collection Phase (Non-Blocking)
+    Components->>Components: Update internal atomic counters during execution
     
     Note over Hub, Observer: Broadcast Phase (Ticker: 500ms)
     loop Every Interval
-        Hub->>Collector: Snapshot()
-        Collector-->>Hub: ComponentSnapshot
+        Hub->>Components: Snapshot()
+        Components-->>Hub: ComponentSnapshot
         Hub->>Hub: Build GlobalSnapshot
         Hub->>Observer: OnSnapshot(GlobalSnapshot)
-        Observer->>Observer: Update UI / Metrics
+        Observer->>Observer: Render UI
     end
 ```
 
 ## Component Roles
 
-| Interface | Role | Lifecycle |
+| Component | Role | Implementation |
 | :--- | :--- | :--- |
-| **IStatsRecorder** | Captures individual events (bytes, duration). | Short-lived, per-request (via Context). |
-| **IStatsCollector** | Aggregates recordings into a component-level state. | Long-lived, bound to Engine components. |
-| **TelemetryHub** | Orchestrates periodic polling and broadcasting. | Singleton, bound to Engine lifecycle. |
-| **IStatsObserver** | Consumes snapshots for visualization or export. | Pluggable (e.g., TUI, Prometheus). |
+| **Engine Components** | Maintain their own local metrics without a central bottleneck. | `sync/atomic` counters inside `Scheduler`, `WorkerPool`, `PipelineManager`, etc. |
+| **Stats Middleware** | Specifically captures HTTP request/response metrics (latency, status codes). | Pluggable middleware using atomic variables. |
+| **TelemetryHub** | Orchestrates periodic polling of all registered components. | Background loop with a Go `time.Ticker`. |
+| **IStatsObserver** | Consumes aggregated snapshots for visualization or export. | TUI (bubbletea) dashboard or standard logging. |
