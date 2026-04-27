@@ -82,12 +82,14 @@ func New[OUT any](config *Config[OUT]) (*Engine[OUT], error) {
 	}
 
 	engine.logger.Debugf("Engine created at %p", engine)
+
+	// wire up activity tracking to signals
+	engine.signals.Connect(signal.ItemScraped, func(ctx context.Context, item any) { engine.Dec() })
+	engine.signals.Connect(signal.ItemDropped, func(ctx context.Context, item any, err error) { engine.Dec() })
+	engine.signals.Connect(signal.ItemError, func(ctx context.Context, item any, err error) { engine.Dec() })
+
 	return engine, nil
 }
-
-// func (m *Engine[OUT]) WithShutdownTimeout(timeout time.Duration) {
-// 	m.opts.shutdownTimeout = timeout
-// }
 
 func (m *Engine[OUT]) Start(ctx context.Context) error {
 	if m.started.Swap(true) {
