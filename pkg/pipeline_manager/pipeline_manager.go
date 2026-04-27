@@ -2,6 +2,7 @@ package pipelinemanager
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strconv"
 	"sync"
@@ -10,6 +11,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/logger"
+	"github.com/tech-engine/goscrapy/pkg/signal"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -18,6 +20,7 @@ type Config struct {
 	OutputQueueBuffSize       uint64
 	MaxProcessItemConcurrency uint64
 	Logger                    core.ILogger
+	Signals                   *signal.Bus
 }
 
 func DefaultConfig() *Config {
@@ -55,6 +58,7 @@ type PipelineManager[OUT any] struct {
 	logger                    core.ILogger
 	tracker                   core.IActivityTracker
 	maxProcessItemConcurrency uint64
+	signals                   *signal.Bus
 }
 
 func New[OUT any](config *Config) *PipelineManager[OUT] {
@@ -71,6 +75,7 @@ func New[OUT any](config *Config) *PipelineManager[OUT] {
 		pipelines:                 make([]engine.IPipeline[OUT], 0),
 		logger:                    config.Logger,
 		maxProcessItemConcurrency: config.MaxProcessItemConcurrency,
+		signals:                   config.Signals,
 	}
 
 	pm.itemPool.New = func() any {
@@ -210,10 +215,23 @@ func (pm *PipelineManager[OUT]) processItem(original core.IOutput[OUT]) {
 
 		// we check if pipeline is a group by checking
 		if err = pipeline.ProcessItem(engine.IPipelineItem(pItem), original); err != nil {
-			pm.logger.Errorf("Pipeline error: %v", err)
+			if errors.Is(err, engine.ErrDropItem) {
+				pm.logger.Infof("Item dropped by pipeline: %v", err)
+				if pm.signals != nil {
+					pm.signals.EmitItemDropped(context.Background(), original.Record(), err)
+				}
+			} else {
+				pm.logger.Errorf("Pipeline error: %v", err)
+				if pm.signals != nil {
+					pm.signals.EmitItemError(context.Background(), original.Record(), err)
+				}
+			}
 			return
 		}
 	}
 
+	if pm.signals != nil {
+		pm.signals.EmitItemScraped(context.Background(), original.Record())
+	}
 	pm.logger.Debug("Item processed successfully")
 }
