@@ -181,6 +181,9 @@ func (m *Engine[OUT]) handleResult(ctx context.Context, res IResult) {
 
 	if res.Error() != nil {
 		m.logger.Errorf("request failed: %v", res.Error())
+		if m.signals != nil {
+			m.signals.EmitSpiderError(ctx, res.Error())
+		}
 		return
 	}
 
