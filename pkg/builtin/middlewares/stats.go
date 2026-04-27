@@ -50,9 +50,7 @@ type StatsCollector struct {
 	tlsCount  atomic.Uint64
 	ttfbCount atomic.Uint64
 
-	// to track each worker StatsCollector
-	workerMu sync.Mutex
-	workers  []*StatsCollector
+
 }
 
 type bodyCounter struct {
@@ -152,15 +150,7 @@ func (s *StatsCollector) AddSample(metric string, d time.Duration) {
 	}
 }
 
-func (s *StatsCollector) NewStatsRecorder() ts.IStatsRecorder {
-	w := &StatsCollector{
-		startTime: s.startTime,
-	}
-	s.workerMu.Lock()
-	s.workers = append(s.workers, w)
-	s.workerMu.Unlock()
-	return w
-}
+
 
 func (s *StatsCollector) Name() string {
 	return "http"
@@ -187,40 +177,17 @@ func (s *StatsCollector) Snapshot() ts.ComponentSnapshot {
 		return true
 	})
 
-	// merge worker counters without destroying them
-	s.workerMu.Lock()
-	var (
-		aggTLSCount  uint64
-		aggTLSSum    int64
-		aggTTFBCount uint64
-		aggTTFBSum   int64
-	)
-	for _, w := range s.workers {
-		snap.TotalRequests += w.totalCount.Load()
-		snap.TotalDuration += time.Duration(w.totalDuration.Load())
-		snap.TotalBytes += w.totalBytes.Load()
 
-		aggTLSCount += w.tlsCount.Load()
-		aggTLSSum += w.tlsSum.Load()
-		aggTTFBCount += w.ttfbCount.Load()
-		aggTTFBSum += w.ttfbSum.Load()
 
-		w.statusCodes.Range(func(key, value any) bool {
-			snap.StatusCodes[key.(int)] += value.(*atomic.Uint64).Load()
-			return true
-		})
-	}
-	s.workerMu.Unlock()
-
-	// calculate averages from combined running sums
-	totalTLSCount := s.tlsCount.Load() + aggTLSCount
-	totalTLSSum := s.tlsSum.Load() + aggTLSSum
+	// calculate averages from running sums
+	totalTLSCount := s.tlsCount.Load()
+	totalTLSSum := s.tlsSum.Load()
 	if totalTLSCount > 0 {
 		snap.AvgTLS = time.Duration(totalTLSSum) / time.Duration(totalTLSCount)
 	}
 
-	totalTTFBCount := s.ttfbCount.Load() + aggTTFBCount
-	totalTTFBSum := s.ttfbSum.Load() + aggTTFBSum
+	totalTTFBCount := s.ttfbCount.Load()
+	totalTTFBSum := s.ttfbSum.Load()
 	if totalTTFBCount > 0 {
 		snap.AvgLatency = time.Duration(totalTTFBSum) / time.Duration(totalTTFBCount)
 	}
