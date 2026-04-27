@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
-	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
+	"github.com/tech-engine/goscrapy/pkg/engine"
 )
 
 type {{.}}[OUT any] struct {
@@ -26,7 +26,7 @@ func (p *{{.}}[OUT]) Close() {
 }
 
 // your custome pipeline processing code goes here
-func (p *{{.}}[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
+func (p *{{.}}[OUT]) ProcessItem(item engine.IPipelineItem, original core.IOutput[OUT]) error {
 
 	// original is the output yield from spider
 	// original.Job()       	- access Job

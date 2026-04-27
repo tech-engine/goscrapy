@@ -6,6 +6,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/builtin/middlewares"
 	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines/csv"
 	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines/json"
+	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 )
@@ -14,8 +15,9 @@ import (
 // Options: DEBUG, INFO, WARN, ERROR, NONE
 const GOS_LOG_LEVEL = "INFO"
 
-// To enable stats collection, uncomment the following line and the Stats middleware below
-// var HttpStats = middlewares.NewStatsCollector()
+// To enable stats collection, uncomment the Stats middleware below.
+// The HttpStats object will automatically record metrics globally.
+var HttpStats = middlewares.NewStatsCollector()
 
 // HTTP Transport settings
 
@@ -42,22 +44,13 @@ const MIDDLEWARE_HTTP_RETRY_CODES = ""
 // Default: 1s
 const MIDDLEWARE_HTTP_RETRY_BASE_DELAY = ""
 
-// Default: 50000
-const SCHEDULER_REQ_RES_POOL_SIZE = ""
-
 // Default: num of CPU * 30
 const SCHEDULER_CONCURRENCY = ""
 
-// Default: 100000
-const SCHEDULER_WORK_QUEUE_SIZE = ""
-
-// Pipeline Manager settings
-
-// Default: 10000
-const PIPELINEMANAGER_ITEMPOOL_SIZE = ""
 
 // Default: 24
 const PIPELINEMANAGER_ITEM_SIZE = ""
+
 
 // Default: 5000
 const PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE = ""
@@ -94,7 +87,7 @@ var export2CSV = csv.New[*Record](csv.Options{
 
 // Pipelines here
 // Executed in the order they appear.
-var PIPELINES = []pm.IPipeline[*Record]{
+var PIPELINES = []engine.IPipeline[*Record]{
 	export2CSV,
 	// export2Json,
 	// myCustomPipelineGroup(),
@@ -110,13 +103,11 @@ func init() {
 		"MIDDLEWARE_HTTP_RETRY_MAX_RETRIES":            MIDDLEWARE_HTTP_RETRY_MAX_RETRIES,
 		"MIDDLEWARE_HTTP_RETRY_CODES":                  MIDDLEWARE_HTTP_RETRY_CODES,
 		"MIDDLEWARE_HTTP_RETRY_BASE_DELAY":             MIDDLEWARE_HTTP_RETRY_BASE_DELAY,
-		"SCHEDULER_REQ_RES_POOL_SIZE":                  SCHEDULER_REQ_RES_POOL_SIZE,
 		"SCHEDULER_CONCURRENCY":                        SCHEDULER_CONCURRENCY,
-		"SCHEDULER_WORK_QUEUE_SIZE":                    SCHEDULER_WORK_QUEUE_SIZE,
-		"PIPELINEMANAGER_ITEMPOOL_SIZE":                PIPELINEMANAGER_ITEMPOOL_SIZE,
 		"PIPELINEMANAGER_ITEM_SIZE":                    PIPELINEMANAGER_ITEM_SIZE,
 		"PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE":        PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE,
 		"PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY": PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY,
+
 	}
 
 	for key, value := range settings {

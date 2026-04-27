@@ -10,31 +10,25 @@ type Spider struct {
 	gos.ICoreSpider[*Record]
 }
 
-// New initializes the spider with minimal setup (no TUI, no stats collection).
-func New(ctx context.Context) *Spider {
-	app := gos.New[*Record]().
-		WithMiddlewares(MIDDLEWARES...).
-		WithPipelines(PIPELINES...)
+// New initializes the spider with minimal setup.
+func New(ctx context.Context) (*Spider, error) {
+	app, err := gos.New[*Record]()
+	if err != nil {
+		return nil, err
+	}
 
-	// To enable stats collection & TUI, uncomment the following:
-	// hub := ts.NewTelemetryHub()
-	// hub.AddCollector(HttpStats)
-	//
-	// dashboard := tui.New(app.Logger())
-	// hub.AddObserver(dashboard)
-	//
-	// app.WithStatsRecorderFactory(HttpStats).
-	// 	WithTelemetry(hub).
-	// 	WithOnEngineShutdown(func() { HttpStats.Print() })
+	app.WithMiddlewares(MIDDLEWARES...).
+		WithPipelines(PIPELINES...)
 
 	spider := &Spider{
 		ICoreSpider: app,
 	}
 
+	app.RegisterSpider(spider)
+
 	go func() {
 		_ = app.Start(ctx)
-		spider.Close(ctx)
 	}()
 
-	return spider
+	return spider, nil
 }
