@@ -28,7 +28,6 @@ type IEngine[OUT any] interface {
 	RegisterSpider(any) error
 	ActiveCount() int64
 	WithLogger(ILogger) IEngine[OUT]
-	WithOnShutdown(func()) IEngine[OUT]
 }
 
 type IResponseReader interface {

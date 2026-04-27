@@ -11,6 +11,7 @@ import (
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/logger"
+	"github.com/tech-engine/goscrapy/pkg/signal"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -20,6 +21,7 @@ type Config[OUT any] struct {
 	PipelineManager  IPipelineManager[OUT]
 	CallbackRegistry ICallbackRegistry
 	Logger           core.ILogger
+	Signals          *signal.Bus
 	shutdownTimeout  time.Duration
 }
 
@@ -32,7 +34,7 @@ type Engine[OUT any] struct {
 	logger           core.ILogger
 	activeCount      atomic.Int64
 	started          atomic.Bool
-	onShutdown       []func()
+	signals          *signal.Bus
 	cbNameCache      sync.Map
 }
 
@@ -65,6 +67,10 @@ func New[OUT any](config *Config[OUT]) (*Engine[OUT], error) {
 		config.Logger = logger.EnsureLogger(config.Logger).WithName("Engine")
 	}
 
+	if config.Signals == nil {
+		config.Signals = signal.New()
+	}
+
 	engine := &Engine[OUT]{
 		scheduler:        config.Scheduler,
 		workerPool:       config.WorkerPool,
@@ -72,6 +78,7 @@ func New[OUT any](config *Config[OUT]) (*Engine[OUT], error) {
 		callbackRegistry: config.CallbackRegistry,
 		shutdownTimeout:  config.shutdownTimeout,
 		logger:           config.Logger,
+		signals:          config.Signals,
 	}
 
 	return engine, nil
@@ -87,17 +94,12 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	}
 
 	m.logger.Infof("Engine starting...")
-
-	// wire up activity tracking
-	// m.scheduler.WithActivityTracker(m)
-	// m.pipelineManager.WithActivityTracker(m)
+	m.signals.EmitEngineStarted(ctx)
 
 	// run all shutdown hooks before returning
 	defer func() {
 		m.logger.Infof("Shutting down engine...")
-		for _, fn := range m.onShutdown {
-			fn()
-		}
+		m.signals.EmitEngineStopped(ctx)
 		m.logger.Infof("shutdown complete.")
 		m.started.Store(false)
 	}()
@@ -156,6 +158,12 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 func (m *Engine[OUT]) handleResult(ctx context.Context, res IResult) {
 	defer func() {
 		m.activeCount.Add(-1)
+		
+		// notify idle if all tasks are done
+		if m.activeCount.Load() == 0 && m.started.Load() {
+			m.signals.EmitSpiderIdle(ctx)
+		}
+
 		// acknowledge the task
 		m.scheduler.Ack(res.TaskHandle())
 		// release the result, cancels context and returns response to pool
@@ -219,6 +227,24 @@ func (m *Engine[OUT]) RegisterSpider(spider any) error {
 		}
 	}
 
+	// auto discover spider signals
+	if method, ok := t.MethodByName("Open"); ok {
+		m.signals.Connect(signal.SpiderOpened, v.Method(method.Index).Interface())
+		m.logger.Debugf("  -> auto-discovered signal: Open")
+	}
+	if method, ok := t.MethodByName("Idle"); ok {
+		m.signals.Connect(signal.SpiderIdle, v.Method(method.Index).Interface())
+		m.logger.Debugf("  -> auto-discovered signal: Idle")
+	}
+	if method, ok := t.MethodByName("Close"); ok {
+		m.signals.Connect(signal.SpiderClosed, v.Method(method.Index).Interface())
+		m.logger.Debugf("  -> auto-discovered signal: Close")
+	}
+	if method, ok := t.MethodByName("Error"); ok {
+		m.signals.Connect(signal.SpiderError, v.Method(method.Index).Interface())
+		m.logger.Debugf("  -> auto-discovered signal: Error")
+	}
+
 	if count == 0 {
 		return ErrNoCallbacksFound
 	}
@@ -249,7 +275,3 @@ func (m *Engine[OUT]) WithLogger(loggerIn core.ILogger) core.IEngine[OUT] {
 	return m
 }
 
-func (m *Engine[OUT]) WithOnShutdown(fn func()) core.IEngine[OUT] {
-	m.onShutdown = append(m.onShutdown, fn)
-	return m
-}
