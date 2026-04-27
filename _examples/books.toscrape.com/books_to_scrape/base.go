@@ -26,6 +26,8 @@ func New(ctx context.Context) (*Spider, error) {
 		baseUrl:     "https://books.toscrape.com",
 	}
 
+	app.RegisterSpider(spider)
+
 	go func() {
 		_ = app.Start(ctx)
 	}()

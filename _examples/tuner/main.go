@@ -74,6 +74,7 @@ func runBenchmark(concurrency, maxIdle, queueBuf string) float64 {
 	spider := &BenchSpider{
 		ICoreSpider: app,
 	}
+	app.RegisterSpider(spider)
 
 	go func() {
 		_ = app.Start(ctx)

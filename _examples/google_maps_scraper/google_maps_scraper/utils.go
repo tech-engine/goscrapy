@@ -3,7 +3,6 @@ package google_maps_scraper
 import (
 	"bytes"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"

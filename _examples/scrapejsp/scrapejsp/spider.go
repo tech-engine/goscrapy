@@ -9,10 +9,9 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-// This is the entrypoint to the spider
-func (s *Spider) StartRequest(ctx context.Context, job *Job) {
+// open is auto-called by goscrapy during engine startup
+func (s *Spider) Open(ctx context.Context) {
 	req := s.Request(ctx).Url("https://jsonplaceholder.typicode.com/todos/1")
-	// req.Meta("JOB", job)
 	s.Parse(req, s.parse)
 }
 

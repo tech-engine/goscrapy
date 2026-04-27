@@ -8,8 +8,8 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-// This is the entrypoint to the spider
-func (s *Spider) StartRequest(ctx context.Context, job *Job) {
+// open is auto-called by goscrapy during engine startup
+func (s *Spider) Open(ctx context.Context) {
 	ctx = middlewares.WithAzureTLSOptions(ctx, &middlewares.AzureTLSOptions{
 		Browser: middlewares.BrowserFirefox,
 		Proxy:   "http://user:pass@myproxy.com:8080",

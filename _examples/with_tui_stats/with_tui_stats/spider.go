@@ -9,7 +9,8 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-func (s *Spider) StartRequest(ctx context.Context, job *Job) {
+// open is auto-called by goscrapy during engine startup
+func (s *Spider) Open(ctx context.Context) {
 	// for each request we must call NewRequest() and never reuse it
 	req := s.Request(ctx).Url(s.baseUrl)
 

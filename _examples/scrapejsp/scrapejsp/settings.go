@@ -5,9 +5,10 @@ import (
 
 	"github.com/tech-engine/goscrapy/pkg/builtin/middlewares"
 	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines/csv"
+
 	// "github.com/tech-engine/goscrapy/pkg/builtin/pipelines/json"
+	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
-	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 )
 
 // Default: INFO
@@ -90,7 +91,7 @@ var export2CSV = csv.New[*Record](csv.Options{
 
 // Pipelines here
 // Executed in the order they appear.
-var PIPELINES = []pm.IPipeline[*Record]{
+var PIPELINES = []engine.IPipeline[*Record]{
 	export2CSV,
 	// export2Json,
 	// myCustomPipelineGroup(),

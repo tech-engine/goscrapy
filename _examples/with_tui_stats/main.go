@@ -20,8 +20,7 @@ func main() {
 		return
 	}
 
-	// start the scraper with a job, currently nil is passed but you can pass your job here
-	spider.StartRequest(ctx, nil)
+
 
 	fmt.Println("🕷️  GoScrapy spider is running. Press Ctrl+C to stop.")
 

@@ -29,12 +29,11 @@ func New(ctx context.Context, tuiEnabled bool) (*Spider, error) {
 		baseUrl:     "https://books.toscrape.com",
 	}
 
-	if tuiEnabled {
-		// Explicitly wire the user stats collector to framework engines
-		app.WithStatsRecorderFactory(HttpStats)
+	app.RegisterSpider(spider)
 
+	if tuiEnabled {
 		// Configure Telemetry
-		hub := ts.NewTelemetryHub()
+		hub := ts.NewTelemetryHub(nil)
 		hub.AddCollector(HttpStats)
 
 		app.AddSignal(signal.EngineStopped, func(ctx context.Context) {
@@ -45,7 +44,7 @@ func New(ctx context.Context, tuiEnabled bool) (*Spider, error) {
 
 		dashboard := tui.New(app.Logger())
 		hub.AddObserver(dashboard)
-		app.WithTelemetry(hub)
+		app.WithTelemetry(hub, nil)
 
 		go func() {
 			_ = gos.StartWithTUI(ctx, app, dashboard)
@@ -56,5 +55,5 @@ func New(ctx context.Context, tuiEnabled bool) (*Spider, error) {
 		}()
 	}
 
-	return spider
+	return spider, nil
 }

@@ -23,9 +23,11 @@ func New(ctx context.Context) (*Spider, error) {
 		ICoreSpider: app,
 	}
 
+	app.RegisterSpider(spider)
+
 	go func() {
 		_ = app.Start(ctx)
 	}()
 
-	return spider
+	return spider, nil
 }
