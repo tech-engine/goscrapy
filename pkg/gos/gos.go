@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"os/signal"
+	ossignal "os/signal"
 	"strconv"
 	"syscall"
 	"time"
@@ -18,6 +18,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 	pipelinemanager "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 	"github.com/tech-engine/goscrapy/pkg/scheduler"
+	"github.com/tech-engine/goscrapy/pkg/signal"
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 	"github.com/tech-engine/goscrapy/pkg/worker"
 )
@@ -45,6 +46,7 @@ type app[OUT any] struct {
 	logger            core.ILogger
 	hub               *ts.TelemetryHub
 	cancelableSignal  *cancelableSignal
+	signals           *signal.Bus
 	lastErr           error
 }
 
@@ -134,11 +136,15 @@ func New[OUT any](configs ...*Config) (*app[OUT], error) {
 	pm := pipelinemanager.New[OUT](pmCfg)
 
 	// create our engine
-	eng, err := engine.New(&engine.Config[OUT]{
+	appSignals := signal.New()
+	engCfg := &engine.Config[OUT]{
 		Scheduler:       sched,
 		WorkerPool:      pool,
 		PipelineManager: pm,
-	})
+		Signals:         appSignals,
+	}
+
+	eng, err := engine.New(engCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -154,6 +160,7 @@ func New[OUT any](configs ...*Config) (*app[OUT], error) {
 		Executor:          exec,
 		logger:            l.WithName("GOS"),
 		cancelableSignal:  newCancelableSignal(context.Background()),
+		signals:           appSignals,
 	}
 
 	return app, nil
@@ -169,10 +176,8 @@ func (gos *app[OUT]) WithPipelines(pipelines ...engine.IPipeline[OUT]) *app[OUT]
 	return gos
 }
 
-func (gos *app[OUT]) WithOnEngineShutdown(onShutdown ...func()) *app[OUT] {
-	for _, fn := range onShutdown {
-		gos.Engine.WithOnShutdown(fn)
-	}
+func (gos *app[OUT]) AddSignal(sig signal.Type, h any) *app[OUT] {
+	gos.signals.Connect(sig, h)
 	return gos
 }
 
@@ -201,9 +206,6 @@ func (gos *app[OUT]) Logger() core.ILogger {
 }
 
 func (gos *app[OUT]) Start(ctx context.Context) error {
-	// Bridge the external context to the internal lifecycle
-	// We do this instead of creating a child context to prevent
-	// a race condition between Start and Wait.
 	stop := context.AfterFunc(ctx, func() {
 		gos.cancelableSignal.cancel()
 	})
@@ -224,28 +226,16 @@ func (gos *app[OUT]) Start(ctx context.Context) error {
 // shut down automatically when all work is finished.
 func (gos *app[OUT]) Wait(autoExit ...bool) error {
 	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	ossignal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	if len(autoExit) > 0 && autoExit[0] {
-		// start auto exit monitor
-		go func() {
-			// wait for initial start
-			time.Sleep(500 * time.Millisecond)
-			ticker := time.NewTicker(200 * time.Millisecond)
-			defer func() {
-				if gos.cancelableSignal != nil {
-					gos.cancelableSignal.cancel()
-				}
-				ticker.Stop()
-			}()
-
-			for range ticker.C {
-				if gos.Engine.ActiveCount() <= 0 {
-					gos.logger.Info("✅ Scraping complete. Automatic shutdown initiated.")
-					return
-				}
+		// auto exit when idle
+		gos.AddSignal(signal.SpiderIdle, func(ctx context.Context) {
+			gos.logger.Info("✅ Scraping complete. Automatic shutdown initiated.")
+			if gos.cancelableSignal != nil {
+				gos.cancelableSignal.cancel()
 			}
-		}()
+		})
 	} else {
 		gos.logger.Info("🕷️  GoScrapy spider is running. Press Ctrl+C to stop.")
 	}
