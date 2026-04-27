@@ -28,7 +28,6 @@ func New(ctx context.Context) (*Spider, error) {
 
 	go func() {
 		_ = app.Start(ctx)
-		spider.Close(ctx)
 	}()
 
 	return spider, nil

@@ -14,7 +14,11 @@ func main() {
 	defer cancel()
 
 	// start spider
-	spider := scrapejsp.New(ctx)
+	spider, err := scrapejsp.New(ctx)
+	if err != nil {
+		fmt.Printf("❌ Failed to create spider: %v\n", err)
+		return
+	}
 
 	// start the scraper with a job, currently nil is passed but you can pass your job here
 	spider.StartRequest(ctx, nil)

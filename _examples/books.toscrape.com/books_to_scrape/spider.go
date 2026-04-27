@@ -3,7 +3,6 @@ package books_to_scrape
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"regexp"
 	"strings"
 
@@ -25,7 +24,9 @@ func (s *Spider) Close(ctx context.Context) {
 
 func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 	s.Logger().Infof("GET: %d %s", resp.StatusCode(), resp.Request().URL.String())
-	for _, productUrl := range resp.Css("article.product_pod h3 a").Attr("href") {
+	productUrls := resp.Css("article.product_pod h3 a").Attr("href")
+	s.Logger().Debugf("Found %d product URLs", len(productUrls))
+	for _, productUrl := range productUrls {
 		if strings.HasPrefix(productUrl, "catalogue/") {
 			productUrl = fmt.Sprintf("%s/%s", s.baseUrl, productUrl)
 		} else {
@@ -37,25 +38,19 @@ func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 	}
 
 	// pagination
-	nextUrls := resp.Css("li.next a").Attr("href")
-
-	if len(nextUrls) <= 0 {
-		return
+	nextPage := resp.Css("li.next a").Attr("href")
+	if len(nextPage) > 0 {
+		nextPageUrl := fmt.Sprintf("%s/%s", s.baseUrl, nextPage[0])
+		if !strings.Contains(nextPage[0], "catalogue/") {
+			nextPageUrl = fmt.Sprintf("%s/catalogue/%s", s.baseUrl, nextPage[0])
+		}
+		s.Parse(s.Request(ctx).Url(nextPageUrl), s.parse)
 	}
-
-	nextUrl := fmt.Sprintf("%s/%s", s.baseUrl, nextUrls[0])
-
-	if !strings.HasPrefix(nextUrls[0], "catalogue/") {
-		nextUrl = fmt.Sprintf("%s/catalogue/%s", s.baseUrl, nextUrls[0])
-	}
-
-	req := s.Request(ctx).Url(nextUrl)
-	s.Parse(req, s.parse)
 }
 
 func (s *Spider) parseProduct(ctx context.Context, resp core.IResponseReader) {
 	product := resp.Css("article.product_page")
-	
+
 	var title string
 	if titles := product.Css(".product_main h1").Text(); len(titles) > 0 {
 		title = titles[0]

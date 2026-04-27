@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/tech-engine/goscrapy/pkg/gos"
+	"github.com/tech-engine/goscrapy/pkg/signal"
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 	"github.com/tech-engine/goscrapy/pkg/tui"
 )
@@ -14,9 +15,13 @@ type Spider struct {
 }
 
 // New initializes the spider with optional TUI and stats collection enabled.
-func New(ctx context.Context, tuiEnabled bool) *Spider {
-	app, _ := gos.New[*Record]()
-		WithMiddlewares(MIDDLEWARES...).
+func New(ctx context.Context, tuiEnabled bool) (*Spider, error) {
+	app, err := gos.New[*Record]()
+	if err != nil {
+		return nil, err
+	}
+
+	app.WithMiddlewares(MIDDLEWARES...).
 		WithPipelines(PIPELINES...)
 
 	spider := &Spider{
@@ -32,7 +37,7 @@ func New(ctx context.Context, tuiEnabled bool) *Spider {
 		hub := ts.NewTelemetryHub()
 		hub.AddCollector(HttpStats)
 
-		app.WithOnEngineShutdown(func() {
+		app.AddSignal(signal.EngineStopped, func(ctx context.Context) {
 			// Output stats cleanly at the end
 			// We can have any other cleanup code here
 			HttpStats.Print()
@@ -44,12 +49,10 @@ func New(ctx context.Context, tuiEnabled bool) *Spider {
 
 		go func() {
 			_ = gos.StartWithTUI(ctx, app, dashboard)
-			spider.Close(ctx) // Optional finalizer for spider
 		}()
 	} else {
 		go func() {
 			_ = app.Start(ctx)
-			spider.Close(ctx) // Optional finalizer for spider
 		}()
 	}
 

@@ -11,9 +11,13 @@ type Spider struct {
 }
 
 // New initializes the spider with the new v0.20.1 pattern.
-func New(ctx context.Context) *Spider {
-	app, _ := gos.New[*Record]()
-		WithMiddlewares(MIDDLEWARES...).
+func New(ctx context.Context) (*Spider, error) {
+	app, err := gos.New[*Record]()
+	if err != nil {
+		return nil, err
+	}
+
+	app.WithMiddlewares(MIDDLEWARES...).
 		WithPipelines(PIPELINES...)
 
 	spider := &Spider{
@@ -22,7 +26,6 @@ func New(ctx context.Context) *Spider {
 
 	go func() {
 		_ = app.Start(ctx)
-		spider.Close(ctx)
 	}()
 
 	return spider
