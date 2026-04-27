@@ -115,6 +115,14 @@ func (w *Worker) execute(ctx context.Context, task *workTask) engine.IResult {
 		resp.WriteMeta(task.req.Meta_)
 	}
 
+	if w.pool.signals != nil {
+		if err != nil {
+			w.pool.signals.EmitRequestError(context.Background(), task.req, err)
+		} else {
+			w.pool.signals.EmitResponseReceived(context.Background(), resp)
+		}
+	}
+
 	return &result{
 		request:      task.req,
 		response:     resp,

@@ -10,6 +10,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/logger"
+	"github.com/tech-engine/goscrapy/pkg/signal"
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 )
 
@@ -26,6 +27,7 @@ type Config struct {
 	}
 	Logger        core.ILogger
 	EnableMetrics bool
+	Signals       *signal.Bus
 }
 
 // WorkerPoolSnapshot is returned by the worker pool collector.
@@ -78,6 +80,7 @@ type workerPool struct {
 	logger           core.ILogger
 	wg               sync.WaitGroup
 	metrics          poolMetrics
+	signals          *signal.Bus
 }
 
 func (p *workerPool) Name() string { return "WorkerPool" }
@@ -120,6 +123,7 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 		workerTaskBuffer: make(chan *workTask, queueSize),
 		logger:           logger.EnsureLogger(config.Logger).WithName("WorkerPool"),
 		metrics:          poolMetrics{enabled: config.EnableMetrics},
+		signals:          config.Signals,
 	}
 
 	autoscalerConfig := &AutoscalerConfig{
@@ -209,9 +213,15 @@ func (p *workerPool) Submit(req *core.Request, callbackName string, handle core.
 	select {
 	case p.workerTaskBuffer <- task:
 		p.metrics.recordSubmit()
+		if p.signals != nil {
+			p.signals.EmitRequestScheduled(context.Background(), req)
+		}
 		return nil
 	default:
 		p.metrics.recordDrop()
+		if p.signals != nil {
+			p.signals.EmitRequestDropped(context.Background(), req, ErrWorkerPoolFull)
+		}
 		task.req = nil
 		task.taskHandle = nil
 		p.workerTaskPool.Put(task)
