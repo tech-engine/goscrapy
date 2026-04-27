@@ -100,6 +100,7 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	m.logger.Infof("Engine starting...")
 	m.signals.EmitEngineStarted(ctx)
 
+
 	// run all shutdown hooks before returning
 	defer func() {
 		m.logger.Infof("Shutting down engine...")
@@ -114,6 +115,10 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	g.Go(func() error { return m.pipelineManager.Start(gCtx) })
 	g.Go(func() error { return m.scheduler.Start(gCtx) })
 	g.Go(func() error { return m.workerPool.Start(gCtx) })
+
+	// open all registered spiders
+	m.signals.EmitSpiderOpened(gCtx)
+
 
 	// result handler pool
 	const resultHandlers = 4
