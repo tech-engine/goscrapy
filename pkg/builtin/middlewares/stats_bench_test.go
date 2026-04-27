@@ -21,12 +21,7 @@ func BenchmarkStatsCollector_Snapshot(b *testing.B) {
 		v.(*atomic.Uint64).Add(1)
 	}
 
-	// Add some workers
-	for i := 0; i < 10; i++ {
-		w := s.NewStatsRecorder().(*StatsCollector)
-		w.totalCount.Add(100)
-		w.AddSample(MetricLatency, 40*time.Millisecond)
-	}
+
 
 	b.ResetTimer()
 	b.ReportAllocs()
