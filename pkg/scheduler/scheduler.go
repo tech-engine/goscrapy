@@ -43,7 +43,7 @@ func New(config *Config) (engine.IScheduler, error) {
 	}
 
 	if config.WorkQueueSize == 0 {
-		config.WorkQueueSize = 1000
+		config.WorkQueueSize = SCHEDULER_DEFAULT_WORK_QUEUE_SIZE
 	}
 
 	if config.TaskQueue == nil {
