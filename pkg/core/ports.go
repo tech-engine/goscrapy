@@ -27,6 +27,7 @@ type IEngine[OUT any] interface {
 	Yield(IOutput[OUT])
 	RegisterSpider(any) error
 	ActiveCount() int64
+	IsStarted() bool
 	WithLogger(ILogger) IEngine[OUT]
 }
 
