@@ -22,7 +22,7 @@ type Config[OUT any] struct {
 	PipelineManager  IPipelineManager[OUT]
 	CallbackRegistry ICallbackRegistry
 	Logger           core.ILogger
-	Signals          *signal.Bus
+	Signals          *signal.Bus[OUT]
 	shutdownTimeout  time.Duration
 }
 
@@ -35,7 +35,7 @@ type Engine[OUT any] struct {
 	logger           core.ILogger
 	activeCount      atomic.Int64
 	started          atomic.Bool
-	signals          *signal.Bus
+	signals          *signal.Bus[OUT]
 	cbNameCache      sync.Map
 }
 
@@ -69,7 +69,7 @@ func New[OUT any](config *Config[OUT]) (*Engine[OUT], error) {
 	}
 
 	if config.Signals == nil {
-		config.Signals = signal.New()
+		config.Signals = signal.New[OUT]()
 	}
 
 	engine := &Engine[OUT]{
@@ -85,9 +85,9 @@ func New[OUT any](config *Config[OUT]) (*Engine[OUT], error) {
 	engine.logger.Debugf("Engine created at %p", engine)
 
 	// wire up activity tracking to signals
-	engine.signals.Connect(signal.ItemScraped, func(ctx context.Context, item any) { engine.Dec() })
-	engine.signals.Connect(signal.ItemDropped, func(ctx context.Context, item any, err error) { engine.Dec() })
-	engine.signals.Connect(signal.ItemError, func(ctx context.Context, item any, err error) { engine.Dec() })
+	engine.signals.OnItemScraped(func(ctx context.Context, item OUT) { engine.Dec() })
+	engine.signals.OnItemDropped(func(ctx context.Context, item OUT, err error) { engine.Dec() })
+	engine.signals.OnItemError(func(ctx context.Context, item OUT, err error) { engine.Dec() })
 
 	return engine, nil
 }
@@ -116,9 +116,10 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	g.Go(func() error { return m.scheduler.Start(gCtx) })
 	g.Go(func() error { return m.workerPool.Start(gCtx) })
 
-	// open all registered spiders
+	// track activity during open to prevent premature idle
+	m.activeCount.Add(1)
 	m.signals.EmitSpiderOpened(gCtx)
-
+	m.Dec()
 
 	// result handler pool
 	const resultHandlers = 4
@@ -241,25 +242,34 @@ func (m *Engine[OUT]) RegisterSpider(spider any) error {
 
 	// auto discover spider signals
 	if method, ok := t.MethodByName("Open"); ok {
-		m.signals.Connect(signal.SpiderOpened, v.Method(method.Index).Interface())
-		m.logger.Debugf("  -> auto-discovered signal: Open")
+		if fn, ok := v.Method(method.Index).Interface().(func(context.Context)); ok {
+			m.signals.OnSpiderOpened(fn)
+			m.logger.Debugf("  -> auto-discovered signal: Open")
+		}
 	}
 	if method, ok := t.MethodByName("Idle"); ok {
-		m.signals.Connect(signal.SpiderIdle, v.Method(method.Index).Interface())
-		m.logger.Debugf("  -> auto-discovered signal: Idle")
+		if fn, ok := v.Method(method.Index).Interface().(func(context.Context)); ok {
+			m.signals.OnSpiderIdle(fn)
+			m.logger.Debugf("  -> auto-discovered signal: Idle")
+		}
 	}
 	if method, ok := t.MethodByName("Close"); ok {
-		m.signals.Connect(signal.SpiderClosed, v.Method(method.Index).Interface())
-		m.logger.Debugf("  -> auto-discovered signal: Close")
+		if fn, ok := v.Method(method.Index).Interface().(func(context.Context)); ok {
+			m.signals.OnSpiderClosed(fn)
+			m.logger.Debugf("  -> auto-discovered signal: Close")
+		}
 	}
 	if method, ok := t.MethodByName("Error"); ok {
-		m.signals.Connect(signal.SpiderError, v.Method(method.Index).Interface())
-		m.logger.Debugf("  -> auto-discovered signal: Error")
+		if fn, ok := v.Method(method.Index).Interface().(func(context.Context, error)); ok {
+			m.signals.OnSpiderError(fn)
+			m.logger.Debugf("  -> auto-discovered signal: Error")
+		}
 	}
 
 	if count == 0 {
 		return ErrNoCallbacksFound
 	}
+
 
 	return nil
 }

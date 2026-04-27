@@ -15,16 +15,16 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type Config struct {
+type Config[OUT any] struct {
 	ItemSize                  uint64
 	OutputQueueBuffSize       uint64
 	MaxProcessItemConcurrency uint64
 	Logger                    core.ILogger
-	Signals                   *signal.Bus
+	Signals                   signal.ItemBus[OUT]
 }
 
-func DefaultConfig() *Config {
-	c := &Config{
+func DefaultConfig[OUT any]() *Config[OUT] {
+	c := &Config[OUT]{
 		ItemSize:                  PIPELINEMANAGER_ITEM_SIZE,
 		OutputQueueBuffSize:       PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE,
 		MaxProcessItemConcurrency: PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY,
@@ -57,12 +57,12 @@ type PipelineManager[OUT any] struct {
 	pipelines                 []engine.IPipeline[OUT]
 	logger                    core.ILogger
 	maxProcessItemConcurrency uint64
-	signals                   *signal.Bus
+	signals                   signal.ItemBus[OUT]
 }
 
-func New[OUT any](config *Config) *PipelineManager[OUT] {
+func New[OUT any](config *Config[OUT]) *PipelineManager[OUT] {
 	if config == nil {
-		config = DefaultConfig()
+		config = DefaultConfig[OUT]()
 	}
 
 	if config.Logger == nil {

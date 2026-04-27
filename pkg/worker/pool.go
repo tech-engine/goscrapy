@@ -27,7 +27,7 @@ type Config struct {
 	}
 	Logger        core.ILogger
 	EnableMetrics bool
-	Signals       *signal.Bus
+	Signals       signal.RequestBus
 }
 
 // WorkerPoolSnapshot is returned by the worker pool collector.
@@ -80,7 +80,7 @@ type workerPool struct {
 	logger           core.ILogger
 	wg               sync.WaitGroup
 	metrics          poolMetrics
-	signals          *signal.Bus
+	signals          signal.RequestBus
 }
 
 func (p *workerPool) Name() string { return "WorkerPool" }
