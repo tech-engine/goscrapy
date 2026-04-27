@@ -19,6 +19,7 @@ type TelemetryHub struct {
 	startTime  time.Time
 }
 
+// NewTelemetryHub returns a new telemetry hub
 func NewTelemetryHub(config *TelemetryHubConfig) *TelemetryHub {
 	cfg := TelemetryHubConfig{
 		Interval: 500 * time.Millisecond,
@@ -37,6 +38,7 @@ func NewTelemetryHub(config *TelemetryHubConfig) *TelemetryHub {
 	}
 }
 
+// AddCollector adds a new collector to the hub
 func (th *TelemetryHub) AddCollector(coll IStatsCollector) {
 	th.mu.Lock()
 	defer th.mu.Unlock()

@@ -12,6 +12,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 	"github.com/tech-engine/goscrapy/pkg/signal"
+
 	"golang.org/x/sync/errgroup"
 )
 
@@ -275,8 +276,10 @@ func (m *Engine[OUT]) checkIdle(ctx context.Context) {
 	}
 }
 
+// ActiveCount returns current number of active tasks
 func (m *Engine[OUT]) ActiveCount() int64 { return m.activeCount.Load() }
 
+// IsStarted returns true if the engine has started
 func (m *Engine[OUT]) IsStarted() bool { return m.started.Load() }
 
 func (m *Engine[OUT]) WithLogger(loggerIn core.ILogger) core.IEngine[OUT] {
@@ -284,4 +287,8 @@ func (m *Engine[OUT]) WithLogger(loggerIn core.ILogger) core.IEngine[OUT] {
 	m.logger = loggerIn.WithName("Engine")
 	return m
 }
+
+
+
+
 
