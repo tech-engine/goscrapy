@@ -6,6 +6,7 @@ import (
 	"os"
 	ossignal "os/signal"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -48,6 +49,7 @@ type app[OUT any] struct {
 	cancelableSignal  *cancelableSignal
 	signals           *signal.Bus
 	lastErr           error
+	wg                sync.WaitGroup
 }
 
 func New[OUT any](configs ...*Config) (*app[OUT], error) {
@@ -206,6 +208,9 @@ func (gos *app[OUT]) Logger() core.ILogger {
 }
 
 func (gos *app[OUT]) Start(ctx context.Context) error {
+	gos.wg.Add(1)
+	defer gos.wg.Done()
+
 	stop := context.AfterFunc(ctx, func() {
 		gos.cancelableSignal.cancel()
 	})
@@ -236,12 +241,20 @@ func (gos *app[OUT]) Wait(autoExit ...bool) error {
 				gos.cancelableSignal.cancel()
 			}
 		})
+
+		// check if idle to handle startup races
+		if gos.Engine.ActiveCount() == 0 && gos.Engine.IsStarted() {
+			if gos.cancelableSignal != nil {
+				gos.cancelableSignal.cancel()
+			}
+		}
 	} else {
 		gos.logger.Info("🕷️  GoScrapy spider is running. Press Ctrl+C to stop.")
 	}
 
 	select {
 	case <-gos.cancelableSignal.ctx.Done():
+		gos.wg.Wait()
 		return gos.lastErr
 	case sig := <-sigCh:
 		gos.logger.Infof("Received termination signal: %v", sig)
@@ -249,7 +262,7 @@ func (gos *app[OUT]) Wait(autoExit ...bool) error {
 			gos.cancelableSignal.cancel()
 		}
 		// Wait for engine to finish cleanup and set lastErr
-		<-gos.cancelableSignal.ctx.Done()
+		gos.wg.Wait()
 		return gos.lastErr
 	}
 }
