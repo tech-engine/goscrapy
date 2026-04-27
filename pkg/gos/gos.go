@@ -47,7 +47,7 @@ type app[OUT any] struct {
 	logger            core.ILogger
 	hub               *ts.TelemetryHub
 	cancelableSignal  *cancelableSignal
-	signals           *signal.Bus
+	signals           *signal.Bus[OUT]
 	lastErr           error
 	wg                sync.WaitGroup
 }
@@ -102,6 +102,9 @@ func New[OUT any](configs ...*Config) (*app[OUT], error) {
 		}
 	}
 
+	// create our engine signals
+	appSignals := signal.New[OUT]()
+
 	// create our scheduler
 	sched, err := scheduler.New(&scheduler.Config{
 		WorkQueueSize: queueSize,
@@ -124,7 +127,8 @@ func New[OUT any](configs ...*Config) (*app[OUT], error) {
 			MinWorkers: concurrency / 2,
 			MaxWorkers: concurrency,
 		},
-		Logger: l.WithName("WorkerPool"),
+		Logger:  l.WithName("WorkerPool"),
+		Signals: appSignals,
 	})
 
 	if err != nil {
@@ -132,13 +136,13 @@ func New[OUT any](configs ...*Config) (*app[OUT], error) {
 	}
 
 	// create our pipeline manager
-	pmCfg := pipelinemanager.DefaultConfig()
+	pmCfg := pipelinemanager.DefaultConfig[OUT]()
 	pmCfg.OutputQueueBuffSize = queueSize
 	pmCfg.Logger = l.WithName("PipelineManager")
-	pm := pipelinemanager.New[OUT](pmCfg)
+	pmCfg.Signals = appSignals
+	pm := pipelinemanager.New(pmCfg)
 
 	// create our engine
-	appSignals := signal.New()
 	engCfg := &engine.Config[OUT]{
 		Scheduler:       sched,
 		WorkerPool:      pool,
@@ -178,8 +182,68 @@ func (gos *app[OUT]) WithPipelines(pipelines ...engine.IPipeline[OUT]) *app[OUT]
 	return gos
 }
 
-func (gos *app[OUT]) AddSignal(sig signal.Type, h any) *app[OUT] {
-	gos.signals.Connect(sig, h)
+func (gos *app[OUT]) OnSpiderOpened(h func(context.Context)) *app[OUT] {
+	gos.signals.OnSpiderOpened(h)
+	return gos
+}
+
+func (gos *app[OUT]) OnSpiderClosed(h func(context.Context)) *app[OUT] {
+	gos.signals.OnSpiderClosed(h)
+	return gos
+}
+
+func (gos *app[OUT]) OnSpiderError(h func(context.Context, error)) *app[OUT] {
+	gos.signals.OnSpiderError(h)
+	return gos
+}
+
+func (gos *app[OUT]) OnSpiderIdle(h func(context.Context)) *app[OUT] {
+	gos.signals.OnSpiderIdle(h)
+	return gos
+}
+
+func (gos *app[OUT]) OnItemScraped(h func(context.Context, OUT)) *app[OUT] {
+	gos.signals.OnItemScraped(h)
+	return gos
+}
+
+func (gos *app[OUT]) OnItemDropped(h func(context.Context, OUT, error)) *app[OUT] {
+	gos.signals.OnItemDropped(h)
+	return gos
+}
+
+func (gos *app[OUT]) OnItemError(h func(context.Context, OUT, error)) *app[OUT] {
+	gos.signals.OnItemError(h)
+	return gos
+}
+
+func (gos *app[OUT]) OnRequestScheduled(h func(context.Context, *core.Request)) *app[OUT] {
+	gos.signals.OnRequestScheduled(h)
+	return gos
+}
+
+func (gos *app[OUT]) OnRequestDropped(h func(context.Context, *core.Request, error)) *app[OUT] {
+	gos.signals.OnRequestDropped(h)
+	return gos
+}
+
+func (gos *app[OUT]) OnRequestError(h func(context.Context, *core.Request, error)) *app[OUT] {
+	gos.signals.OnRequestError(h)
+	return gos
+}
+
+func (gos *app[OUT]) OnResponseReceived(h func(context.Context, core.IResponseReader)) *app[OUT] {
+	gos.signals.OnResponseReceived(h)
+	return gos
+}
+
+func (gos *app[OUT]) OnEngineStarted(h func(context.Context)) *app[OUT] {
+	gos.signals.OnEngineStarted(h)
+	return gos
+}
+
+func (gos *app[OUT]) OnEngineStopped(h func(context.Context)) *app[OUT] {
+	gos.signals.OnEngineStopped(h)
 	return gos
 }
 
@@ -235,19 +299,12 @@ func (gos *app[OUT]) Wait(autoExit ...bool) error {
 
 	if len(autoExit) > 0 && autoExit[0] {
 		// auto exit when idle
-		gos.AddSignal(signal.SpiderIdle, func(ctx context.Context) {
+		gos.OnSpiderIdle(func(ctx context.Context) {
 			gos.logger.Info("✅ Scraping complete. Automatic shutdown initiated.")
 			if gos.cancelableSignal != nil {
 				gos.cancelableSignal.cancel()
 			}
 		})
-
-		// check if idle to handle startup races
-		if gos.Engine.ActiveCount() == 0 && gos.Engine.IsStarted() {
-			if gos.cancelableSignal != nil {
-				gos.cancelableSignal.cancel()
-			}
-		}
 	} else {
 		gos.logger.Info("🕷️  GoScrapy spider is running. Press Ctrl+C to stop.")
 	}
