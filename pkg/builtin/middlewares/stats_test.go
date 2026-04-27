@@ -2,16 +2,13 @@
 package middlewares
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 
-	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -119,27 +116,3 @@ func TestStats_DataAndTiming(t *testing.T) {
 	assert.Equal(t, uint64(len(body)), stats.totalBytes.Load())
 }
 
-func TestStats_WorkerAggregation(t *testing.T) {
-	global := NewStatsCollector()
-	worker := global.NewStatsRecorder()
-
-	worker.AddBytes(1024)
-	worker.AddSample(MetricTLS, 50*time.Millisecond)
-
-	// Inject worker into context
-	ctx := ts.WithRecorder(context.Background(), worker)
-	mock := &mockRoundTripper{response: &http.Response{StatusCode: 200}}
-	mw := Stats(global)(mock)
-
-	req, _ := http.NewRequest("GET", "http://test.com", nil)
-	req = req.WithContext(ctx)
-	mw.RoundTrip(req)
-
-	// Snapshot (via Print) aggregates worker data
-	global.Print()
-	snap := global.Snapshot().(HttpMetrics)
-
-	assert.Equal(t, uint64(1024), snap.TotalBytes)
-	// Original request (1 from MW call)
-	assert.Equal(t, uint64(1), snap.TotalRequests)
-}

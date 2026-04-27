@@ -9,7 +9,7 @@ import (
 
 	"github.com/gocarina/gocsv"
 	"github.com/tech-engine/goscrapy/pkg/core"
-	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
+	"github.com/tech-engine/goscrapy/pkg/engine"
 )
 
 type Options struct {
@@ -73,7 +73,7 @@ func (p *export2CSV[OUT]) Close() {
 	}
 }
 
-func (p *export2CSV[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
+func (p *export2CSV[OUT]) ProcessItem(item engine.IPipelineItem, original core.IOutput[OUT]) error {
 
 	data := []OUT{original.Record()}
 

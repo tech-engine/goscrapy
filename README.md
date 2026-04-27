@@ -29,14 +29,15 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
 - 🚀 **Blazing Fast** — Built on Go's concurrency model for high-throughput parallel scraping
 - 🐍 **Scrapy-inspired** — Familiar architecture for anyone coming from Python's Scrapy
 - 🛠️ **CLI Scaffolding** — Generate project structure instantly with `goscrapy startproject`
+- 📡 **Signal-Driven** — Decoupled, event-driven architecture using a central signal bus
+- 🧠 **Auto-Discovery** — Automatic detection of spider lifecycle methods (Open, Close, Idle)
 - 🔁 **Smart Retry** — Automatic retries with exponential back-off on failures
 - 🍪 **Cookie Management** — Maintains separate cookie sessions per scraping target
 - 🔍 **CSS & XPath Selectors** — Flexible HTML parsing with chainable selectors
-- 📦 **Built-in Pipelines** — Export scraped data to CSV, JSON, MongoDB, Google Sheets, and Firebase out of the box
+- 📦 **Built-in Pipelines** — Export to CSV, JSON, MongoDB, Google Sheets, and Firebase out of the box
 - 🧩 **Built-in Middleware** — Plug in robust middlewares like Azure TLS and advanced Dupefilters
-- 🔌 **Extensible by Design** — Almost every layer of the framework is built to be swapped or extended
-- 🎛️ **Telemetry & Monitoring** — Optional built-in telemetry hub for real-time stats 
-
+- 🎛️ **Telemetry & TUI** — Real-time terminal dashboard and global metrics monitoring
+- 🔌 **Extensible** — Every layer (Scheduler, WorkerPool, Engine) is swappable and extensible
 ## Examples
 
 For practical examples and real-world use cases, check the [_examples](./_examples) directory:
@@ -52,37 +53,71 @@ GoScrapy's data flow is designed for clarity and concurrent execution:
 
 ```mermaid
 flowchart LR
-    %% Request Flow
-    Spider -->|1. Request| Engine
-    Engine -->|2. Schedule| Scheduler
-    Scheduler -->|3. Pull Worker| WorkerQueue[(Worker Queue)]
-    WorkerQueue -.->|4. Available Worker| Scheduler
-    Scheduler -->|5. Pass Work| Worker
-    Worker -->|6. Trigger| Executor
-    Executor -->|7. Forward| Middlewares
-    Middlewares -->|8. Request| HTTP_Client
+    Spider(((Spider)))
+    Engine{Engine}
+    Scheduler[(Scheduler)]
+    WorkerPool[Worker Pool]
+    Middlewares[[Middlewares]]
+    HTTPAdapter([HTTP Adapter])
+    PipelineManager[Pipeline Manager]
+    Pipelines[(Pipelines)]
+    SignalBus{{Signal Bus}}
 
-    %% Response Flow
-    HTTP_Client -.->|9. Response| Middlewares
-    Middlewares -.->|10. Response| Executor
-    Executor -.->|11. Callback| Spider
+    %% Main Request/Response Loop
+    Spider -- 1. Requests --> Engine
+    Engine -- 2. Schedule --> Scheduler
+    Scheduler -- 3. Next --> Engine
+    Engine -- 4. Submit --> WorkerPool
+    WorkerPool -- 5. Execute --> Middlewares
+    Middlewares -- 6. Fetch --> HTTPAdapter
+    HTTPAdapter -- 7. Response --> Middlewares
+    Middlewares -- 8. Return --> WorkerPool
+    WorkerPool -- 9. Result --> Engine
+    Engine -- 10. Callback --> Spider
 
-    %% Data Flow
-    Spider ==>|12. Yield Record| Engine
-    Engine ==>|13. Push Data| PipelineManager
-    PipelineManager ==>|14. Export| Pipelines[(DB, CSV, File)]
+    %% Data Export Loop
+    Spider -- 11. Yield Items --> Engine
+    Engine -- 12. Push --> PipelineManager
+    PipelineManager -- 13. Export --> Pipelines
 
-    style Spider fill:#F5C4B3,stroke:#993C1D,stroke-width:1px,color:#711B0C
-    style Engine fill:#B5D4F4,stroke:#185FA5,stroke-width:1px,color:#0C447C
+    %% Signal Bus (Event System)
+    SignalBus -.-> |Auto-Discovery| Spider
+    SignalBus -.-> |Engine Events| Engine
+    SignalBus -.-> |Data Events| PipelineManager
+
+    %% Styling
+    style SignalBus fill:#FFDFD3,stroke:#E27D60,stroke-width:2px,color:#8B4513
+    style Spider fill:#F5C4B3,stroke:#993C1D,stroke-width:2px,color:#711B0C
+    style Engine fill:#B5D4F4,stroke:#185FA5,stroke-width:2px,color:#0C447C
     style Scheduler fill:#CECBF6,stroke:#534AB7,stroke-width:1px,color:#3C3489
-    style WorkerQueue fill:#D3D1C7,stroke:#5F5E5A,stroke-width:1px,color:#444441
-    style Worker fill:#9FE1CB,stroke:#0F6E56,stroke-width:1px,color:#085041
-    style Executor fill:#FAC775,stroke:#854F0B,stroke-width:1px,color:#633806
+    style WorkerPool fill:#D3D1C7,stroke:#5F5E5A,stroke-width:1px,color:#444441
     style Middlewares fill:#E5B8F3,stroke:#842B9E,stroke-width:1px,color:#4B1161
-    style HTTP_Client fill:#C0DD97,stroke:#3B6D11,stroke-width:1px,color:#27500A
+    style HTTPAdapter fill:#C0DD97,stroke:#3B6D11,stroke-width:1px,color:#27500A
     style PipelineManager fill:#F4C0D1,stroke:#993556,stroke-width:1px,color:#72243E
     style Pipelines fill:#D3D1C7,stroke:#5F5E5A,stroke-width:1px,color:#444441
 ```
+
+## Signals
+
+GoScrapy uses a central signal bus to decouple various components and provide hooks for custom logic. You can connect to these signals to monitor the engine, track item progress, or handle errors.
+
+### Supported Signals
+
+| Category | Signal | Triggered when... |
+| :--- | :--- | :--- |
+| **Engine** | `EngineStarted` | The engine has finished initialization and is starting. |
+| | `EngineStopped` | The engine has finished all work and completed its shutdown. |
+| **Spider** | `SpiderOpened` | A spider is registered and ready to begin (auto-calls `Open` method). |
+| | `SpiderClosed` | A spider has finished all its tasks (auto-calls `Close` method). |
+| | `SpiderIdle` | A spider has no active requests or pending items (auto-calls `Idle` method). |
+| | `SpiderError` | A spider encounters an unhandled error (auto-calls `Error` method). |
+| **Item** | `ItemScraped` | An item has successfully passed through all configured pipelines. |
+| | `ItemDropped` | An item was explicitly dropped by a pipeline using `engine.ErrDropItem`. |
+| | `ItemError` | A pipeline returned a non-nil error while processing an item. |
+| **Request** | `RequestScheduled` | A new request has been added to the scheduler. |
+| | `RequestDropped` | A request was dropped due to a full queue or other limitations. |
+| | `RequestError` | A request failed during execution (e.g., network timeout). |
+| | `ResponseReceived` | A response has been received from the downloader and is about to be parsed. |
 
 ## Getting Started
 
@@ -144,17 +179,11 @@ package myspider
 import (
 	"time"
 
-	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
+	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 	"github.com/tech-engine/goscrapy/pkg/builtin/middlewares"
 	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines/csv"
 )
-
-// Add Azure TLS client and Retry functionality seamlessly
-var MIDDLEWARES = []middlewaremanager.Middleware{
-	middlewares.AzureTLS(azureTLSOpts),
-	middlewares.Retry(), // 3 retries, 5s back-off
-}
 
 // Prepare CSV export pipeline
 var export2CSV = csv.New[*Record](csv.Options{
@@ -162,7 +191,7 @@ var export2CSV = csv.New[*Record](csv.Options{
 })
 
 // Export to CSV instantly
-var PIPELINES = []pm.IPipeline[*Record]{
+var PIPELINES = []engine.IPipeline[*Record]{
 	export2CSV,
 }
 ```
@@ -182,20 +211,28 @@ type Spider struct {
 	gos.ICoreSpider[*Record]
 }
 
-func New(ctx context.Context) *Spider {
-	// Initialize and configure everything in one go
-	app := gos.NewApp[*Record]().
-		WithMiddlewares(MIDDLEWARES...).
+func New(ctx context.Context) (*Spider, error) {
+	// Initialize the application
+	app, err := gos.New[*Record]()
+	if err != nil {
+		return nil, err
+	}
+
+	app.WithMiddlewares(MIDDLEWARES...).
 		WithPipelines(PIPELINES...)
 
-	spider := &Spider{app}
+	spider := &Spider{
+		ICoreSpider: app,
+	}
+
+	// Auto-discovery: Engine will find Open/Close methods via reflection
+	app.RegisterSpider(spider)
 
 	go func() {
 		_ = app.Start(ctx)
-		spider.Close(ctx)
 	}()
 
-	return spider, errCh
+	return spider, nil
 }
 ```
 
@@ -212,11 +249,9 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-// StartRequest is the entrypoint to the spider
-func (s *Spider) StartRequest(ctx context.Context, job *Job) {
-	// Create a new request. This request must not be reused.
-	req := s.Request(ctx)
-	req.Url("https://httpbin.org/get")
+// open is auto-called by goscrapy during engine startup
+func (s *Spider) Open(ctx context.Context) {
+	req := s.Request(ctx).Url("https://httpbin.org/get")
 	s.Parse(req, s.parse)
 }
 
@@ -233,6 +268,7 @@ func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 	s.Yield(&data)
 }
 
+// close is auto-called by goscrapy during engine shutdown
 func (s *Spider) Close(ctx context.Context) {
 }
 ```

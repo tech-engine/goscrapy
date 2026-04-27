@@ -2,12 +2,15 @@ package gos
 
 import (
 	"context"
+	"net/http"
 	"os"
-	"os/signal"
+	ossignal "os/signal"
+	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
-	"github.com/tech-engine/goscrapy/internal/types"
+	"github.com/tech-engine/goscrapy/internal/request"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/executor"
@@ -16,49 +19,153 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 	pipelinemanager "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
 	"github.com/tech-engine/goscrapy/pkg/scheduler"
+	"github.com/tech-engine/goscrapy/pkg/signal"
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
+	"github.com/tech-engine/goscrapy/pkg/worker"
 )
 
-// deprecated: use New instead
-// kept for backward compatibility and to be removed in future versions
-func NewApp[OUT any](optFuncs ...types.OptFunc[appOpts]) *app[OUT] {
-	return New[OUT](optFuncs...)
+type Config struct {
+	Client *http.Client
+	Logger core.ILogger
 }
 
-func New[OUT any](optFuncs ...types.OptFunc[appOpts]) *app[OUT] {
+func DefaultConfig() *Config {
+	return &Config{
+		Client: DefaultClient(),
+	}
+}
 
-	opts := defaultAppOpts()
-	for _, fn := range optFuncs {
-		fn(&opts)
+type app[OUT any] struct {
+	*core.Core[OUT]
+	Engine            core.IEngine[OUT]
+	PipelineManager   engine.IPipelineManager[OUT]
+	Scheduler         engine.IScheduler
+	WorkerPool        engine.IWorkerPool
+	Executor          worker.IExecutor
+	MiddlewareManager IMiddlewareManager
+	httpClient        *http.Client
+	logger            core.ILogger
+	hub               *ts.TelemetryHub
+	cancelableSignal  *cancelableSignal
+	signals           *signal.Bus
+	lastErr           error
+	wg                sync.WaitGroup
+}
+
+func New[OUT any](configs ...*Config) (*app[OUT], error) {
+	var config *Config
+	if len(configs) > 0 {
+		config = configs[0]
 	}
 
-	httpClient := opts.client
+	if config == nil {
+		config = DefaultConfig()
+	}
 
-	adapter := httpAdapter.NewAdapter(
-		httpAdapter.WithClient(httpClient),
-	)
-	executor := executor.New(adapter)
-	scheduler := scheduler.New(executor)
-	mm := middlewaremanager.New(httpClient)
-	pm := pipelinemanager.New[OUT]()
+	if config.Logger == nil {
+		config.Logger = logger.NewLogger()
+	}
 
-	l := logger.NewLogger()
-	eng := engine.New(scheduler, pm).
-		WithLogger(l)
+	l := config.Logger
+
+	// create our http adapter
+	adapter, err := httpAdapter.NewAdapter(&httpAdapter.Config{
+		Client: config.Client,
+		Logger: l,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// create our executor
+	exec, err := executor.New(&executor.Config{
+		Adapter: adapter,
+		Logger:  l.WithName("Executor"),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// read from env vars for tuning
+	concurrency := uint32(16)
+	if c := os.Getenv("SCHEDULER_CONCURRENCY"); c != "" {
+		if v, err := strconv.Atoi(c); err == nil {
+			concurrency = uint32(v)
+		}
+	}
+
+	queueSize := uint64(1000)
+	if q := os.Getenv("PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE"); q != "" {
+		if v, err := strconv.ParseUint(q, 10, 64); err == nil && v > 0 {
+			queueSize = v
+		}
+	}
+
+	// create our scheduler
+	sched, err := scheduler.New(&scheduler.Config{
+		WorkQueueSize: queueSize,
+		Logger:        l.WithName("Scheduler"),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// create our worker pool
+	pool, err := worker.NewPool(&worker.Config{
+		Executor: exec,
+		Autoscaler: struct {
+			MaxWorkers    uint32
+			MinWorkers    uint32
+			ScalingFactor float32
+			ScalingWindow time.Duration
+			EMAAlpha      float32
+		}{
+			MinWorkers: concurrency / 2,
+			MaxWorkers: concurrency,
+		},
+		Logger: l.WithName("WorkerPool"),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// create our pipeline manager
+	pmCfg := pipelinemanager.DefaultConfig()
+	pmCfg.OutputQueueBuffSize = queueSize
+	pmCfg.Logger = l.WithName("PipelineManager")
+	pm := pipelinemanager.New[OUT](pmCfg)
+
+	// create our engine
+	appSignals := signal.New()
+	engCfg := &engine.Config[OUT]{
+		Scheduler:       sched,
+		WorkerPool:      pool,
+		PipelineManager: pm,
+		Signals:         appSignals,
+	}
+
+	eng, err := engine.New(engCfg)
+	if err != nil {
+		return nil, err
+	}
+	eng.WithLogger(l.WithName("Engine"))
 
 	app := &app[OUT]{
-		Core:              core.New(eng),
+		Core:              core.New(eng, request.NewPool()),
 		Engine:            eng,
-		MiddlewareManager: mm,
+		MiddlewareManager: middlewaremanager.New(config.Client),
 		PipelineManager:   pm,
-		Scheduler:         scheduler,
-		Executor:          executor,
+		Scheduler:         sched,
+		WorkerPool:        pool,
+		Executor:          exec,
 		logger:            l.WithName("GOS"),
-		hub:               nil,
 		cancelableSignal:  newCancelableSignal(context.Background()),
+		signals:           appSignals,
 	}
 
-	return app
+	return app, nil
 }
 
 func (gos *app[OUT]) WithMiddlewares(middlewares ...middlewaremanager.Middleware) *app[OUT] {
@@ -66,52 +173,30 @@ func (gos *app[OUT]) WithMiddlewares(middlewares ...middlewaremanager.Middleware
 	return gos
 }
 
-func (gos *app[OUT]) WithPipelines(pipelines ...pipelinemanager.IPipeline[OUT]) *app[OUT] {
+func (gos *app[OUT]) WithPipelines(pipelines ...engine.IPipeline[OUT]) *app[OUT] {
 	gos.PipelineManager.Add(pipelines...)
 	return gos
 }
 
-// registers a function to be called when the engine is shutting down
-func (gos *app[OUT]) WithOnEngineShutdown(onShutdown ...func()) *app[OUT] {
-	for _, fn := range onShutdown {
-		gos.Engine.WithOnShutdown(fn)
-	}
-	return gos
-}
-
-// deprecated: use WithMiddlewares, WithPipelines and WithOnShutdown
-// kept for backward compatibility and to be removed in future versions
-func (gos *app[OUT]) Setup(
-	middlewares []middlewaremanager.Middleware,
-	pipelines []pipelinemanager.IPipeline[OUT],
-	onShutdown ...func(),
-) *app[OUT] {
-	gos.logger.Infof("Initializing engine with %d middlewares and %d pipelines", len(middlewares), len(pipelines))
-	gos.MiddlewareManager.Add(middlewares...)
-	gos.PipelineManager.Add(pipelines...)
-	for _, fn := range onShutdown {
-		gos.Engine.WithOnShutdown(fn)
-	}
-	return gos
-}
-
-func (gos *app[OUT]) WithStatsRecorderFactory(factory ts.IStatsRecorderFactory) *app[OUT] {
-	if gos.Scheduler != nil && factory != nil {
-		gos.Scheduler.WithStatsRecorderFactory(factory)
-	}
+func (gos *app[OUT]) AddSignal(sig signal.Type, h any) *app[OUT] {
+	gos.signals.Connect(sig, h)
 	return gos
 }
 
 func (gos *app[OUT]) WithLogger(loggerIn core.IConfigurableLogger) *app[OUT] {
 	loggerIn = logger.EnsureLogger(loggerIn).(core.IConfigurableLogger)
 	gos.logger = loggerIn.WithName("GOS")
-	gos.Engine.WithLogger(loggerIn)
+	gos.Engine.WithLogger(gos.logger.WithName("Engine"))
 	return gos
 }
 
-func (gos *app[OUT]) WithTelemetry(hub *ts.TelemetryHub, optFuncs ...types.OptFunc[ts.TelemetryHubOpts]) *app[OUT] {
+func (gos *app[OUT]) RegisterSpider(spider any) {
+	gos.Engine.RegisterSpider(spider)
+}
+
+func (gos *app[OUT]) WithTelemetry(hub *ts.TelemetryHub, config *ts.TelemetryHubConfig) *app[OUT] {
 	if hub == nil {
-		gos.hub = ts.NewTelemetryHub(optFuncs...)
+		gos.hub = ts.NewTelemetryHub(config)
 		return gos
 	}
 	gos.hub = hub
@@ -123,15 +208,19 @@ func (gos *app[OUT]) Logger() core.ILogger {
 }
 
 func (gos *app[OUT]) Start(ctx context.Context) error {
-	// Bridge the external context to the internal lifecycle
-	// We do this instead of creating a child context to prevent
-	// a race condition between Start and Wait.
+	gos.wg.Add(1)
+	defer gos.wg.Done()
+
 	stop := context.AfterFunc(ctx, func() {
 		gos.cancelableSignal.cancel()
 	})
 	defer stop()
 
 	if gos.hub != nil {
+		// auto register workerpool components as collectors
+		if coll, ok := gos.WorkerPool.(ts.IStatsCollector); ok {
+			gos.hub.AddCollector(coll)
+		}
 		go gos.hub.Start(gos.cancelableSignal.ctx)
 	}
 	gos.lastErr = gos.Engine.Start(gos.cancelableSignal.ctx)
@@ -142,34 +231,30 @@ func (gos *app[OUT]) Start(ctx context.Context) error {
 // shut down automatically when all work is finished.
 func (gos *app[OUT]) Wait(autoExit ...bool) error {
 	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	ossignal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	if len(autoExit) > 0 && autoExit[0] {
-		// Start auto-exit monitor
-		go func() {
-			// Wait for initial start
-			time.Sleep(500 * time.Millisecond)
-			ticker := time.NewTicker(200 * time.Millisecond)
-			defer func() {
-				if gos.cancelableSignal != nil {
-					gos.cancelableSignal.cancel()
-				}
-				ticker.Stop()
-			}()
-
-			for range ticker.C {
-				if gos.Engine.ActiveCount() <= 0 {
-					gos.logger.Info("✅ Scraping complete. Automatic shutdown initiated.")
-					return
-				}
+		// auto exit when idle
+		gos.AddSignal(signal.SpiderIdle, func(ctx context.Context) {
+			gos.logger.Info("✅ Scraping complete. Automatic shutdown initiated.")
+			if gos.cancelableSignal != nil {
+				gos.cancelableSignal.cancel()
 			}
-		}()
+		})
+
+		// check if idle to handle startup races
+		if gos.Engine.ActiveCount() == 0 && gos.Engine.IsStarted() {
+			if gos.cancelableSignal != nil {
+				gos.cancelableSignal.cancel()
+			}
+		}
 	} else {
 		gos.logger.Info("🕷️  GoScrapy spider is running. Press Ctrl+C to stop.")
 	}
 
 	select {
 	case <-gos.cancelableSignal.ctx.Done():
+		gos.wg.Wait()
 		return gos.lastErr
 	case sig := <-sigCh:
 		gos.logger.Infof("Received termination signal: %v", sig)
@@ -177,7 +262,7 @@ func (gos *app[OUT]) Wait(autoExit ...bool) error {
 			gos.cancelableSignal.cancel()
 		}
 		// Wait for engine to finish cleanup and set lastErr
-		<-gos.cancelableSignal.ctx.Done()
+		gos.wg.Wait()
 		return gos.lastErr
 	}
 }

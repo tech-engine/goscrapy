@@ -48,9 +48,8 @@ func (s *BenchSpider) parse(ctx context.Context, resp core.IResponseReader) {
 	s.completed.Add(1)
 }
 
-func runBenchmark(concurrency, poolSize, maxIdle, queueBuf string) float64 {
+func runBenchmark(concurrency, maxIdle, queueBuf string) float64 {
 	os.Setenv("SCHEDULER_CONCURRENCY", concurrency)
-	os.Setenv("SCHEDULER_REQ_RES_POOL_SIZE", poolSize)
 	os.Setenv("MIDDLEWARE_HTTP_MAX_IDLE_CONN", maxIdle)
 	os.Setenv("MIDDLEWARE_HTTP_MAX_CONN_PER_HOST", maxIdle)
 	os.Setenv("MIDDLEWARE_HTTP_MAX_IDLE_CONN_PER_HOST", maxIdle)
@@ -65,11 +64,17 @@ func runBenchmark(concurrency, poolSize, maxIdle, queueBuf string) float64 {
 
 	// Initialize the application using the modern factory
 	// Explicitly disable telemetry and TUI for zero benchmark overhead
-	app := gos.NewApp[*Record]().WithLogger(l)
+	app, err := gos.New[*Record]()
+	if err != nil {
+		fmt.Printf("failed to create app: %v\n", err)
+		return 0
+	}
+	app.WithLogger(l)
 
 	spider := &BenchSpider{
 		ICoreSpider: app,
 	}
+	app.RegisterSpider(spider)
 
 	go func() {
 		_ = app.Start(ctx)
@@ -121,7 +126,6 @@ func main() {
 
 	type permutation struct {
 		Concurrency string
-		PoolSize    string
 		MaxIdle     string
 		QueueBuf    string
 	}
@@ -133,22 +137,22 @@ func main() {
 	// 3. Blazing Fast profile (Recommended) (Cores * 30)
 	// 4. Extreme scale (Cores * 60)
 	perms := []permutation{
-		{fmt.Sprintf("%d", cores*5), "10000", "100", "0"},
-		{fmt.Sprintf("%d", cores*12), "50000", "500", "1000"},
-		{fmt.Sprintf("%d", cores*30), "50000", "1000", "5000"},
-		{fmt.Sprintf("%d", cores*60), "100000", "4000", "10000"},
+		{fmt.Sprintf("%d", cores*5), "100", "0"},
+		{fmt.Sprintf("%d", cores*12), "500", "1000"},
+		{fmt.Sprintf("%d", cores*30), "1000", "5000"},
+		{fmt.Sprintf("%d", cores*60), "4000", "10000"},
 	}
 
 	bestRPS := 0.0
 	var bestCombo permutation
 
 	fmt.Println("Starting GoScrapy Auto-Tuning Benchmark Engine...")
-	fmt.Printf("%-11s | %-10s | %-10s | %-10s | %-15s\n", "Concurrency", "PoolSize", "MaxIdle", "QueueBuf", "Requests/Sec")
-	fmt.Println("-----------------------------------------------------------------------")
+	fmt.Printf("%-11s | %-10s | %-10s | %-15s\n", "Concurrency", "MaxIdle", "QueueBuf", "Requests/Sec")
+	fmt.Println("---------------------------------------------------------------")
 
 	for _, p := range perms {
-		rps := runBenchmark(p.Concurrency, p.PoolSize, p.MaxIdle, p.QueueBuf)
-		fmt.Printf("%-11s | %-10s | %-10s | %-10s | %.2f req/s\n", p.Concurrency, p.PoolSize, p.MaxIdle, p.QueueBuf, rps)
+		rps := runBenchmark(p.Concurrency, p.MaxIdle, p.QueueBuf)
+		fmt.Printf("%-11s | %-10s | %-10s | %.2f req/s\n", p.Concurrency, p.MaxIdle, p.QueueBuf, rps)
 
 		if rps > bestRPS {
 			bestRPS = rps
@@ -160,7 +164,6 @@ func main() {
 	fmt.Printf("🏆 BEST SETUP (%.2f req/sec):\n\n", bestRPS)
 	fmt.Println("Apply these exact fields to your settings.go or .env variables:")
 	fmt.Printf("  SCHEDULER_CONCURRENCY                  = %s\n", bestCombo.Concurrency)
-	fmt.Printf("  SCHEDULER_REQ_RES_POOL_SIZE            = %s\n", bestCombo.PoolSize)
 	fmt.Printf("  MIDDLEWARE_HTTP_MAX_IDLE_CONN          = %s\n", bestCombo.MaxIdle)
 	fmt.Printf("  MIDDLEWARE_HTTP_MAX_CONN_PER_HOST      = %s\n", bestCombo.MaxIdle)
 	fmt.Printf("  MIDDLEWARE_HTTP_MAX_IDLE_CONN_PER_HOST = %s\n", bestCombo.MaxIdle)

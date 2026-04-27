@@ -11,10 +11,7 @@ type IStatsRecorder interface {
 	AddSample(metric string, d time.Duration)
 }
 
-// Represents a factory that create IStatsRecorder
-type IStatsRecorderFactory interface {
-	NewStatsRecorder() IStatsRecorder
-}
+
 
 // Represents a generic interface for individual components to return their state.
 type ComponentSnapshot any

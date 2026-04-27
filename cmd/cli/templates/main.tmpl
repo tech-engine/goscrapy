@@ -17,10 +17,11 @@ func main() {
 	defer cancel()
 
 	// start spider
-	spider := {{.}}.New(ctx)
-
-	// start the scraper with a job, currently nil is passed but you can pass your job here
-	spider.StartRequest(ctx, nil)
+	spider, err := {{.}}.New(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "❌ Failed to create spider: %v\n", err)
+		os.Exit(1)
+	}
 
 	fmt.Println("🕷️  GoScrapy spider is running. Press Ctrl+C to stop.")
 

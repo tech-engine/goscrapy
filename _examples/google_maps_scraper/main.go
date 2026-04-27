@@ -17,7 +17,11 @@ func main() {
 	defer cancel()
 
 	// start spider
-	spider := google_maps_scraper.New(ctx)
+	spider, err := google_maps_scraper.New(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "❌ Failed to create spider: %v\n", err)
+		os.Exit(1)
+	}
 
 	// create a job
 	job := google_maps_scraper.NewJob("googlemaps_carwash")

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tech-engine/goscrapy/internal/fsmap"
 )
 
@@ -101,7 +102,9 @@ func run(t *testing.T, adapter *httpAdapter, method string, body io.ReadCloser, 
 
 func TestAdapterRequest(t *testing.T) {
 
-	adapter := NewAdapter()
+	adapter, err := NewAdapter(nil)
+	require.NoError(t, err)
+
 	testCases := []testCase{
 		{
 			name:     "GET",
@@ -141,7 +144,8 @@ func TestAdapterRequest(t *testing.T) {
 }
 
 func TestAdapterRequestCtx(t *testing.T) {
-	adapter := NewAdapter()
+	adapter, err := NewAdapter(nil)
+	require.NoError(t, err)
 
 	resp := &testResponseWriter{}
 

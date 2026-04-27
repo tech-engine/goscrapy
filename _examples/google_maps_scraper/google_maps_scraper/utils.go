@@ -3,7 +3,6 @@ package google_maps_scraper
 import (
 	"bytes"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -198,12 +197,10 @@ func extractGeocoding(data []byte) (lat, lng float64, query string, ok bool) {
 	return lat, lng, qResult.Str, true
 }
 
-func prepareRequest(req core.IRequestRW, url string, job Job) core.IRequestRW {
-	headers := make(http.Header)
-	headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
-
-	req.Url(url).Header(headers).Meta("JOB", job)
-	return req
+func prepareRequest(req *core.Request, url string, job Job) *core.Request {
+	return req.Url(url).
+		AddHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36").
+		Meta("JOB", job)
 }
 
 func getJob(resp core.IResponseReader) (Job, bool) {

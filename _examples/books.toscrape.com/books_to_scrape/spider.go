@@ -9,14 +9,12 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-func (s *Spider) StartRequest(ctx context.Context, job *Job) {
-
+// open is auto-called by goscrapy during engine startup
+func (s *Spider) Open(ctx context.Context) {
 	// for each request we must call NewRequest() and never reuse it
-	req := s.Request(ctx)
+	req := s.Request(ctx).Url(s.baseUrl)
 
 	// GET is the default method
-	req.Url(s.baseUrl)
-
 	s.Parse(req, s.parse)
 }
 
@@ -27,36 +25,28 @@ func (s *Spider) Close(ctx context.Context) {
 
 func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 	s.Logger().Infof("GET: %d %s", resp.StatusCode(), resp.Request().URL.String())
-	for _, productUrl := range resp.Css("article.product_pod h3 a").Attr("href") {
-		req := s.Request(ctx)
-
+	productUrls := resp.Css("article.product_pod h3 a").Attr("href")
+	s.Logger().Debugf("Found %d product URLs", len(productUrls))
+	for _, productUrl := range productUrls {
 		if strings.HasPrefix(productUrl, "catalogue/") {
 			productUrl = fmt.Sprintf("%s/%s", s.baseUrl, productUrl)
 		} else {
 			productUrl = fmt.Sprintf("%s/catalogue/%s", s.baseUrl, productUrl)
 		}
-
-		req.Url(productUrl)
+		req := s.Request(ctx).Url(productUrl)
 		s.Parse(req, s.parseProduct)
 		s.Logger().Infof("GET: %s", productUrl)
 	}
 
 	// pagination
-	nextUrls := resp.Css("li.next a").Attr("href")
-
-	if len(nextUrls) <= 0 {
-		return
+	nextPage := resp.Css("li.next a").Attr("href")
+	if len(nextPage) > 0 {
+		nextPageUrl := fmt.Sprintf("%s/%s", s.baseUrl, nextPage[0])
+		if !strings.Contains(nextPage[0], "catalogue/") {
+			nextPageUrl = fmt.Sprintf("%s/catalogue/%s", s.baseUrl, nextPage[0])
+		}
+		s.Parse(s.Request(ctx).Url(nextPageUrl), s.parse)
 	}
-
-	nextUrl := fmt.Sprintf("%s/%s", s.baseUrl, nextUrls[0])
-
-	if !strings.HasPrefix(nextUrls[0], "catalogue/") {
-		nextUrl = fmt.Sprintf("%s/catalogue/%s", s.baseUrl, nextUrls[0])
-	}
-
-	req := s.Request(ctx)
-	req.Url(nextUrl)
-	s.Parse(req, s.parse)
 }
 
 func (s *Spider) parseProduct(ctx context.Context, resp core.IResponseReader) {

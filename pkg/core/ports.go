@@ -4,48 +4,31 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"net/url"
 
 	"github.com/tech-engine/goscrapy/internal/fsmap"
 	"golang.org/x/net/html"
 )
+
+type TaskHandle any
 
 type IActivityTracker interface {
 	Inc()
 	Dec()
 }
 
+type IRequestPool interface {
+	Acquire(context.Context) *Request
+	Release(*Request)
+}
+
 type IEngine[OUT any] interface {
 	Start(context.Context) error
-	NewRequest(context.Context) IRequestRW
-	Schedule(IRequestReader, ResponseCallback)
+	Schedule(*Request, ResponseCallback)
 	Yield(IOutput[OUT])
-}
-
-type IRequestReader interface {
-	ReadContext() context.Context
-	ReadUrl() *url.URL
-	ReadHeader() http.Header
-	ReadMethod() string
-	ReadBody() io.ReadCloser
-	ReadMeta() *fsmap.FixedSizeMap[string, any]
-	ReadCookieJar() string
-}
-
-type IRequestWriter interface {
-	Context(context.Context) IRequestWriter
-	Url(string) IRequestWriter
-	Header(http.Header) IRequestWriter
-	Method(string) IRequestWriter
-	Body(any) IRequestWriter
-	Meta(string, any) IRequestWriter
-	CookieJar(string) IRequestWriter
-}
-
-type IRequestRW interface {
-	IRequestReader
-	IRequestWriter
-	Reset()
+	RegisterSpider(any) error
+	ActiveCount() int64
+	IsStarted() bool
+	WithLogger(ILogger) IEngine[OUT]
 }
 
 type IResponseReader interface {
@@ -99,4 +82,33 @@ type IResponseWriter interface {
 type IResponse interface {
 	IResponseReader
 	IResponseWriter
+}
+
+type LogLevel int
+
+const (
+	LevelDebug LogLevel = iota
+	LevelInfo
+	LevelWarn
+	LevelError
+	LevelNone
+)
+
+type ILogger interface {
+	Debug(args ...any)
+	Info(args ...any)
+	Warn(args ...any)
+	Error(args ...any)
+	Debugf(template string, args ...any)
+	Infof(template string, args ...any)
+	Warnf(template string, args ...any)
+	Errorf(template string, args ...any)
+	// must return a logger pointing to the same writer as that of parent
+	WithName(name string) ILogger
+}
+
+// IConfigurableLogger is the framework-level interface that allows output redirection.
+type IConfigurableLogger interface {
+	ILogger
+	WithWriter(io.Writer) ILogger
 }

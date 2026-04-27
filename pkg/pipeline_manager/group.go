@@ -5,11 +5,12 @@ import (
 	"sync"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/engine"
 	"golang.org/x/sync/errgroup"
 )
 
 type Group[OUT any] struct {
-	nodes        []IPipeline[OUT]
+	nodes        []engine.IPipeline[OUT]
 	ignoreErrors bool
 }
 
@@ -22,7 +23,7 @@ type Group[OUT any] struct {
 // A Group must not modify
 func NewGroup[OUT any]() *Group[OUT] {
 	return &Group[OUT]{
-		nodes: make([]IPipeline[OUT], 0),
+		nodes: make([]engine.IPipeline[OUT], 0),
 	}
 }
 
@@ -76,11 +77,11 @@ func (g *Group[OUT]) WithIgnoreError() {
 	g.ignoreErrors = true
 }
 
-func (g *Group[OUT]) Add(p ...IPipeline[OUT]) {
+func (g *Group[OUT]) Add(p ...engine.IPipeline[OUT]) {
 	g.nodes = append(g.nodes, p...)
 }
 
-func (g *Group[OUT]) ProcessItem(pi IPipelineItem, out core.IOutput[OUT]) error {
+func (g *Group[OUT]) ProcessItem(pi engine.IPipelineItem, out core.IOutput[OUT]) error {
 
 	if g.ignoreErrors {
 		var wg sync.WaitGroup

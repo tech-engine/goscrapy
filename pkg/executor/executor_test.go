@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/tech-engine/goscrapy/internal/fsmap"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
@@ -30,49 +31,6 @@ func (m *MockExecutorAdapter) WithClient(client *http.Client) {
 func (m *MockExecutorAdapter) WithLogger(l core.ILogger) IExecutorAdapter {
 	args := m.Called(l)
 	return args.Get(0).(IExecutorAdapter)
-}
-
-// MockRequestReader implements IRequestReader
-type MockRequestReader struct {
-	mock.Mock
-}
-
-func (m *MockRequestReader) ReadUrl() *url.URL {
-	args := m.Called()
-	return args.Get(0).(*url.URL)
-}
-
-func (m *MockRequestReader) ReadContext() context.Context {
-	args := m.Called()
-	return args.Get(0).(context.Context)
-}
-
-func (m *MockRequestReader) ReadMethod() string {
-	args := m.Called()
-	return args.String(0)
-}
-
-func (m *MockRequestReader) ReadBody() io.ReadCloser {
-	args := m.Called()
-	if args.Get(0) == nil {
-		return nil
-	}
-	return args.Get(0).(io.ReadCloser)
-}
-
-func (m *MockRequestReader) ReadHeader() http.Header {
-	args := m.Called()
-	return args.Get(0).(http.Header)
-}
-
-func (m *MockRequestReader) ReadCookieJar() string {
-	args := m.Called()
-	return args.String(0)
-}
-
-func (m *MockRequestReader) ReadMeta() *fsmap.FixedSizeMap[string, any] {
-	args := m.Called()
-	return args.Get(0).(*fsmap.FixedSizeMap[string, any])
 }
 
 // MockResponseWriter implements IResponseWriter
@@ -106,32 +64,32 @@ func (m *MockResponseWriter) WriteMeta(meta *fsmap.FixedSizeMap[string, any]) {
 
 func TestExecutor_Execute(t *testing.T) {
 	mockAdapter := new(MockExecutorAdapter)
-	exec := New(mockAdapter)
+	exec, err := New(&Config{Adapter: mockAdapter})
+	require.NoError(t, err)
 
 	u, _ := url.Parse("http://localhost")
 	ctx := context.Background()
 	header := http.Header{"User-Agent": []string{"test"}}
 
-	mockReq := new(MockRequestReader)
-	mockReq.On("ReadUrl").Return(u)
-	mockReq.On("ReadContext").Return(ctx)
-	mockReq.On("ReadMethod").Return("POST")
-	mockReq.On("ReadBody").Return(nil)
-	mockReq.On("ReadHeader").Return(header)
-	mockReq.On("ReadCookieJar").Return("session1")
+	req := &core.Request{
+		Ctx:          ctx,
+		URL:          u,
+		Method_:      "POST",
+		Header_:      header,
+		CookieJarKey: "session1",
+	}
 
 	mockRes := new(MockResponseWriter)
 
 	mockAdapter.On("Do", mockRes, mock.MatchedBy(func(req *http.Request) bool {
-		return req.Method == "POST" && 
+		return req.Method == "POST" &&
 			req.URL.String() == "http://localhost" &&
 			req.Header.Get("User-Agent") == "test" &&
 			core.ExtractCtxValue(req.Context(), "GOSCookieJarKey") == "session1"
 	})).Return(nil)
 
-	err := exec.Execute(mockReq, mockRes)
+	err = exec.Execute(req, mockRes)
 	assert.NoError(t, err)
 
 	mockAdapter.AssertExpectations(t)
-	mockReq.AssertExpectations(t)
 }

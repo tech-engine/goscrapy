@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
 
@@ -102,7 +102,7 @@ func (p *doublePipeline[OUT]) Open(ctx context.Context) error {
 func (p *doublePipeline[OUT]) Close() {
 }
 
-func (p *doublePipeline[OUT]) ProcessItem(item IPipelineItem, original core.IOutput[OUT]) error {
+func (p *doublePipeline[OUT]) ProcessItem(item engine.IPipelineItem, original core.IOutput[OUT]) error {
 	rec := original.RecordFlat()
 	item.Set("id", rec[0])
 	item.Set("age", rec[1].(int)*2)
@@ -127,7 +127,7 @@ func (p *dummyPipeline2[OUT]) Open(ctx context.Context) error {
 func (p *dummyPipeline2[OUT]) Close() {
 }
 
-func (p *dummyPipeline2[OUT]) ProcessItem(item IPipelineItem, original core.IOutput[OUT]) error {
+func (p *dummyPipeline2[OUT]) ProcessItem(item engine.IPipelineItem, original core.IOutput[OUT]) error {
 	id, _ := item.Get("id")
 	age, _ := item.Get("age")
 	p.safeRecord.Set(id.(int), age.(int))
@@ -139,8 +139,9 @@ func TestPipelineManager(t *testing.T) {
 	// create a pipeline manager
 	var wg sync.WaitGroup
 	logger := logger.NewNoopLogger()
-	pipelineManager := New[*dummyRecord]()
-	pipelineManager.WithLogger(logger)
+	cfg := DefaultConfig()
+	cfg.Logger = logger
+	pipelineManager := New[*dummyRecord](cfg)
 
 	// add a dummy test pipeline
 	readPipeline := newDummyPipeline2[*dummyRecord]()
@@ -174,7 +175,7 @@ func TestPipelineManager(t *testing.T) {
 
 func TestPipelineManager_LoggerCoverage(t *testing.T) {
 	t.Run("DefaultLogger_DoesNotPanic", func(t *testing.T) {
-		pm := New[*dummyRecord]()
+		pm := New[*dummyRecord](nil)
 		assert.NotNil(t, pm.logger)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
@@ -187,9 +188,7 @@ func TestPipelineManager_LoggerCoverage(t *testing.T) {
 }
 
 func TestPipelineManager_Pooling(t *testing.T) {
-	pm := New[*dummyRecord](types.OptFunc[opts](func(o *opts) {
-		o.itemPoolSize = 1
-	}))
+	pm := New[*dummyRecord](nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup

@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
-	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
+	"github.com/tech-engine/goscrapy/pkg/engine"
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
 )
@@ -68,7 +68,7 @@ func (p *export2GSheet[OUT]) Open(ctx context.Context) error {
 func (p *export2GSheet[OUT]) Close() {
 }
 
-func (p *export2GSheet[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
+func (p *export2GSheet[OUT]) ProcessItem(item engine.IPipelineItem, original core.IOutput[OUT]) error {
 
 	records := original.RecordFlat()
 	row := &sheets.ValueRange{

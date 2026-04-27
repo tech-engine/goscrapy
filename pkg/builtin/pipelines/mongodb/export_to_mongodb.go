@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
-	pm "github.com/tech-engine/goscrapy/pkg/pipeline_manager"
+	"github.com/tech-engine/goscrapy/pkg/engine"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -59,7 +59,7 @@ func (p *export2MongoDB[OUT]) Close() {
 	}
 }
 
-func (p *export2MongoDB[OUT]) ProcessItem(item pm.IPipelineItem, original core.IOutput[OUT]) error {
+func (p *export2MongoDB[OUT]) ProcessItem(item engine.IPipelineItem, original core.IOutput[OUT]) error {
 
 	doc := primitive.D{}
 	recordFlat := original.RecordFlat()

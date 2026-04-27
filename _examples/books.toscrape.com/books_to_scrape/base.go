@@ -12,9 +12,13 @@ type Spider struct {
 }
 
 // New initializes the spider with minimal setup (no TUI, no stats collection).
-func New(ctx context.Context) *Spider {
-	app := gos.NewApp[*Record]().
-		WithMiddlewares(MIDDLEWARES...).
+func New(ctx context.Context) (*Spider, error) {
+	app, err := gos.New[*Record]()
+	if err != nil {
+		return nil, err
+	}
+
+	app.WithMiddlewares(MIDDLEWARES...).
 		WithPipelines(PIPELINES...)
 
 	spider := &Spider{
@@ -22,10 +26,11 @@ func New(ctx context.Context) *Spider {
 		baseUrl:     "https://books.toscrape.com",
 	}
 
+	app.RegisterSpider(spider)
+
 	go func() {
 		_ = app.Start(ctx)
-		spider.Close(ctx)
 	}()
 
-	return spider
+	return spider, nil
 }

@@ -14,10 +14,13 @@ func main() {
 	defer cancel()
 
 	// start spider
-	spider := fingerprint_spoofing.New(ctx)
+	spider, err := fingerprint_spoofing.New(ctx)
+	if err != nil {
+		fmt.Printf("❌ Failed to create spider: %v\n", err)
+		return
+	}
 
-	// start the scraper with a job, currently nil is passed but you can pass your job here
-	spider.StartRequest(ctx, nil)
+
 
 	fmt.Println("🕷️  GoScrapy spider is running. Press Ctrl+C to stop.")
 

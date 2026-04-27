@@ -6,9 +6,6 @@ package pipelinemanager
 
 // const PIPELINEMANAGER_PIPELINES_MUST_OPEN = false
 
-// Reuseable Pipeline Item pool size
-const PIPELINEMANAGER_ITEMPOOL_SIZE = 10000
-
 // Max key-value pairs a Pipiline Item can have
 const PIPELINEMANAGER_ITEM_SIZE = 24
 

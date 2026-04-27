@@ -2,234 +2,116 @@ package scheduler
 
 import (
 	"context"
-	"net/http"
 	"sync"
 	"sync/atomic"
-	"time"
 
-	rp "github.com/tech-engine/goscrapy/internal/resource_pool"
-	"github.com/tech-engine/goscrapy/internal/types"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/logger"
-	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 )
 
-type scheduler struct {
-	opts
-	executor          IExecutor
-	schedulerWorkPool *rp.Pooler[schedulerWork]
-	requestPool       *rp.Pooler[request]
-	responsePool      *rp.Pooler[response]
-	workerQueue       WorkerQueue
-	workQueue         WorkQueue
-	stopping          atomic.Bool
-	logger            core.ILogger
-	tracker           core.IActivityTracker
-
-	currentWorkerCnt atomic.Int32
-	lastWorkerID     atomic.Uint32
-	workerWG         sync.WaitGroup
-
-	// adaptive scaling, nil when disabled
-	autoscaler *autoscaler
+type Config struct {
+	WorkQueueSize uint64 // currently mainly used for inMemTaskQueue's buffer size, but can also be used for prefetching hint later
+	Logger        core.ILogger
+	TaskQueue     ITaskQueue // Default: inMemTaskQueue
 }
 
-func New(executor IExecutor, optFuncs ...types.OptFunc[opts]) *scheduler {
+type QueuedTask struct {
+	Request      *core.Request
+	CallbackName string
+}
 
-	// set default options
-	opts := defaultOpts()
+func (qt *QueuedTask) Reset() {
+	qt.Request = nil
+	qt.CallbackName = ""
+}
 
-	// set custom options
-	for _, fn := range optFuncs {
-		fn(&opts)
+type scheduler struct {
+	taskQueue ITaskQueue
+	logger    core.ILogger
+	stopping  atomic.Bool
+	taskPool  sync.Pool
+}
+
+func New(config *Config) (engine.IScheduler, error) {
+	if config == nil {
+		config = &Config{}
 	}
 
-	// when adaptive scaling is on, size the workerQueue for the upper bound
-	// so dynamically spawned workers can always register themselves
-	queueCap := opts.numWorkers
-	if opts.adaptive != nil && opts.adaptive.MaxWorkers > queueCap {
-		queueCap = opts.adaptive.MaxWorkers
+	if config.Logger == nil {
+		config.Logger = logger.EnsureLogger(nil).WithName("Scheduler")
+	}
+
+	if config.WorkQueueSize == 0 {
+		config.WorkQueueSize = SCHEDULER_DEFAULT_WORK_QUEUE_SIZE
+	}
+
+	if config.TaskQueue == nil {
+		config.TaskQueue = newInMemoryTaskQueue(config.WorkQueueSize)
 	}
 
 	s := &scheduler{
-		opts:              opts,
-		executor:          executor,
-		schedulerWorkPool: rp.NewPooler(rp.WithSize[schedulerWork](opts.reqResPoolSize)),
-		requestPool:       rp.NewPooler(rp.WithSize[request](opts.reqResPoolSize)),
-		responsePool:      rp.NewPooler(rp.WithSize[response](opts.reqResPoolSize)),
-		workerQueue:       make(WorkerQueue, queueCap),
-		workQueue:         make(WorkQueue, opts.workQueueSize),
-		logger:            logger.EnsureLogger(nil).WithName("Scheduler"),
+		taskQueue: config.TaskQueue,
+		logger:    config.Logger,
 	}
 
-	if opts.adaptive != nil {
-		s.autoscaler = newAutoscaler(autoscalerConfig{
-			minWorkers:         opts.adaptive.MinWorkers,
-			maxWorkers:         opts.adaptive.MaxWorkers,
-			scalingFactor:      opts.adaptive.ScalingFactor,
-			scalingWindow:      opts.adaptive.ScalingWindow,
-			emaAlpha:           opts.adaptive.EMAAlpha,
-			currentWorkerCntFn: s.currentWorkerCnt.Load,
-			spawnWorkerFn:      s.spawnWorker,
-			workerQueue:        s.workerQueue,
-			logger:             s.logger,
-		})
+	s.taskPool.New = func() any {
+		return &QueuedTask{}
 	}
 
-	return s
-}
-
-func (s *scheduler) WithExecutor(executor IExecutor) {
-	s.executor = executor
-}
-
-func (s *scheduler) WithLogger(loggerIn core.ILogger) engine.IScheduler {
-	loggerIn = logger.EnsureLogger(loggerIn)
-	s.logger = loggerIn.WithName("Scheduler")
-	s.executor.WithLogger(loggerIn)
-	return s
-}
-
-func (s *scheduler) WithStatsRecorderFactory(f ts.IStatsRecorderFactory) {
-	s.opts.statsFactory = f
-}
-
-func (s *scheduler) WithActivityTracker(tracker core.IActivityTracker) engine.IScheduler {
-	s.tracker = tracker
-	return s
+	return s, nil
 }
 
 func (s *scheduler) Start(ctx context.Context) error {
-	s.logger.Infof("Starting scheduler with %d workers", s.opts.numWorkers)
+	s.logger.Info("Starting scheduler")
 
-	// worker lifecycle context, cancelled in defer to signal all workers
-	wCtx, wCancel := context.WithCancel(ctx)
+	<-ctx.Done()
+	s.stopping.Store(true)
 
-	defer func() {
-		wCancel()
-		s.workerWG.Wait()
-		s.logger.Info("stopped")
-	}()
-
-	if s.autoscaler != nil {
-		s.autoscaler.SetDesired(uint32(s.opts.numWorkers))
-	}
-
-	for i := uint16(0); i < s.opts.numWorkers; i++ {
-		s.spawnWorker(wCtx)
-	}
-
-	if s.autoscaler != nil {
-		go s.autoscaler.Start(wCtx)
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			s.stopping.Store(true)
-			s.logger.Infof("received context cancellation: %v", ctx.Err())
-			return nil
-		case work := <-s.workQueue:
-			select {
-			case worker := <-s.workerQueue:
-				worker <- work
-			case <-ctx.Done():
-				s.stopping.Store(true)
-				s.logger.Infof("received context cancellation during work dispatch: %v", ctx.Err())
-				return nil
-			}
-		}
-	}
+	s.logger.Info("Stopped scheduler")
+	return nil
 }
 
-func (s *scheduler) Schedule(req core.IRequestReader, next core.ResponseCallback) {
+func (s *scheduler) Schedule(req *core.Request, cbName string) error {
 	if s.stopping.Load() {
-		return
+		return ErrSchedulerStopping
 	}
 
-	if s.autoscaler != nil {
-		s.autoscaler.OnTaskArrival()
-	}
+	// get task from pool
+	task := s.taskPool.Get().(*QueuedTask)
+	task.Request = req
+	task.CallbackName = cbName
 
-	work := s.schedulerWorkPool.Acquire()
-
-	if work == nil {
-		work = &schedulerWork{}
-	}
-
-	work.request = req
-	work.next = next
-
-	s.workQueue <- work
+	return s.taskQueue.Push(context.Background(), task)
 }
 
-func (s *scheduler) NewRequest(ctx context.Context) core.IRequestRW {
-	req := s.requestPool.Acquire()
-	if req == nil {
-		req = &request{
-			method: "GET",
-			header: make(http.Header),
-		}
+func (s *scheduler) NextRequest(ctx context.Context) (*core.Request, string, engine.TaskHandle, error) {
+	qTask, handle, err := s.taskQueue.Pull(ctx)
+
+	if err != nil {
+		return nil, "", nil, err
 	}
-	req.ctx = ctx
-	return req
+
+	if qTask == nil {
+		return nil, "", nil, nil
+	}
+
+	req := qTask.Request
+	cbName := qTask.CallbackName
+
+	// return task to pool
+	qTask.Reset()
+	s.taskPool.Put(qTask)
+
+	return req, cbName, handle, nil
 }
 
-func (s *scheduler) spawnWorker(ctx context.Context) {
-	s.workerWG.Add(1)
-	s.currentWorkerCnt.Add(1)
-	id := uint16(s.lastWorkerID.Add(1))
-
-	var recorder ts.IStatsRecorder
-	if s.opts.statsFactory != nil {
-		recorder = s.opts.statsFactory.NewStatsRecorder()
-	}
-
-	// wire autoscaler callbacks if enabled
-	var onTaskDone func(time.Duration)
-	var shouldExit func() bool
-
-	if s.autoscaler != nil {
-		onTaskDone = s.autoscaler.OnTaskDone
-		shouldExit = s.autoscaler.ShouldExit
-	}
-
-	worker := NewWorker(id, s.executor, s.workerQueue, s.schedulerWorkPool, s.requestPool, s.responsePool, recorder, onTaskDone, shouldExit)
-
-	worker.WithLogger(s.logger)
-	if s.tracker != nil {
-		worker.WithActivityTracker(s.tracker)
-	}
-
-	go func() {
-		defer s.workerWG.Done()
-		defer s.currentWorkerCnt.Add(-1)
-		_ = worker.Start(ctx)
-	}()
+// currently passing is a background context,
+// but will see later if we need need another context
+func (s *scheduler) Ack(handle engine.TaskHandle) error {
+	return s.taskQueue.Ack(context.Background(), handle)
 }
 
-// For the telemetry hub
-type SchedulerSnapshot struct {
-	CurrentWorkerCnt uint16  `json:"current_workers"`
-	DesiredWorkers   uint16  `json:"desired_workers"`
-	TaskArrivalRate  float64 `json:"task_arrival_rate_ema"`
-	TaskServiceTime  float64 `json:"task_service_time_ema"`
-}
-
-// implements IStatsCollector
-func (s *scheduler) Name() string {
-	return "Scheduler"
-}
-
-func (s *scheduler) Snapshot() ts.ComponentSnapshot {
-	snap := SchedulerSnapshot{
-		CurrentWorkerCnt: uint16(s.currentWorkerCnt.Load()),
-	}
-	if s.autoscaler != nil {
-		snap.DesiredWorkers = uint16(s.autoscaler.desiredWorkerCnt.Load())
-		snap.TaskArrivalRate = s.autoscaler.lambdaEMA.Value()
-		snap.TaskServiceTime = s.autoscaler.serviceTimeEMA.Value()
-	}
-	return snap
+func (s *scheduler) Nack(handle engine.TaskHandle) error {
+	return s.taskQueue.Nack(context.Background(), handle)
 }
