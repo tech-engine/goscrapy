@@ -7,198 +7,245 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-// Type defines the goscraoy signal type
-type Type string
+// request signals emitted by worker pool and scheduler
+type RequestBus interface {
+	EmitRequestScheduled(ctx context.Context, req *core.Request)
+	EmitRequestDropped(ctx context.Context, req *core.Request, err error)
+	EmitRequestError(ctx context.Context, req *core.Request, err error)
+	EmitResponseReceived(ctx context.Context, resp core.IResponseReader)
+}
 
-const (
+// item signals emitted by pipeline manager
+type ItemBus[OUT any] interface {
+	EmitItemScraped(ctx context.Context, item OUT)
+	EmitItemDropped(ctx context.Context, item OUT, err error)
+	EmitItemError(ctx context.Context, item OUT, err error)
+}
+
+// typed signal bus
+type Bus[OUT any] struct {
+	mu sync.RWMutex
+
 	// spider signals
-	SpiderOpened Type = "spider_opened"
-	SpiderClosed Type = "spider_closed"
-	SpiderError  Type = "spider_error"
-	SpiderIdle   Type = "spider_idle"
+	spiderOpened []func(context.Context)
+	spiderClosed []func(context.Context)
+	spiderError  []func(context.Context, error)
+	spiderIdle   []func(context.Context)
 
 	// item signals
-	ItemScraped Type = "item_scraped"
-	ItemDropped Type = "item_dropped"
-	ItemError   Type = "item_error"
+	itemScraped []func(context.Context, OUT)
+	itemDropped []func(context.Context, OUT, error)
+	itemError   []func(context.Context, OUT, error)
 
 	// request signals
-	RequestScheduled Type = "request_scheduled"
-	RequestDropped   Type = "request_dropped"
-	RequestError     Type = "request_error"
+	requestScheduled []func(context.Context, *core.Request)
+	requestDropped   []func(context.Context, *core.Request, error)
+	requestError     []func(context.Context, *core.Request, error)
 
 	// response signals
-	ResponseReceived Type = "response_received"
+	responseReceived []func(context.Context, core.IResponseReader)
 
-	// rngine signals
-	EngineStarted Type = "engine_started"
-	EngineStopped Type = "engine_stopped"
-)
-
-type Bus struct {
-	mu       sync.RWMutex
-	handlers map[Type][]any
+	// engine signals
+	engineStarted []func(context.Context)
+	engineStopped []func(context.Context)
 }
 
-// Returns a new signal bus
-func New() *Bus {
-	return &Bus{
-		handlers: make(map[Type][]any),
-	}
+// create new signal bus
+func New[OUT any]() *Bus[OUT] {
+	return &Bus[OUT]{}
 }
 
-// Connect attaches a handler to a signal
-func (b *Bus) Connect(sig Type, h any) {
+func (b *Bus[OUT]) OnSpiderOpened(h func(context.Context)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.handlers[sig] = append(b.handlers[sig], h)
+	b.spiderOpened = append(b.spiderOpened, h)
 }
 
-// spider signals
-func (b *Bus) EmitSpiderOpened(ctx context.Context) {
+func (b *Bus[OUT]) OnSpiderClosed(h func(context.Context)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.spiderClosed = append(b.spiderClosed, h)
+}
+
+func (b *Bus[OUT]) OnSpiderError(h func(context.Context, error)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.spiderError = append(b.spiderError, h)
+}
+
+func (b *Bus[OUT]) OnSpiderIdle(h func(context.Context)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.spiderIdle = append(b.spiderIdle, h)
+}
+
+func (b *Bus[OUT]) OnItemScraped(h func(context.Context, OUT)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.itemScraped = append(b.itemScraped, h)
+}
+
+func (b *Bus[OUT]) OnItemDropped(h func(context.Context, OUT, error)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.itemDropped = append(b.itemDropped, h)
+}
+
+func (b *Bus[OUT]) OnItemError(h func(context.Context, OUT, error)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.itemError = append(b.itemError, h)
+}
+
+func (b *Bus[OUT]) OnRequestScheduled(h func(context.Context, *core.Request)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.requestScheduled = append(b.requestScheduled, h)
+}
+
+func (b *Bus[OUT]) OnRequestDropped(h func(context.Context, *core.Request, error)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.requestDropped = append(b.requestDropped, h)
+}
+
+func (b *Bus[OUT]) OnRequestError(h func(context.Context, *core.Request, error)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.requestError = append(b.requestError, h)
+}
+
+func (b *Bus[OUT]) OnResponseReceived(h func(context.Context, core.IResponseReader)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.responseReceived = append(b.responseReceived, h)
+}
+
+func (b *Bus[OUT]) OnEngineStarted(h func(context.Context)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.engineStarted = append(b.engineStarted, h)
+}
+
+func (b *Bus[OUT]) OnEngineStopped(h func(context.Context)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.engineStopped = append(b.engineStopped, h)
+}
+
+func (b *Bus[OUT]) EmitSpiderOpened(ctx context.Context) {
 	b.mu.RLock()
-	handlers := b.handlers[SpiderOpened]
+	handlers := b.spiderOpened
 	b.mu.RUnlock()
 	for _, h := range handlers {
-		if fn, ok := h.(func(context.Context)); ok {
-			fn(ctx)
-		}
+		h(ctx)
 	}
 }
 
-func (b *Bus) EmitSpiderClosed(ctx context.Context) {
+func (b *Bus[OUT]) EmitSpiderClosed(ctx context.Context) {
 	b.mu.RLock()
-	handlers := b.handlers[SpiderClosed]
+	handlers := b.spiderClosed
 	b.mu.RUnlock()
 	for _, h := range handlers {
-		if fn, ok := h.(func(context.Context)); ok {
-			fn(ctx)
-		}
+		h(ctx)
 	}
 }
 
-func (b *Bus) EmitSpiderError(ctx context.Context, err error) {
+func (b *Bus[OUT]) EmitSpiderError(ctx context.Context, err error) {
 	b.mu.RLock()
-	handlers := b.handlers[SpiderError]
+	handlers := b.spiderError
 	b.mu.RUnlock()
 	for _, h := range handlers {
-		if fn, ok := h.(func(context.Context, error)); ok {
-			fn(ctx, err)
-		}
+		h(ctx, err)
 	}
 }
 
-func (b *Bus) EmitSpiderIdle(ctx context.Context) {
+func (b *Bus[OUT]) EmitSpiderIdle(ctx context.Context) {
 	b.mu.RLock()
-	handlers := b.handlers[SpiderIdle]
+	handlers := b.spiderIdle
 	b.mu.RUnlock()
 	for _, h := range handlers {
-		if fn, ok := h.(func(context.Context)); ok {
-			fn(ctx)
-		}
+		h(ctx)
 	}
 }
 
-// item signals
-func (b *Bus) EmitItemScraped(ctx context.Context, item any) {
+func (b *Bus[OUT]) EmitItemScraped(ctx context.Context, item OUT) {
 	b.mu.RLock()
-	handlers := b.handlers[ItemScraped]
+	handlers := b.itemScraped
 	b.mu.RUnlock()
 	for _, h := range handlers {
-		if fn, ok := h.(func(context.Context, any)); ok {
-			fn(ctx, item)
-		}
+		h(ctx, item)
 	}
 }
 
-func (b *Bus) EmitItemDropped(ctx context.Context, item any, err error) {
+func (b *Bus[OUT]) EmitItemDropped(ctx context.Context, item OUT, err error) {
 	b.mu.RLock()
-	handlers := b.handlers[ItemDropped]
+	handlers := b.itemDropped
 	b.mu.RUnlock()
 	for _, h := range handlers {
-		if fn, ok := h.(func(context.Context, any, error)); ok {
-			fn(ctx, item, err)
-		}
+		h(ctx, item, err)
 	}
 }
 
-func (b *Bus) EmitItemError(ctx context.Context, item any, err error) {
+func (b *Bus[OUT]) EmitItemError(ctx context.Context, item OUT, err error) {
 	b.mu.RLock()
-	handlers := b.handlers[ItemError]
+	handlers := b.itemError
 	b.mu.RUnlock()
 	for _, h := range handlers {
-		if fn, ok := h.(func(context.Context, any, error)); ok {
-			fn(ctx, item, err)
-		}
+		h(ctx, item, err)
 	}
 }
 
-// request signals
-
-func (b *Bus) EmitRequestScheduled(ctx context.Context, req *core.Request) {
+func (b *Bus[OUT]) EmitRequestScheduled(ctx context.Context, req *core.Request) {
 	b.mu.RLock()
-	handlers := b.handlers[RequestScheduled]
+	handlers := b.requestScheduled
 	b.mu.RUnlock()
 	for _, h := range handlers {
-		if fn, ok := h.(func(context.Context, *core.Request)); ok {
-			fn(ctx, req)
-		}
+		h(ctx, req)
 	}
 }
 
-func (b *Bus) EmitRequestDropped(ctx context.Context, req *core.Request, err error) {
+func (b *Bus[OUT]) EmitRequestDropped(ctx context.Context, req *core.Request, err error) {
 	b.mu.RLock()
-	handlers := b.handlers[RequestDropped]
+	handlers := b.requestDropped
 	b.mu.RUnlock()
 	for _, h := range handlers {
-		if fn, ok := h.(func(context.Context, *core.Request, error)); ok {
-			fn(ctx, req, err)
-		}
+		h(ctx, req, err)
 	}
 }
 
-func (b *Bus) EmitRequestError(ctx context.Context, req *core.Request, err error) {
+func (b *Bus[OUT]) EmitRequestError(ctx context.Context, req *core.Request, err error) {
 	b.mu.RLock()
-	handlers := b.handlers[RequestError]
+	handlers := b.requestError
 	b.mu.RUnlock()
 	for _, h := range handlers {
-		if fn, ok := h.(func(context.Context, *core.Request, error)); ok {
-			fn(ctx, req, err)
-		}
+		h(ctx, req, err)
 	}
 }
 
-// response signals
-func (b *Bus) EmitResponseReceived(ctx context.Context, resp core.IResponseReader) {
+func (b *Bus[OUT]) EmitResponseReceived(ctx context.Context, resp core.IResponseReader) {
 	b.mu.RLock()
-	handlers := b.handlers[ResponseReceived]
+	handlers := b.responseReceived
 	b.mu.RUnlock()
 	for _, h := range handlers {
-		if fn, ok := h.(func(context.Context, core.IResponseReader)); ok {
-			fn(ctx, resp)
-		}
+		h(ctx, resp)
 	}
 }
 
-// engine signals
-func (b *Bus) EmitEngineStarted(ctx context.Context) {
+func (b *Bus[OUT]) EmitEngineStarted(ctx context.Context) {
 	b.mu.RLock()
-	handlers := b.handlers[EngineStarted]
+	handlers := b.engineStarted
 	b.mu.RUnlock()
 	for _, h := range handlers {
-		if fn, ok := h.(func(context.Context)); ok {
-			fn(ctx)
-		}
+		h(ctx)
 	}
 }
 
-func (b *Bus) EmitEngineStopped(ctx context.Context) {
+func (b *Bus[OUT]) EmitEngineStopped(ctx context.Context) {
 	b.mu.RLock()
-	handlers := b.handlers[EngineStopped]
+	handlers := b.engineStopped
 	b.mu.RUnlock()
 	for _, h := range handlers {
-		if fn, ok := h.(func(context.Context)); ok {
-			fn(ctx)
-		}
+		h(ctx)
 	}
 }
