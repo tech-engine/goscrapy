@@ -81,6 +81,7 @@ func New[OUT any](config *Config[OUT]) (*Engine[OUT], error) {
 		signals:          config.Signals,
 	}
 
+	engine.logger.Debugf("Engine created at %p", engine)
 	return engine, nil
 }
 
@@ -99,6 +100,7 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	// run all shutdown hooks before returning
 	defer func() {
 		m.logger.Infof("Shutting down engine...")
+		m.signals.EmitSpiderClosed(ctx)
 		m.signals.EmitEngineStopped(ctx)
 		m.logger.Infof("shutdown complete.")
 		m.started.Store(false)
@@ -142,6 +144,7 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 
 			if err := m.workerPool.Submit(req, cbName, handle); err != nil {
 				m.logger.Errorf("failed to submit task: %v", err)
+				m.activeCount.Add(-1)
 				m.scheduler.Nack(handle)
 			}
 		}
@@ -160,9 +163,7 @@ func (m *Engine[OUT]) handleResult(ctx context.Context, res IResult) {
 		m.activeCount.Add(-1)
 		
 		// notify idle if all tasks are done
-		if m.activeCount.Load() == 0 && m.started.Load() {
-			m.signals.EmitSpiderIdle(ctx)
-		}
+		m.checkIdle(ctx)
 
 		// acknowledge the task
 		m.scheduler.Ack(res.TaskHandle())
@@ -263,11 +264,18 @@ func (m *Engine[OUT]) Inc() {
 
 func (m *Engine[OUT]) Dec() {
 	m.activeCount.Add(-1)
+	m.checkIdle(context.Background())
 }
 
-func (m *Engine[OUT]) ActiveCount() int64 {
-	return m.activeCount.Load()
+func (m *Engine[OUT]) checkIdle(ctx context.Context) {
+	if m.activeCount.Load() == 0 && m.started.Load() {
+		m.signals.EmitSpiderIdle(ctx)
+	}
 }
+
+func (m *Engine[OUT]) ActiveCount() int64 { return m.activeCount.Load() }
+
+func (m *Engine[OUT]) IsStarted() bool { return m.started.Load() }
 
 func (m *Engine[OUT]) WithLogger(loggerIn core.ILogger) core.IEngine[OUT] {
 	loggerIn = logger.EnsureLogger(loggerIn)
