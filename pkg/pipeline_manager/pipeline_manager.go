@@ -56,7 +56,6 @@ type PipelineManager[OUT any] struct {
 	outputQueue               chan core.IOutput[OUT]
 	pipelines                 []engine.IPipeline[OUT]
 	logger                    core.ILogger
-	tracker                   core.IActivityTracker
 	maxProcessItemConcurrency uint64
 	signals                   *signal.Bus
 }
@@ -94,11 +93,6 @@ func (pm *PipelineManager[OUT]) Add(pipeline ...engine.IPipeline[OUT]) {
 // 	pm.logger = loggerIn.WithName("PipelineManager")
 // 	return pm
 // }
-
-func (pm *PipelineManager[OUT]) WithActivityTracker(tracker core.IActivityTracker) engine.IPipelineManager[OUT] {
-	pm.tracker = tracker
-	return pm
-}
 
 // runs after the spider's Open func and calls all open function of pipelines
 func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
@@ -206,9 +200,6 @@ func (pm *PipelineManager[OUT]) processItem(original core.IOutput[OUT]) {
 	defer func() {
 		pItem.Clear()
 		pm.itemPool.Put(pItem)
-		if pm.tracker != nil {
-			pm.tracker.Dec()
-		}
 	}()
 
 	for _, pipeline := range pm.pipelines {
