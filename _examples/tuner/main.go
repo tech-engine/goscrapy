@@ -61,7 +61,7 @@ func (s *BenchSpider) parse(ctx context.Context, resp core.IResponseReader) {
 }
 
 func runBenchmark(concurrency, maxIdle, queueBuf, resultHandlers string) float64 {
-	os.Setenv("SCHEDULER_CONCURRENCY", concurrency)
+	os.Setenv("AUTOSCALER_MAX_WORKERS", concurrency)
 	os.Setenv("MIDDLEWARE_HTTP_MAX_IDLE_CONN", maxIdle)
 	os.Setenv("MIDDLEWARE_HTTP_MAX_CONN_PER_HOST", maxIdle)
 	os.Setenv("MIDDLEWARE_HTTP_MAX_IDLE_CONN_PER_HOST", maxIdle)
@@ -183,7 +183,7 @@ func main() {
 	fmt.Println("\n--- TUNING COMPLETE ---")
 	fmt.Printf("🏆 BEST SETUP (%.2f req/sec):\n\n", bestRPS)
 	fmt.Println("Apply these exact fields to your settings.go or .env variables:")
-	fmt.Printf("  SCHEDULER_CONCURRENCY                  = %s\n", bestCombo.Concurrency)
+	fmt.Printf("  AUTOSCALER_MAX_WORKERS                 = %s\n", bestCombo.Concurrency)
 	fmt.Printf("  ENGINE_RESULT_HANDLERS                 = %s\n", bestCombo.ResultHandlers)
 	fmt.Printf("  MIDDLEWARE_HTTP_MAX_IDLE_CONN          = %s\n", bestCombo.MaxIdle)
 	fmt.Printf("  MIDDLEWARE_HTTP_MAX_CONN_PER_HOST      = %s\n", bestCombo.MaxIdle)
