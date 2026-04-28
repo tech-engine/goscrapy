@@ -119,6 +119,24 @@ GoScrapy uses a central signal bus to decouple various components and provide ho
 | | `RequestError` | A request failed during execution (e.g., network timeout). |
 | | `ResponseReceived` | A response has been received from the downloader and is about to be parsed. |
 
+### Using Signals
+
+Signals are now strongly-typed and can be subscribed to using a fluent builder pattern. This provides compile-time safety and IDE auto-completion.
+
+```go
+app, _ := gos.New[*MyRecord]()
+
+app.OnEngineStarted(func(ctx context.Context) {
+    log.Println("engine started")
+}).
+OnItemScraped(func(ctx context.Context, item *MyRecord) {
+    log.Printf("item scraped: %s", item.Title)
+}).
+OnSpiderError(func(ctx context.Context, err error) {
+    log.Printf("spider error: %v", err)
+})
+```
+
 ## Getting Started
 
 > [!IMPORTANT]
