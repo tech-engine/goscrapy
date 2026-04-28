@@ -23,8 +23,10 @@ import (
 )
 
 type Config struct {
-	Client *http.Client
-	Logger core.ILogger
+	Client     *http.Client
+	Logger     core.ILogger
+	TaskQueue  scheduler.ITaskQueue
+	Autoscaler *worker.AutoscalerConfig
 }
 
 func DefaultConfig() *Config {
@@ -94,7 +96,8 @@ func New[OUT any](configs ...*Config) (*App[OUT], error) {
 
 	// create our scheduler
 	sched, err := scheduler.New(&scheduler.Config{
-		Logger: l.WithName("Scheduler"),
+		Logger:    l.WithName("Scheduler"),
+		TaskQueue: config.TaskQueue,
 	})
 	if err != nil {
 		return nil, err
@@ -102,9 +105,10 @@ func New[OUT any](configs ...*Config) (*App[OUT], error) {
 
 	// create our worker pool
 	pool, err := worker.NewPool(&worker.Config{
-		Executor: exec,
-		Logger:   l.WithName("WorkerPool"),
-		Signals:  appSignals,
+		Executor:   exec,
+		Logger:     l.WithName("WorkerPool"),
+		Signals:    appSignals,
+		Autoscaler: config.Autoscaler,
 	})
 
 	if err != nil {
