@@ -2,6 +2,8 @@ package scheduler
 
 import (
 	"context"
+	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 
@@ -43,7 +45,14 @@ func New(config *Config) (engine.IScheduler, error) {
 	}
 
 	if config.WorkQueueSize == 0 {
-		config.WorkQueueSize = SCHEDULER_DEFAULT_WORK_QUEUE_SIZE
+		if v := os.Getenv("SCHEDULER_WORK_QUEUE_SIZE"); v != "" {
+			if q, err := strconv.ParseUint(v, 10, 64); err == nil && q > 0 {
+				config.WorkQueueSize = q
+			}
+		}
+		if config.WorkQueueSize == 0 {
+			config.WorkQueueSize = SCHEDULER_DEFAULT_WORK_QUEUE_SIZE
+		}
 	}
 
 	if config.TaskQueue == nil {

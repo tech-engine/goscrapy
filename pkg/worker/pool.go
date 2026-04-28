@@ -3,6 +3,8 @@ package worker
 import (
 	"context"
 	"io"
+	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -134,10 +136,52 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 		signals:          config.Signals,
 	}
 
+	// read from env vars for tuning
+	concurrency := uint32(16)
+	if c := os.Getenv("SCHEDULER_CONCURRENCY"); c != "" {
+		if v, err := strconv.ParseUint(c, 10, 32); err == nil {
+			concurrency = uint32(v)
+		}
+	}
+
+	maxWorkers := config.Autoscaler.MaxWorkers
+	if maxWorkers == 0 {
+		if m := os.Getenv("AUTOSCALER_MAX_WORKERS"); m != "" {
+			if v, err := strconv.ParseUint(m, 10, 32); err == nil {
+				maxWorkers = uint32(v)
+			}
+		} else {
+			maxWorkers = concurrency
+		}
+	}
+
+	minWorkers := config.Autoscaler.MinWorkers
+	if minWorkers == 0 {
+		if m := os.Getenv("AUTOSCALER_MIN_WORKERS"); m != "" {
+			if v, err := strconv.ParseUint(m, 10, 32); err == nil {
+				minWorkers = uint32(v)
+			}
+		} else {
+			minWorkers = maxWorkers / 2
+		}
+	}
+
+	scalingFactor := config.Autoscaler.ScalingFactor
+	if scalingFactor <= 0 {
+		if f := os.Getenv("AUTOSCALER_SCALING_FACTOR"); f != "" {
+			if v, err := strconv.ParseFloat(f, 32); err == nil {
+				scalingFactor = float32(v)
+			}
+		}
+		if scalingFactor <= 0 {
+			scalingFactor = 1.0
+		}
+	}
+
 	autoscalerConfig := &AutoscalerConfig{
-		MaxWorkers:    config.Autoscaler.MaxWorkers,
-		MinWorkers:    config.Autoscaler.MinWorkers,
-		ScalingFactor: config.Autoscaler.ScalingFactor,
+		MaxWorkers:    maxWorkers,
+		MinWorkers:    minWorkers,
+		ScalingFactor: scalingFactor,
 		ScalingWindow: config.Autoscaler.ScalingWindow,
 		EMAAlpha:      config.Autoscaler.EMAAlpha,
 		currentWorkerCntFn: func() int32 {

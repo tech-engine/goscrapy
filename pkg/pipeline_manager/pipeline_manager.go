@@ -31,19 +31,19 @@ func DefaultConfig[OUT any]() *Config[OUT] {
 	}
 
 	if envVal, ok := os.LookupEnv("PIPELINEMANAGER_ITEM_SIZE"); ok {
-		if v, err := strconv.ParseUint(envVal, 10, 64); err == nil {
+		if v, err := strconv.ParseUint(envVal, 10, 64); err == nil && v > 0 {
 			c.ItemSize = v
 		}
 	}
 
 	if envVal, ok := os.LookupEnv("PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE"); ok {
-		if v, err := strconv.ParseUint(envVal, 10, 64); err == nil {
+		if v, err := strconv.ParseUint(envVal, 10, 64); err == nil && v > 0 {
 			c.OutputQueueBuffSize = v
 		}
 	}
 
 	if envVal, ok := os.LookupEnv("PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY"); ok {
-		if v, err := strconv.ParseUint(envVal, 10, 64); err == nil {
+		if v, err := strconv.ParseUint(envVal, 10, 64); err == nil && v > 0 {
 			c.MaxProcessItemConcurrency = v
 		}
 	}

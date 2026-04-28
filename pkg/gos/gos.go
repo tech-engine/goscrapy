@@ -5,10 +5,8 @@ import (
 	"net/http"
 	"os"
 	ossignal "os/signal"
-	"strconv"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/tech-engine/goscrapy/internal/request"
 	"github.com/tech-engine/goscrapy/pkg/core"
@@ -91,49 +89,12 @@ func New[OUT any](configs ...*Config) (*app[OUT], error) {
 		return nil, err
 	}
 
-	// read from env vars for tuning
-	concurrency := uint32(16)
-	if c := os.Getenv("SCHEDULER_CONCURRENCY"); c != "" {
-		if v, err := strconv.Atoi(c); err == nil {
-			concurrency = uint32(v)
-		}
-	}
-
-	minWorkers := concurrency / 2
-	if m := os.Getenv("AUTOSCALER_MIN_WORKERS"); m != "" {
-		if v, err := strconv.Atoi(m); err == nil {
-			minWorkers = uint32(v)
-		}
-	}
-
-	maxWorkers := concurrency
-	if m := os.Getenv("AUTOSCALER_MAX_WORKERS"); m != "" {
-		if v, err := strconv.Atoi(m); err == nil {
-			maxWorkers = uint32(v)
-		}
-	}
-
-	scalingFactor := float32(1.0)
-	if f := os.Getenv("AUTOSCALER_SCALING_FACTOR"); f != "" {
-		if v, err := strconv.ParseFloat(f, 32); err == nil {
-			scalingFactor = float32(v)
-		}
-	}
-
-	queueSize := uint64(1000)
-	if q := os.Getenv("PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE"); q != "" {
-		if v, err := strconv.ParseUint(q, 10, 64); err == nil && v > 0 {
-			queueSize = v
-		}
-	}
-
 	// create our engine signals
 	appSignals := signal.New[OUT]()
 
 	// create our scheduler
 	sched, err := scheduler.New(&scheduler.Config{
-		WorkQueueSize: queueSize,
-		Logger:        l.WithName("Scheduler"),
+		Logger: l.WithName("Scheduler"),
 	})
 	if err != nil {
 		return nil, err
@@ -142,19 +103,8 @@ func New[OUT any](configs ...*Config) (*app[OUT], error) {
 	// create our worker pool
 	pool, err := worker.NewPool(&worker.Config{
 		Executor: exec,
-		Autoscaler: struct {
-			MaxWorkers    uint32
-			MinWorkers    uint32
-			ScalingFactor float32
-			ScalingWindow time.Duration
-			EMAAlpha      float32
-		}{
-			MinWorkers:    minWorkers,
-			MaxWorkers:    maxWorkers,
-			ScalingFactor: scalingFactor,
-		},
-		Logger:  l.WithName("WorkerPool"),
-		Signals: appSignals,
+		Logger:   l.WithName("WorkerPool"),
+		Signals:  appSignals,
 	})
 
 	if err != nil {
@@ -163,7 +113,6 @@ func New[OUT any](configs ...*Config) (*app[OUT], error) {
 
 	// create our pipeline manager
 	pmCfg := pipelinemanager.DefaultConfig[OUT]()
-	pmCfg.OutputQueueBuffSize = queueSize
 	pmCfg.Logger = l.WithName("PipelineManager")
 	pmCfg.Signals = appSignals
 	pm := pipelinemanager.New(pmCfg)
