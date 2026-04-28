@@ -7,12 +7,12 @@ import (
 )
 
 func TestSignalBus_ConnectAndEmit(t *testing.T) {
-	bus := New()
+	bus := New[string]()
 	ctx := context.Background()
 
 	t.Run("SpiderIdle", func(t *testing.T) {
 		called := false
-		bus.Connect(SpiderIdle, func(c context.Context) {
+		bus.OnSpiderIdle(func(c context.Context) {
 			called = true
 		})
 
@@ -23,9 +23,9 @@ func TestSignalBus_ConnectAndEmit(t *testing.T) {
 	})
 
 	t.Run("ItemScraped", func(t *testing.T) {
-		var capturedItem any
+		var capturedItem string
 		item := "test-item"
-		bus.Connect(ItemScraped, func(c context.Context, i any) {
+		bus.OnItemScraped(func(c context.Context, i string) {
 			capturedItem = i
 		})
 
@@ -37,8 +37,8 @@ func TestSignalBus_ConnectAndEmit(t *testing.T) {
 
 	t.Run("MultipleHandlers", func(t *testing.T) {
 		count := 0
-		bus.Connect(EngineStarted, func(c context.Context) { count++ })
-		bus.Connect(EngineStarted, func(c context.Context) { count++ })
+		bus.OnEngineStarted(func(c context.Context) { count++ })
+		bus.OnEngineStarted(func(c context.Context) { count++ })
 
 		bus.EmitEngineStarted(ctx)
 		if count != 2 {
@@ -48,21 +48,13 @@ func TestSignalBus_ConnectAndEmit(t *testing.T) {
 }
 
 func TestSignalBus_Robustness(t *testing.T) {
-	bus := New()
+	bus := New[string]()
 	ctx := context.Background()
-
-	t.Run("WrongSignatureIgnored", func(t *testing.T) {
-		bus.Connect(SpiderIdle, func() {
-			t.Error("should not be called")
-		})
-
-		bus.EmitSpiderIdle(ctx)
-	})
 
 	t.Run("SpiderErrorSignature", func(t *testing.T) {
 		err := errors.New("test-error")
 		called := false
-		bus.Connect(SpiderError, func(c context.Context, e error) {
+		bus.OnSpiderError(func(c context.Context, e error) {
 			called = true
 			if e != err {
 				t.Error("error mismatch")

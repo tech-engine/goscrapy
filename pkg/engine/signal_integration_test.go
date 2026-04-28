@@ -53,19 +53,19 @@ func TestEngine_SignalAutoDiscovery(t *testing.T) {
 }
 
 func TestEngine_LifecycleSignals(t *testing.T) {
-	bus := signal.New()
+	bus := signal.New[any]()
 	
 	startedCalled := false
 	stoppedCalled := false
 	closedCalled  := false
 	
-	bus.Connect(signal.EngineStarted, func(ctx context.Context) {
+	bus.OnEngineStarted(func(ctx context.Context) {
 		startedCalled = true
 	})
-	bus.Connect(signal.EngineStopped, func(ctx context.Context) {
+	bus.OnEngineStopped(func(ctx context.Context) {
 		stoppedCalled = true
 	})
-	bus.Connect(signal.SpiderClosed, func(ctx context.Context) {
+	bus.OnSpiderClosed(func(ctx context.Context) {
 		closedCalled = true
 	})
 
@@ -89,9 +89,9 @@ func TestEngine_LifecycleSignals(t *testing.T) {
 }
 
 func TestEngine_SpiderIdleSignal(t *testing.T) {
-	bus := signal.New()
+	bus := signal.New[any]()
 	idleCalled := false
-	bus.Connect(signal.SpiderIdle, func(ctx context.Context) {
+	bus.OnSpiderIdle(func(ctx context.Context) {
 		idleCalled = true
 	})
 

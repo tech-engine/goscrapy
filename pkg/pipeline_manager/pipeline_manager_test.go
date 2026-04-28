@@ -139,9 +139,9 @@ func TestPipelineManager(t *testing.T) {
 	// create a pipeline manager
 	var wg sync.WaitGroup
 	logger := logger.NewNoopLogger()
-	cfg := DefaultConfig()
+	cfg := DefaultConfig[*dummyRecord]()
 	cfg.Logger = logger
-	pipelineManager := New[*dummyRecord](cfg)
+	pipelineManager := New(cfg)
 
 	// add a dummy test pipeline
 	readPipeline := newDummyPipeline2[*dummyRecord]()
@@ -167,7 +167,7 @@ func TestPipelineManager(t *testing.T) {
 	safeRecord := readPipeline.safeRecord.GetVal()
 	assert.Equalf(t, 1, safeRecord[0], "expected id=1, got=%d", safeRecord[0])
 	assert.Equalf(t, 38, safeRecord[1], "expected age=38, got=%d", safeRecord[1])
-	
+
 	// signal the manager to stop and wait for it
 	cancel()
 	wg.Wait()
@@ -207,4 +207,3 @@ func TestPipelineManager_Pooling(t *testing.T) {
 	cancel()
 	wg.Wait()
 }
-
