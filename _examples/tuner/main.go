@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -59,12 +60,13 @@ func (s *BenchSpider) parse(ctx context.Context, resp core.IResponseReader) {
 	s.completed.Add(1)
 }
 
-func runBenchmark(concurrency, maxIdle, queueBuf string) float64 {
+func runBenchmark(concurrency, maxIdle, queueBuf, resultHandlers string) float64 {
 	os.Setenv("SCHEDULER_CONCURRENCY", concurrency)
 	os.Setenv("MIDDLEWARE_HTTP_MAX_IDLE_CONN", maxIdle)
 	os.Setenv("MIDDLEWARE_HTTP_MAX_CONN_PER_HOST", maxIdle)
 	os.Setenv("MIDDLEWARE_HTTP_MAX_IDLE_CONN_PER_HOST", maxIdle)
 	os.Setenv("PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE", queueBuf)
+	os.Setenv("ENGINE_RESULT_HANDLERS", resultHandlers)
 
 	// Use a timeout context to run each benchmark for a fixed duration
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -121,6 +123,11 @@ func runBenchmark(concurrency, maxIdle, queueBuf string) float64 {
 }
 
 func main() {
+	f, _ := os.Create("cpu.prof")
+	defer f.Close()
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
+
 	fmt.Println("Warming up Mock Server on :18080...")
 	mockServer()
 	time.Sleep(500 * time.Millisecond)
@@ -135,31 +142,32 @@ func main() {
 	}()
 
 	type permutation struct {
-		Concurrency string
-		MaxIdle     string
-		QueueBuf    string
+		Concurrency    string
+		MaxIdle        string
+		QueueBuf       string
+		ResultHandlers string
 	}
 
 	cores := runtime.NumCPU()
 
 	// perms represent different scaling profiles
 	perms := []permutation{
-		{fmt.Sprintf("%d", cores*5), "100", "0"},
-		{fmt.Sprintf("%d", cores*12), "500", "1000"},
-		{fmt.Sprintf("%d", cores*30), "1000", "5000"},
-		{fmt.Sprintf("%d", cores*60), "4000", "10000"},
+		{fmt.Sprintf("%d", cores*40), "2000", "10000", fmt.Sprintf("%d", cores)},
+		{fmt.Sprintf("%d", cores*40), "2000", "10000", fmt.Sprintf("%d", cores*2)},
+		{fmt.Sprintf("%d", cores*60), "4000", "15000", fmt.Sprintf("%d", cores)},
+		{fmt.Sprintf("%d", cores*60), "4000", "15000", fmt.Sprintf("%d", cores*2)},
 	}
 
 	bestRPS := 0.0
 	var bestCombo permutation
 
 	fmt.Println("Starting GoScrapy Auto-Tuning Benchmark Engine...")
-	fmt.Printf("%-11s | %-10s | %-10s | %-15s\n", "Concurrency", "MaxIdle", "QueueBuf", "Requests/Sec")
-	fmt.Println("---------------------------------------------------------------")
+	fmt.Printf("%-11s | %-10s | %-10s | %-12s | %-15s\n", "Concurrency", "MaxIdle", "QueueBuf", "ResHandlers", "Requests/Sec")
+	fmt.Println("-------------------------------------------------------------------------------")
 
 	for _, p := range perms {
-		rps := runBenchmark(p.Concurrency, p.MaxIdle, p.QueueBuf)
-		fmt.Printf("%-11s | %-10s | %-10s | %.2f req/s\n", p.Concurrency, p.MaxIdle, p.QueueBuf, rps)
+		rps := runBenchmark(p.Concurrency, p.MaxIdle, p.QueueBuf, p.ResultHandlers)
+		fmt.Printf("%-11s | %-10s | %-10s | %-12s | %.2f req/s\n", p.Concurrency, p.MaxIdle, p.QueueBuf, p.ResultHandlers, rps)
 
 		if rps > bestRPS {
 			bestRPS = rps
@@ -167,13 +175,18 @@ func main() {
 		}
 	}
 
+	if bestCombo.Concurrency == "" {
+		fmt.Println("\nNo results collected.")
+		return
+	}
+
 	fmt.Println("\n--- TUNING COMPLETE ---")
 	fmt.Printf("🏆 BEST SETUP (%.2f req/sec):\n\n", bestRPS)
 	fmt.Println("Apply these exact fields to your settings.go or .env variables:")
 	fmt.Printf("  SCHEDULER_CONCURRENCY                  = %s\n", bestCombo.Concurrency)
+	fmt.Printf("  ENGINE_RESULT_HANDLERS                 = %s\n", bestCombo.ResultHandlers)
 	fmt.Printf("  MIDDLEWARE_HTTP_MAX_IDLE_CONN          = %s\n", bestCombo.MaxIdle)
 	fmt.Printf("  MIDDLEWARE_HTTP_MAX_CONN_PER_HOST      = %s\n", bestCombo.MaxIdle)
-	// These usually match MaxIdle for best performance in high-concurrency scraping
 	fmt.Printf("  MIDDLEWARE_HTTP_MAX_IDLE_CONN_PER_HOST = %s\n", bestCombo.MaxIdle)
 	fmt.Printf("  PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE  = %s\n", bestCombo.QueueBuf)
 }
