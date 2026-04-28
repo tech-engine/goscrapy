@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -137,21 +138,19 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 	}
 
 	// read from env vars for tuning
-	concurrency := uint32(16)
-	if c := os.Getenv("SCHEDULER_CONCURRENCY"); c != "" {
-		if v, err := strconv.ParseUint(c, 10, 32); err == nil {
-			concurrency = uint32(v)
-		}
-	}
-
 	maxWorkers := config.Autoscaler.MaxWorkers
 	if maxWorkers == 0 {
 		if m := os.Getenv("AUTOSCALER_MAX_WORKERS"); m != "" {
 			if v, err := strconv.ParseUint(m, 10, 32); err == nil {
 				maxWorkers = uint32(v)
 			}
-		} else {
-			maxWorkers = concurrency
+		}
+		// Fallback to adaptive default
+		if maxWorkers == 0 {
+			maxWorkers = uint32(runtime.NumCPU() * 8)
+			if maxWorkers < 16 {
+				maxWorkers = 16
+			}
 		}
 	}
 
