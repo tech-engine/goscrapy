@@ -25,16 +25,10 @@ var discardBufPool = sync.Pool{
 }
 
 type Config struct {
-	Executor   IExecutor
-	Results    chan engine.IResult
-	QueueSize  int
-	Autoscaler struct {
-		MaxWorkers    uint32
-		MinWorkers    uint32
-		ScalingFactor float32
-		ScalingWindow time.Duration
-		EMAAlpha      float32
-	}
+	Executor      IExecutor
+	Results       chan engine.IResult
+	QueueSize     int
+	Autoscaler    *AutoscalerConfig
 	Logger        core.ILogger
 	EnableMetrics bool
 	Signals       signal.RequestBus
@@ -138,7 +132,16 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 	}
 
 	// read from env vars for tuning
-	maxWorkers := config.Autoscaler.MaxWorkers
+	var maxWorkers uint32
+	var minWorkers uint32
+	var scalingFactor float32
+
+	if config.Autoscaler != nil {
+		maxWorkers = config.Autoscaler.MaxWorkers
+		minWorkers = config.Autoscaler.MinWorkers
+		scalingFactor = config.Autoscaler.ScalingFactor
+	}
+
 	if maxWorkers == 0 {
 		if m := os.Getenv("AUTOSCALER_MAX_WORKERS"); m != "" {
 			if v, err := strconv.ParseUint(m, 10, 32); err == nil {
@@ -154,7 +157,6 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 		}
 	}
 
-	minWorkers := config.Autoscaler.MinWorkers
 	if minWorkers == 0 {
 		if m := os.Getenv("AUTOSCALER_MIN_WORKERS"); m != "" {
 			if v, err := strconv.ParseUint(m, 10, 32); err == nil {
@@ -165,24 +167,33 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 		}
 	}
 
-	scalingFactor := config.Autoscaler.ScalingFactor
 	if scalingFactor <= 0 {
-		if f := os.Getenv("AUTOSCALER_SCALING_FACTOR"); f != "" {
-			if v, err := strconv.ParseFloat(f, 32); err == nil {
+		if v := os.Getenv("AUTOSCALER_SCALING_FACTOR"); v != "" {
+			if v, err := strconv.ParseFloat(v, 32); err == nil && v > 0 {
 				scalingFactor = float32(v)
 			}
 		}
-		if scalingFactor <= 0 {
-			scalingFactor = 1.0
-		}
+	}
+	if scalingFactor <= 0 {
+		scalingFactor = 1.0
+	}
+
+	scalingWindow := 5 * time.Second
+	if config.Autoscaler != nil && config.Autoscaler.ScalingWindow > 0 {
+		scalingWindow = config.Autoscaler.ScalingWindow
+	}
+
+	emaAlpha := float32(0.3)
+	if config.Autoscaler != nil && config.Autoscaler.EMAAlpha > 0 {
+		emaAlpha = config.Autoscaler.EMAAlpha
 	}
 
 	autoscalerConfig := &AutoscalerConfig{
 		MaxWorkers:    maxWorkers,
 		MinWorkers:    minWorkers,
 		ScalingFactor: scalingFactor,
-		ScalingWindow: config.Autoscaler.ScalingWindow,
-		EMAAlpha:      config.Autoscaler.EMAAlpha,
+		ScalingWindow: scalingWindow,
+		EMAAlpha:      emaAlpha,
 		currentWorkerCntFn: func() int32 {
 			return p.activeWorkers.Load()
 		},
