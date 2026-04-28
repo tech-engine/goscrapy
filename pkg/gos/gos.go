@@ -68,6 +68,10 @@ func New[OUT any](configs ...*Config) (*app[OUT], error) {
 
 	l := config.Logger
 
+	if config.Client == nil {
+		config.Client = DefaultClient()
+	}
+
 	// create our http adapter
 	adapter, err := httpAdapter.NewAdapter(&httpAdapter.Config{
 		Client: config.Client,
@@ -92,6 +96,27 @@ func New[OUT any](configs ...*Config) (*app[OUT], error) {
 	if c := os.Getenv("SCHEDULER_CONCURRENCY"); c != "" {
 		if v, err := strconv.Atoi(c); err == nil {
 			concurrency = uint32(v)
+		}
+	}
+
+	minWorkers := concurrency / 2
+	if m := os.Getenv("AUTOSCALER_MIN_WORKERS"); m != "" {
+		if v, err := strconv.Atoi(m); err == nil {
+			minWorkers = uint32(v)
+		}
+	}
+
+	maxWorkers := concurrency
+	if m := os.Getenv("AUTOSCALER_MAX_WORKERS"); m != "" {
+		if v, err := strconv.Atoi(m); err == nil {
+			maxWorkers = uint32(v)
+		}
+	}
+
+	scalingFactor := float32(1.0)
+	if f := os.Getenv("AUTOSCALER_SCALING_FACTOR"); f != "" {
+		if v, err := strconv.ParseFloat(f, 32); err == nil {
+			scalingFactor = float32(v)
 		}
 	}
 
@@ -124,8 +149,9 @@ func New[OUT any](configs ...*Config) (*app[OUT], error) {
 			ScalingWindow time.Duration
 			EMAAlpha      float32
 		}{
-			MinWorkers: concurrency / 2,
-			MaxWorkers: concurrency,
+			MinWorkers:    minWorkers,
+			MaxWorkers:    maxWorkers,
+			ScalingFactor: scalingFactor,
 		},
 		Logger:  l.WithName("WorkerPool"),
 		Signals: appSignals,
