@@ -29,12 +29,14 @@ func TestAdaptiveScaling(t *testing.T) {
 
 	config := &Config{
 		Executor: executor,
+		Autoscaler: &AutoscalerConfig{
+			MinWorkers:    minWorkers,
+			MaxWorkers:    maxWorkers,
+			ScalingFactor: 1.5,
+			EMAAlpha:      0.9,
+			ScalingWindow: window,
+		},
 	}
-	config.Autoscaler.MinWorkers = minWorkers
-	config.Autoscaler.MaxWorkers = maxWorkers
-	config.Autoscaler.ScalingFactor = 1.5
-	config.Autoscaler.EMAAlpha = 0.9
-	config.Autoscaler.ScalingWindow = window
 
 	p, err := NewPool(config)
 	assert.NoError(t, err)
@@ -79,7 +81,6 @@ func TestAdaptiveScaling(t *testing.T) {
 	assert.Equal(t, int32(minWorkers), finalWorkers)
 	t.Logf("Scaled down to %d workers", finalWorkers)
 }
-
 
 // func TestAdaptiveScaling_DisabledByDefault(t *testing.T) {
 // 	executor := &mockExecutor{execTime: 10 * time.Millisecond}
