@@ -33,7 +33,7 @@ func DefaultConfig() *Config {
 	}
 }
 
-type app[OUT any] struct {
+type App[OUT any] struct {
 	*core.Core[OUT]
 	Engine            core.IEngine[OUT]
 	PipelineManager   engine.IPipelineManager[OUT]
@@ -50,7 +50,7 @@ type app[OUT any] struct {
 	wg                sync.WaitGroup
 }
 
-func New[OUT any](configs ...*Config) (*app[OUT], error) {
+func New[OUT any](configs ...*Config) (*App[OUT], error) {
 	var config *Config
 	if len(configs) > 0 {
 		config = configs[0]
@@ -131,7 +131,7 @@ func New[OUT any](configs ...*Config) (*app[OUT], error) {
 	}
 	eng.WithLogger(l.WithName("Engine"))
 
-	app := &app[OUT]{
+	app := &App[OUT]{
 		Core:              core.New(eng, request.NewPool()),
 		Engine:            eng,
 		MiddlewareManager: middlewaremanager.New(config.Client),
@@ -147,93 +147,93 @@ func New[OUT any](configs ...*Config) (*app[OUT], error) {
 	return app, nil
 }
 
-func (gos *app[OUT]) WithMiddlewares(middlewares ...middlewaremanager.Middleware) *app[OUT] {
+func (gos *App[OUT]) WithMiddlewares(middlewares ...middlewaremanager.Middleware) *App[OUT] {
 	gos.MiddlewareManager.Add(middlewares...)
 	return gos
 }
 
-func (gos *app[OUT]) WithPipelines(pipelines ...engine.IPipeline[OUT]) *app[OUT] {
+func (gos *App[OUT]) WithPipelines(pipelines ...engine.IPipeline[OUT]) *App[OUT] {
 	gos.PipelineManager.Add(pipelines...)
 	return gos
 }
 
-func (gos *app[OUT]) OnSpiderOpened(h func(context.Context)) *app[OUT] {
+func (gos *App[OUT]) OnSpiderOpened(h func(context.Context)) *App[OUT] {
 	gos.signals.OnSpiderOpened(h)
 	return gos
 }
 
-func (gos *app[OUT]) OnSpiderClosed(h func(context.Context)) *app[OUT] {
+func (gos *App[OUT]) OnSpiderClosed(h func(context.Context)) *App[OUT] {
 	gos.signals.OnSpiderClosed(h)
 	return gos
 }
 
-func (gos *app[OUT]) OnSpiderError(h func(context.Context, error)) *app[OUT] {
+func (gos *App[OUT]) OnSpiderError(h func(context.Context, error)) *App[OUT] {
 	gos.signals.OnSpiderError(h)
 	return gos
 }
 
-func (gos *app[OUT]) OnSpiderIdle(h func(context.Context)) *app[OUT] {
+func (gos *App[OUT]) OnSpiderIdle(h func(context.Context)) *App[OUT] {
 	gos.signals.OnSpiderIdle(h)
 	return gos
 }
 
-func (gos *app[OUT]) OnItemScraped(h func(context.Context, OUT)) *app[OUT] {
+func (gos *App[OUT]) OnItemScraped(h func(context.Context, OUT)) *App[OUT] {
 	gos.signals.OnItemScraped(h)
 	return gos
 }
 
-func (gos *app[OUT]) OnItemDropped(h func(context.Context, OUT, error)) *app[OUT] {
+func (gos *App[OUT]) OnItemDropped(h func(context.Context, OUT, error)) *App[OUT] {
 	gos.signals.OnItemDropped(h)
 	return gos
 }
 
-func (gos *app[OUT]) OnItemError(h func(context.Context, OUT, error)) *app[OUT] {
+func (gos *App[OUT]) OnItemError(h func(context.Context, OUT, error)) *App[OUT] {
 	gos.signals.OnItemError(h)
 	return gos
 }
 
-func (gos *app[OUT]) OnRequestScheduled(h func(context.Context, *core.Request)) *app[OUT] {
+func (gos *App[OUT]) OnRequestScheduled(h func(context.Context, *core.Request)) *App[OUT] {
 	gos.signals.OnRequestScheduled(h)
 	return gos
 }
 
-func (gos *app[OUT]) OnRequestDropped(h func(context.Context, *core.Request, error)) *app[OUT] {
+func (gos *App[OUT]) OnRequestDropped(h func(context.Context, *core.Request, error)) *App[OUT] {
 	gos.signals.OnRequestDropped(h)
 	return gos
 }
 
-func (gos *app[OUT]) OnRequestError(h func(context.Context, *core.Request, error)) *app[OUT] {
+func (gos *App[OUT]) OnRequestError(h func(context.Context, *core.Request, error)) *App[OUT] {
 	gos.signals.OnRequestError(h)
 	return gos
 }
 
-func (gos *app[OUT]) OnResponseReceived(h func(context.Context, core.IResponseReader)) *app[OUT] {
+func (gos *App[OUT]) OnResponseReceived(h func(context.Context, core.IResponseReader)) *App[OUT] {
 	gos.signals.OnResponseReceived(h)
 	return gos
 }
 
-func (gos *app[OUT]) OnEngineStarted(h func(context.Context)) *app[OUT] {
+func (gos *App[OUT]) OnEngineStarted(h func(context.Context)) *App[OUT] {
 	gos.signals.OnEngineStarted(h)
 	return gos
 }
 
-func (gos *app[OUT]) OnEngineStopped(h func(context.Context)) *app[OUT] {
+func (gos *App[OUT]) OnEngineStopped(h func(context.Context)) *App[OUT] {
 	gos.signals.OnEngineStopped(h)
 	return gos
 }
 
-func (gos *app[OUT]) WithLogger(loggerIn core.IConfigurableLogger) *app[OUT] {
+func (gos *App[OUT]) WithLogger(loggerIn core.IConfigurableLogger) *App[OUT] {
 	loggerIn = logger.EnsureLogger(loggerIn).(core.IConfigurableLogger)
 	gos.logger = loggerIn.WithName("GOS")
 	gos.Engine.WithLogger(gos.logger.WithName("Engine"))
 	return gos
 }
 
-func (gos *app[OUT]) RegisterSpider(spider any) {
+func (gos *App[OUT]) RegisterSpider(spider any) {
 	gos.Engine.RegisterSpider(spider)
 }
 
-func (gos *app[OUT]) WithTelemetry(hub *ts.TelemetryHub, config *ts.TelemetryHubConfig) *app[OUT] {
+func (gos *App[OUT]) WithTelemetry(hub *ts.TelemetryHub, config *ts.TelemetryHubConfig) *App[OUT] {
 	if hub == nil {
 		gos.hub = ts.NewTelemetryHub(config)
 		return gos
@@ -242,11 +242,11 @@ func (gos *app[OUT]) WithTelemetry(hub *ts.TelemetryHub, config *ts.TelemetryHub
 	return gos
 }
 
-func (gos *app[OUT]) Logger() core.ILogger {
+func (gos *App[OUT]) Logger() core.ILogger {
 	return gos.logger
 }
 
-func (gos *app[OUT]) Start(ctx context.Context) error {
+func (gos *App[OUT]) Start(ctx context.Context) error {
 	gos.wg.Add(1)
 	defer gos.wg.Done()
 
@@ -268,7 +268,7 @@ func (gos *app[OUT]) Start(ctx context.Context) error {
 
 // Wait for completion or termination. If autoExit is true, the engine will
 // shut down automatically when all work is finished.
-func (gos *app[OUT]) Wait(autoExit ...bool) error {
+func (gos *App[OUT]) Wait(autoExit ...bool) error {
 	sigCh := make(chan os.Signal, 1)
 	ossignal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 

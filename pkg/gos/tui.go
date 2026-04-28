@@ -9,7 +9,7 @@ import (
 )
 
 // Handles the graceful initialization and shutdown of both the engine and TUI.
-func StartWithTUI[OUT any](ctx context.Context, gosApp *app[OUT], dashboard tui.IDashboard) error {
+func StartWithTUI[OUT any](ctx context.Context, gosApp *App[OUT], dashboard tui.IDashboard) error {
 	// engineCtx, engineCancel := context.WithCancel(ctx)
 	// defer engineCancel()
 	gosApp.cancelableSignal = newCancelableSignal(ctx)
