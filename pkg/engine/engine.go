@@ -2,11 +2,13 @@ package engine
 
 import (
 	"context"
+	"os"
+	"runtime"
+	"strconv"
 	"sync"
 	"sync/atomic"
 
 	"reflect"
-	"runtime"
 	"time"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
@@ -23,6 +25,7 @@ type Config[OUT any] struct {
 	CallbackRegistry ICallbackRegistry
 	Logger           core.ILogger
 	Signals          *signal.Bus[OUT]
+	ResultHandlers   uint
 	shutdownTimeout  time.Duration
 }
 
@@ -32,6 +35,7 @@ type Engine[OUT any] struct {
 	pipelineManager  IPipelineManager[OUT]
 	callbackRegistry ICallbackRegistry
 	shutdownTimeout  time.Duration
+	resultHandlers   uint
 	logger           core.ILogger
 	activeCount      atomic.Int64
 	started          atomic.Bool
@@ -78,8 +82,24 @@ func New[OUT any](config *Config[OUT]) (*Engine[OUT], error) {
 		pipelineManager:  config.PipelineManager,
 		callbackRegistry: config.CallbackRegistry,
 		shutdownTimeout:  config.shutdownTimeout,
+		resultHandlers:   config.ResultHandlers,
 		logger:           config.Logger,
 		signals:          config.Signals,
+	}
+
+	if engine.resultHandlers == 0 {
+		if v := os.Getenv("ENGINE_RESULT_HANDLERS"); v != "" {
+			if i, err := strconv.ParseUint(v, 10, 32); err == nil && i > 0 {
+				engine.resultHandlers = uint(i)
+			}
+		}
+	}
+
+	if engine.resultHandlers == 0 {
+		engine.resultHandlers = uint(runtime.NumCPU())
+		if engine.resultHandlers < 4 {
+			engine.resultHandlers = 4
+		}
 	}
 
 	engine.logger.Debugf("Engine created at %p", engine)
@@ -99,7 +119,6 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 
 	m.logger.Infof("Engine starting...")
 	m.signals.EmitEngineStarted(ctx)
-
 
 	// run all shutdown hooks before returning
 	defer func() {
@@ -122,11 +141,7 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	m.Dec()
 
 	// result handler pool
-	resultHandlers := runtime.NumCPU()
-	if resultHandlers < 4 {
-		resultHandlers = 4
-	}
-	for i := 0; i < resultHandlers; i++ {
+	for i := uint(0); i < m.resultHandlers; i++ {
 		g.Go(func() error {
 			for {
 				select {
@@ -173,7 +188,7 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 func (m *Engine[OUT]) handleResult(ctx context.Context, res IResult) {
 	defer func() {
 		m.activeCount.Add(-1)
-		
+
 		// notify idle if all tasks are done
 		m.checkIdle(ctx)
 
@@ -273,7 +288,6 @@ func (m *Engine[OUT]) RegisterSpider(spider any) error {
 		return ErrNoCallbacksFound
 	}
 
-
 	return nil
 }
 
@@ -308,8 +322,3 @@ func (m *Engine[OUT]) WithLogger(loggerIn core.ILogger) core.IEngine[OUT] {
 	m.logger = loggerIn.WithName("Engine")
 	return m
 }
-
-
-
-
-
