@@ -29,12 +29,13 @@ type Worker struct {
 	results          chan<- engine.IResult
 	workerTaskPool   *sync.Pool
 	responsePool     *sync.Pool
+	resultPool       *sync.Pool
 	tracker          core.IActivityTracker
 	logger           core.ILogger
 	pool             *workerPool
 }
 
-func NewWorker(id uint16, executor IExecutor, workerTaskBuffer <-chan *workTask, results chan<- engine.IResult, responsePool *sync.Pool, taskPool *sync.Pool, pool *workerPool) *Worker {
+func NewWorker(id uint16, executor IExecutor, workerTaskBuffer <-chan *workTask, results chan<- engine.IResult, responsePool *sync.Pool, taskPool *sync.Pool, resultPool *sync.Pool, pool *workerPool) *Worker {
 	return &Worker{
 		ID:               id,
 		executor:         executor,
@@ -42,6 +43,7 @@ func NewWorker(id uint16, executor IExecutor, workerTaskBuffer <-chan *workTask,
 		results:          results,
 		responsePool:     responsePool,
 		workerTaskPool:   taskPool,
+		resultPool:       resultPool,
 		pool:             pool,
 		logger:           pool.logger.WithName(fmt.Sprintf("Worker-%d", id)),
 	}
@@ -85,17 +87,9 @@ func (w *Worker) Start(ctx context.Context) error {
 func (w *Worker) execute(ctx context.Context, task *workTask) engine.IResult {
 	resp := w.responsePool.Get().(*response)
 
-	// context will be cancelled in ReleaseResult after body is drained
-	execCtx, cancel := context.WithCancel(ctx)
+	// merge contexts to handle timeouts and graceful shutdown
+	execCtx, cleanup := mergeContexts(ctx, task.req.Ctx)
 
-	// use request deadline if provided
-	if task.req.Ctx != nil {
-		if d, ok := task.req.Ctx.Deadline(); ok {
-			execCtx, _ = context.WithDeadline(execCtx, d)
-		}
-	}
-
-	// set our exec context
 	task.req.Ctx = execCtx
 
 	if w.tracker != nil {
@@ -123,12 +117,13 @@ func (w *Worker) execute(ctx context.Context, task *workTask) engine.IResult {
 		}
 	}
 
-	return &result{
-		request:      task.req,
-		response:     resp,
-		callbackName: task.callbackName,
-		taskHandle:   task.taskHandle,
-		err:          err,
-		cancel:       cancel,
-	}
+	res := w.resultPool.Get().(*result)
+	res.request = task.req
+	res.response = resp
+	res.callbackName = task.callbackName
+	res.taskHandle = task.taskHandle
+	res.err = err
+	res.cancel = cleanup
+
+	return res
 }

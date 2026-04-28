@@ -26,6 +26,7 @@ func TestWorker_Lifecycle(t *testing.T) {
 
 	respPool := &sync.Pool{New: func() any { return &response{} }}
 	workPool := &sync.Pool{New: func() any { return &workTask{} }}
+	resPool := &sync.Pool{New: func() any { return &result{} }}
 
 	pool := &workerPool{
 		logger: logger.NewLogger(),
@@ -38,6 +39,7 @@ func TestWorker_Lifecycle(t *testing.T) {
 		results,
 		respPool,
 		workPool,
+		resPool,
 		pool,
 	)
 
