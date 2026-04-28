@@ -5,11 +5,14 @@ import (
 
 	"github.com/tech-engine/goscrapy/pkg/builtin/middlewares"
 	"github.com/tech-engine/goscrapy/pkg/builtin/pipelines/csv"
+	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 
 	// "github.com/tech-engine/goscrapy/pkg/builtin/pipelines/json"
 	"github.com/tech-engine/goscrapy/pkg/engine"
-	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
 )
+
+// stats collector for scraping metrics
+var HttpStats = middlewares.NewStatsCollector()
 
 // Default: 10000
 const MIDDLEWARE_HTTP_TIMEOUT_MS = ""

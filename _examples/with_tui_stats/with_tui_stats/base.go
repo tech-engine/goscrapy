@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/tech-engine/goscrapy/pkg/gos"
-	"github.com/tech-engine/goscrapy/pkg/signal"
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 	"github.com/tech-engine/goscrapy/pkg/tui"
 )
@@ -36,7 +35,7 @@ func New(ctx context.Context, tuiEnabled bool) (*Spider, error) {
 		hub := ts.NewTelemetryHub(nil)
 		hub.AddCollector(HttpStats)
 
-		app.AddSignal(signal.EngineStopped, func(ctx context.Context) {
+		app.OnEngineStopped(func(ctx context.Context) {
 			// Output stats cleanly at the end
 			// We can have any other cleanup code here
 			HttpStats.Print()
