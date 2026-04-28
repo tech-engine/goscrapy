@@ -14,6 +14,13 @@ import (
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
 )
 
+var discardBufPool = sync.Pool{
+	New: func() any {
+		b := make([]byte, 32*1024)
+		return &b
+	},
+}
+
 type Config struct {
 	Executor   IExecutor
 	Results    chan engine.IResult
@@ -73,6 +80,7 @@ type workerPool struct {
 	results          chan engine.IResult
 	workerTaskBuffer chan *workTask
 	workerTaskPool   sync.Pool
+	resultPool       sync.Pool
 	autoscaler       *autoscaler
 	activeWorkers    atomic.Int32
 	lastWorkerID     atomic.Uint32
@@ -153,6 +161,10 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 	p.workerTaskPool.New = func() any {
 		return &workTask{}
 	}
+
+	p.resultPool.New = func() any {
+		return &result{}
+	}
 	return p, nil
 }
 
@@ -183,7 +195,7 @@ func (p *workerPool) spawnWorker(ctx context.Context) {
 	id := uint16(p.lastWorkerID.Add(1))
 	p.activeWorkers.Add(1)
 
-	w := NewWorker(id, p.executor, p.workerTaskBuffer, p.results, &p.responsePool, &p.workerTaskPool, p)
+	w := NewWorker(id, p.executor, p.workerTaskBuffer, p.results, &p.responsePool, &p.workerTaskPool, &p.resultPool, p)
 
 	p.wg.Add(1)
 	go func() {
@@ -241,7 +253,9 @@ func (p *workerPool) ReleaseResult(res engine.IResult) {
 	// drain and close body before cancel to ensure connection reuse
 	if resp, ok := res.Response().(*response); ok {
 		if resp.body != nil {
-			io.Copy(io.Discard, resp.body)
+			buf := discardBufPool.Get().(*[]byte)
+			io.CopyBuffer(io.Discard, resp.body, *buf)
+			discardBufPool.Put(buf)
 			resp.body.Close()
 		}
 		resp.Reset()
@@ -250,4 +264,10 @@ func (p *workerPool) ReleaseResult(res engine.IResult) {
 
 	// now cancel the context (connection stays alive for reuse)
 	res.Release()
+
+	// return result to pool
+	if r, ok := res.(*result); ok {
+		r.Reset()
+		p.resultPool.Put(r)
+	}
 }
