@@ -122,7 +122,10 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	m.Dec()
 
 	// result handler pool
-	const resultHandlers = 4
+	resultHandlers := runtime.NumCPU()
+	if resultHandlers < 4 {
+		resultHandlers = 4
+	}
 	for i := 0; i < resultHandlers; i++ {
 		g.Go(func() error {
 			for {
