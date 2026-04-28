@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
+	"github.com/tech-engine/goscrapy/pkg/engine"
 	"github.com/tech-engine/goscrapy/pkg/gos"
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
@@ -27,6 +28,16 @@ func (r *Record) Record() *Record      { return r }
 func (r *Record) RecordKeys() []string { return []string{"id"} }
 func (r *Record) RecordFlat() []any    { return []any{r.Id} }
 func (r *Record) Job() core.IJob       { return nil }
+
+// NoopPipeline silences warnings and ensures the pipeline hot path is executed.
+type NoopPipeline struct{}
+
+func (p *NoopPipeline) ProcessItem(pi engine.IPipelineItem, out core.IOutput[*Record]) error {
+	return nil
+}
+
+func (p *NoopPipeline) Open(ctx context.Context) error { return nil }
+func (p *NoopPipeline) Close()                         {}
 
 func mockServer() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -63,13 +74,12 @@ func runBenchmark(concurrency, maxIdle, queueBuf string) float64 {
 	l := logger.NewNoopLogger()
 
 	// Initialize the application using the modern factory
-	// Explicitly disable telemetry and TUI for zero benchmark overhead
 	app, err := gos.New[*Record]()
 	if err != nil {
 		fmt.Printf("failed to create app: %v\n", err)
 		return 0
 	}
-	app.WithLogger(l)
+	app.WithLogger(l).WithPipelines(&NoopPipeline{})
 
 	spider := &BenchSpider{
 		ICoreSpider: app,
@@ -132,10 +142,7 @@ func main() {
 
 	cores := runtime.NumCPU()
 
-	// 1. Un-optimized baseline (Cores * 5)
-	// 2. High pipeline buffers (Cores * 12)
-	// 3. Blazing Fast profile (Recommended) (Cores * 30)
-	// 4. Extreme scale (Cores * 60)
+	// perms represent different scaling profiles
 	perms := []permutation{
 		{fmt.Sprintf("%d", cores*5), "100", "0"},
 		{fmt.Sprintf("%d", cores*12), "500", "1000"},
@@ -166,6 +173,7 @@ func main() {
 	fmt.Printf("  SCHEDULER_CONCURRENCY                  = %s\n", bestCombo.Concurrency)
 	fmt.Printf("  MIDDLEWARE_HTTP_MAX_IDLE_CONN          = %s\n", bestCombo.MaxIdle)
 	fmt.Printf("  MIDDLEWARE_HTTP_MAX_CONN_PER_HOST      = %s\n", bestCombo.MaxIdle)
+	// These usually match MaxIdle for best performance in high-concurrency scraping
 	fmt.Printf("  MIDDLEWARE_HTTP_MAX_IDLE_CONN_PER_HOST = %s\n", bestCombo.MaxIdle)
 	fmt.Printf("  PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE  = %s\n", bestCombo.QueueBuf)
 }
