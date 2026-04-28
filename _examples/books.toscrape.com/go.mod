@@ -2,7 +2,7 @@ module books_to_scrape
 
 go 1.25.0
 
-require github.com/tech-engine/goscrapy v0.27.1
+require github.com/tech-engine/goscrapy v0.27.2
 
 require (
 	github.com/Noooste/azuretls-client v1.12.12 // indirect
