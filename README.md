@@ -43,6 +43,7 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
 For practical examples and real-world use cases, check the [_examples](./_examples) directory:
 
 - [Google Maps Scraper](./_examples/google_maps_scraper) — Complete scraper for businesses on Google Maps.
+- [Google Finance Scraper](./_examples/google_finance) — A real-world example of extracting real-time market quotes, company profiles, and historical charts from Google Finance.
 - [Books to Scrape](./_examples/books.toscrape.com) — Standard scraping example for a book catalog.
 - [TUI Stats Integration](./_examples/with_tui_stats) — Example showing how to use the built-in TUI for real-time monitoring.
 - [Fingerprint Spoofing](./_examples/fingerprint_spoofing) — advanced usage for bypassing bot detection.
