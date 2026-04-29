@@ -106,7 +106,7 @@ func New[OUT any](configs ...*Config) (*App[OUT], error) {
 	// create our worker pool
 	pool, err := worker.NewPool(&worker.Config{
 		Executor:   exec,
-		Logger:     l.WithName("WorkerPool"),
+		Logger:     l,
 		Signals:    appSignals,
 		Autoscaler: config.Autoscaler,
 	})
@@ -127,13 +127,13 @@ func New[OUT any](configs ...*Config) (*App[OUT], error) {
 		WorkerPool:      pool,
 		PipelineManager: pm,
 		Signals:         appSignals,
+		Logger:          l.WithName("Engine"),
 	}
 
 	eng, err := engine.New(engCfg)
 	if err != nil {
 		return nil, err
 	}
-	eng.WithLogger(l.WithName("Engine"))
 
 	app := &App[OUT]{
 		Core:              core.New(eng, request.NewPool()),
