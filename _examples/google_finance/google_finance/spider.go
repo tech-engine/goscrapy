@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
-	"github.com/tech-engine/goscrapy/pkg/gos"
 )
 
 const GOOGLE_RPC_URL = "https://www.google.com/finance/_/GoogleFinanceUi/data/batchexecute"

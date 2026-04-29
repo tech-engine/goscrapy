@@ -6,6 +6,10 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/gos"
 )
 
+type Spider struct {
+	gos.ICoreSpider[*Record]
+}
+
 func New(ctx context.Context) (*Spider, error) {
 	app, err := gos.New[*Record]()
 	if err != nil {
