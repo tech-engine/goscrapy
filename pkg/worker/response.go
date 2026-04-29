@@ -2,6 +2,7 @@ package worker
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 
@@ -57,7 +58,11 @@ func (r *response) Detach() core.IResponseReader {
 	dr := &response{
 		statusCode: r.statusCode,
 		bodyBytes:  r.bodyBytes,
-		request:    r.request,
+	}
+
+	// clone request safely
+	if r.request != nil {
+		dr.request = r.request.Clone(context.Background())
 	}
 
 	// clone body
@@ -70,13 +75,15 @@ func (r *response) Detach() core.IResponseReader {
 		dr.header = r.header.Clone()
 	}
 
-	// deep copy cookies
 	if r.cookies != nil {
 		dr.cookies = make([]*http.Cookie, len(r.cookies))
-		copy(dr.cookies, r.cookies)
+		for i, c := range r.cookies {
+			cookieCopy := *c
+			dr.cookies[i] = &cookieCopy
+		}
 	}
 
-	// deep copy meta
+	// meta is shallow copied
 	if r.meta != nil {
 		dr.meta = r.meta.Clone()
 	}
