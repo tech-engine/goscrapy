@@ -21,10 +21,6 @@ var RPC_HEADERS = map[string]string{
 	"Content-Type":    "application/x-www-form-urlencoded;charset=UTF-8",
 }
 
-type Spider struct {
-	gos.ICoreSpider[*Record]
-}
-
 // StartRequest initiates the scraping process for a given ticker job.
 func (s *Spider) StartRequest(ctx context.Context, job *Job) {
 	ticker := job.Query()
