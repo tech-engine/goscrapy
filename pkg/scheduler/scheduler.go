@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"strconv"
-	"sync"
 	"sync/atomic"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
@@ -23,16 +22,10 @@ type QueuedTask struct {
 	CallbackName string
 }
 
-func (qt *QueuedTask) Reset() {
-	qt.Request = nil
-	qt.CallbackName = ""
-}
-
 type scheduler struct {
 	taskQueue ITaskQueue
 	logger    core.ILogger
 	stopping  atomic.Bool
-	taskPool  sync.Pool
 }
 
 func New(config *Config) (engine.IScheduler, error) {
@@ -64,10 +57,6 @@ func New(config *Config) (engine.IScheduler, error) {
 		logger:    config.Logger,
 	}
 
-	s.taskPool.New = func() any {
-		return &QueuedTask{}
-	}
-
 	return s, nil
 }
 
@@ -86,10 +75,10 @@ func (s *scheduler) Schedule(req *core.Request, cbName string) error {
 		return ErrSchedulerStopping
 	}
 
-	// get task from pool
-	task := s.taskPool.Get().(*QueuedTask)
-	task.Request = req
-	task.CallbackName = cbName
+	task := QueuedTask{
+		Request:      req,
+		CallbackName: cbName,
+	}
 
 	return s.taskQueue.Push(context.Background(), task)
 }
@@ -101,16 +90,13 @@ func (s *scheduler) NextRequest(ctx context.Context) (*core.Request, string, eng
 		return nil, "", nil, err
 	}
 
-	if qTask == nil {
+	// For pass-by-value, check if the task is essentially "empty"
+	if qTask.Request == nil {
 		return nil, "", nil, nil
 	}
 
 	req := qTask.Request
 	cbName := qTask.CallbackName
-
-	// return task to pool
-	qTask.Reset()
-	s.taskPool.Put(qTask)
 
 	return req, cbName, handle, nil
 }

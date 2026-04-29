@@ -7,35 +7,34 @@ import (
 )
 
 type inMemTaskQueue struct {
-	taskCh chan *QueuedTask
+	tasks chan QueuedTask
 }
 
-// Default: inmem implementation of ITaskQueue
 func newInMemoryTaskQueue(size uint64) ITaskQueue {
 	return &inMemTaskQueue{
-		taskCh: make(chan *QueuedTask, size),
+		tasks: make(chan QueuedTask, size),
 	}
 }
 
-func (q *inMemTaskQueue) Push(ctx context.Context, task *QueuedTask) error {
+func (q *inMemTaskQueue) Push(ctx context.Context, task QueuedTask) error {
 	select {
-	case q.taskCh <- task:
+	case q.tasks <- task:
 		return nil
 	default:
 		return ErrTaskQueueFull
 	}
 }
 
-func (q *inMemTaskQueue) Pull(ctx context.Context) (*QueuedTask, engine.TaskHandle, error) {
+func (q *inMemTaskQueue) Pull(ctx context.Context) (QueuedTask, engine.TaskHandle, error) {
 	select {
 	case <-ctx.Done():
-		return nil, nil, ctx.Err()
-	case task, ok := <-q.taskCh:
+		return QueuedTask{}, nil, ctx.Err()
+	case task, ok := <-q.tasks:
 		if !ok {
-			return nil, nil, ErrTaskQueueClosed
+			return QueuedTask{}, nil, ErrTaskQueueClosed
 		}
-
-		return task, task, nil
+		// Return a dummy handle for the in-memory queue since Ack/Nack are no-ops
+		return task, "inmem_handle", nil
 	}
 }
 

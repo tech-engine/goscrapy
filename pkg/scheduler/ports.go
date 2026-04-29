@@ -7,8 +7,8 @@ import (
 )
 
 type ITaskQueue interface {
-	Push(context.Context, *QueuedTask) error
-	Pull(context.Context) (*QueuedTask, engine.TaskHandle, error)
+	Push(context.Context, QueuedTask) error
+	Pull(context.Context) (QueuedTask, engine.TaskHandle, error)
 	Ack(context.Context, engine.TaskHandle) error
 	Nack(context.Context, engine.TaskHandle) error
 }
