@@ -49,11 +49,6 @@ const ENGINE_RESULT_HANDLERS = ""
 // Default: 1000
 const SCHEDULER_WORK_QUEUE_SIZE = ""
 
-// Default: INFO
-// Options: DEBUG, INFO, WARN, ERROR, NONE
-// NONE will disable all logging
-const GOS_LOG_LEVEL = "INFO"
-
 // Pipeline Manager settings
 
 // Default: 24
