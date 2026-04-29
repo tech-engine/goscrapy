@@ -3,6 +3,7 @@ package fsmap
 import (
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/tech-engine/goscrapy/internal/cmap"
 )
@@ -43,10 +44,18 @@ func (fsm *FixedSizeMap[K, V]) Clear() {
 	clear(fsm.data)
 }
 
+// Clone creates a shallow copy of the fixed size map.
 func (fsm *FixedSizeMap[K, V]) Clone() *FixedSizeMap[K, V] {
 	newMap := New[K, V](fsm.size)
-	for k, v := range fsm.data {
-		newMap.data[k] = v
-	}
+	maps.Copy(newMap.data, fsm.data)
 	return newMap
+}
+
+// ToMap exports the internal data to a standard Go map. Values are shallow copied.
+func (fsm *FixedSizeMap[K, V]) ToMap() map[K]V {
+	m := make(map[K]V, len(fsm.data))
+	for k, v := range fsm.data {
+		m[k] = v.Data
+	}
+	return m
 }
