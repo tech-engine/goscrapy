@@ -119,9 +119,7 @@ func unwrap(val any) any {
 }
 
 func bindSetter(t reflect.Type) func(reflect.Value, any) {
-	kind := t.Kind()
-
-	switch kind {
+	switch t.Kind() {
 	case reflect.Ptr:
 		elemType := t.Elem()
 		innerSetter := bindSetter(elemType)
@@ -158,10 +156,7 @@ func bindSetter(t reflect.Type) func(reflect.Value, any) {
 				v.Set(newSlice)
 			}
 		}
-	}
 
-	// scalar types
-	switch kind {
 	case reflect.String:
 		return func(v reflect.Value, val any) {
 			val = unwrap(val)
@@ -171,6 +166,7 @@ func bindSetter(t reflect.Type) func(reflect.Value, any) {
 				v.SetString(s)
 			}
 		}
+
 	case reflect.Float32, reflect.Float64:
 		return func(v reflect.Value, val any) {
 			val = unwrap(val)
@@ -181,6 +177,7 @@ func bindSetter(t reflect.Type) func(reflect.Value, any) {
 				v.SetFloat(f)
 			}
 		}
+
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return func(v reflect.Value, val any) {
 			val = unwrap(val)
@@ -191,6 +188,7 @@ func bindSetter(t reflect.Type) func(reflect.Value, any) {
 				v.SetInt(i)
 			}
 		}
+
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return func(v reflect.Value, val any) {
 			val = unwrap(val)
@@ -201,6 +199,7 @@ func bindSetter(t reflect.Type) func(reflect.Value, any) {
 				v.SetUint(u)
 			}
 		}
+
 	case reflect.Bool:
 		return func(v reflect.Value, val any) {
 			val = unwrap(val)
@@ -209,6 +208,13 @@ func bindSetter(t reflect.Type) func(reflect.Value, any) {
 			} else if s, ok := val.(string); ok {
 				b, _ := strconv.ParseBool(s)
 				v.SetBool(b)
+			}
+		}
+
+	case reflect.Struct:
+		return func(v reflect.Value, val any) {
+			if v.CanAddr() {
+				_ = Map(val, v.Addr().Interface())
 			}
 		}
 	}
