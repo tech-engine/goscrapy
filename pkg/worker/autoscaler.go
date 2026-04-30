@@ -160,7 +160,9 @@ func (a *autoscaler) adjust(ctx context.Context, target uint16) {
 		target = a.maxWorkers
 	}
 
-	current := uint16(a.currentWorkerCntFn())
+	// use desired count (not live activeWorkers) to prevent overshoot
+	// when previous despawn signals haven't been processed yet
+	current := uint16(a.desiredWorkerCnt.Load())
 	if target == current {
 		return
 	}
