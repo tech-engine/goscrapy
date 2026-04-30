@@ -12,16 +12,20 @@ import (
 */
 
 type Record struct {
-	J *Job `json:"-" csv:"-"` // JobId is required
-	// add you custom fields here
-	Title       string `json:"title" csv:"title"`
-	Price       string `json:"price" csv:"price"`
+	J           *Job   `json:"-" csv:"-"` // JobId is required
+	Title       string `json:"title" csv:"title" gos_css:".product_main h1"`
+	Price       string `json:"price" csv:"price" gos_css:".price_color"`
 	Stock       string `json:"stock" csv:"stock"`
-	Rating      string `json:"rating" csv:"rating"`
-	Description string `json:"description" csv:"description"`
-	Upc         string `json:"upc" csv:"upc"`
-	ProductType string `json:"product_type" csv:"product_type"`
-	Reviews     string `json:"reviews" csv:"reviews"`
+	Rating      string `json:"rating" csv:"rating" gos_css:".star-rating@class"`
+	Description string `json:"description" csv:"description" gos_css:"#product_description + *"`
+	Upc         string `json:"upc" csv:"upc" gos_css:"table tr:nth-child(1) td"`
+	ProductType string `json:"product_type" csv:"product_type" gos_css:"table tr:nth-child(2) td"`
+	Reviews     string `json:"reviews" csv:"reviews" gos_css:"table tr:nth-child(7) td"`
+}
+
+type Listing struct {
+	ProductLinks []string `gos_css:"article.product_pod h3 a@href"`
+	NextPage     string   `gos_css:"li.next a@href"`
 }
 
 // modify below code only if you know what you are doing

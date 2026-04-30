@@ -22,8 +22,10 @@ func main() {
 	}
 
 
-
 	fmt.Println("🕷️  GoScrapy spider is running. Press Ctrl+C to stop.")
+
+	// start requests
+	spider.StartRequests(ctx)
 
 	// wait for completion
 	if err := spider.Wait(true); err != nil && !errors.Is(err, context.Canceled) {
