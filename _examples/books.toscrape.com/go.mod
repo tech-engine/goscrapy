@@ -2,7 +2,7 @@ module books_to_scrape
 
 go 1.25.0
 
-require github.com/tech-engine/goscrapy v0.27.5
+require github.com/tech-engine/goscrapy v0.27.6
 
 require (
 	github.com/Noooste/azuretls-client v1.12.12 // indirect
@@ -46,6 +46,9 @@ require (
 	github.com/refraction-networking/utls v1.8.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/segmentio/fasthash v1.0.3 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/net v0.53.0 // indirect
