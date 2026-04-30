@@ -203,10 +203,32 @@ func bindSetter(t reflect.Type) func(reflect.Value, any) {
 	case reflect.Bool:
 		return func(v reflect.Value, val any) {
 			val = unwrap(val)
+			var s string
 			if res, ok := val.(gjson.Result); ok {
-				v.SetBool(res.Bool())
-			} else if s, ok := val.(string); ok {
-				b, _ := strconv.ParseBool(s)
+				if res.Type == gjson.True {
+					v.SetBool(true)
+					return
+				}
+				if res.Type == gjson.False {
+					v.SetBool(false)
+					return
+				}
+				s = res.String()
+			} else if str, ok := val.(string); ok {
+				s = str
+			} else {
+				return
+			}
+
+			if s == "" {
+				v.SetBool(false)
+				return
+			}
+			b, err := strconv.ParseBool(strings.ToLower(s))
+			if err != nil {
+				// if not a valid bool string, but not empty, treat as true (existence check)
+				v.SetBool(true)
+			} else {
 				v.SetBool(b)
 			}
 		}
