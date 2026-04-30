@@ -288,6 +288,48 @@ func TestMap_RawStringSource(t *testing.T) {
 	assert.Equal(t, 77, r.X)
 }
 
+func TestMap_JSON_SliceOfStructs(t *testing.T) {
+	src := gjson.Parse(`{"items":[{"name":"A","val":1},{"name":"B","val":2}]}`)
+
+	type Item struct {
+		Name string `gos:"name"`
+		Val  int    `gos:"val"`
+	}
+	type Record struct {
+		Items []Item `gos:"items"`
+	}
+
+	var r Record
+	err := Map(src, &r)
+	assert.NoError(t, err)
+	assert.Len(t, r.Items, 2)
+	assert.Equal(t, "A", r.Items[0].Name)
+	assert.Equal(t, 1, r.Items[0].Val)
+	assert.Equal(t, "B", r.Items[1].Name)
+	assert.Equal(t, 2, r.Items[1].Val)
+}
+
+func TestMap_JSON_RecursiveArrayMapping(t *testing.T) {
+	src := gjson.Parse(`{"203": [["Monday", 1], ["Tuesday", 2]]}`)
+
+	type DayHour struct {
+		Day string `gos:"0"`
+		Val int    `gos:"1"`
+	}
+	type Record struct {
+		Hours []DayHour `gos:"203"`
+	}
+
+	var r Record
+	err := Map(src, &r)
+	assert.NoError(t, err)
+	assert.Len(t, r.Hours, 2)
+	assert.Equal(t, "Monday", r.Hours[0].Day)
+	assert.Equal(t, 1, r.Hours[0].Val)
+	assert.Equal(t, "Tuesday", r.Hours[1].Day)
+	assert.Equal(t, 2, r.Hours[1].Val)
+}
+
 func TestMap_NonPointerTarget_ReturnsError(t *testing.T) {
 	type Record struct {
 		X int `gos:"x"`
