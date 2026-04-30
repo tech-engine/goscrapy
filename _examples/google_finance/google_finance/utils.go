@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/tech-engine/goscrapy/pkg/builtin/gosm"
 	"github.com/tidwall/gjson"
 )
 
@@ -87,59 +88,26 @@ func parseBatchResults(data []byte) map[string]gjson.Result {
 
 // mapQuote extracts basic ticker information from the xh8wxf response.
 func mapQuote(ticker string, raw gjson.Result, record *Record) {
-	q := raw.Get("0.0.0")
-	if !q.Exists() {
-		return
+	// Automatically map fields defined by gjson tags in record.go
+	_ = gosm.Map(raw, record)
+
+	// Special handling for crypto ticker/exchange locations
+	if strings.Contains(ticker, "-") && !strings.Contains(ticker, ":") {
+		record.Ticker = raw.Get("0.0.0.21").String()
+		record.Exchange = ""
 	}
 
-	isCrypto := strings.Contains(ticker, "-") && !strings.Contains(ticker, ":")
-
-	tickerStr := q.Get("1.0").String()
-	exchangeStr := q.Get("1.1").String()
-	if isCrypto {
-		tickerStr = q.Get("21").String()
-		exchangeStr = ""
-	}
-
+	// Map numeric type to human-readable string
 	typeMap := map[float64]string{0: "stock", 1: "index", 3: "crypto", 5: "etf"}
-	typeStr, ok := typeMap[q.Get("3").Float()]
-	if !ok {
-		typeStr = "other"
+	if tStr, ok := typeMap[raw.Get("0.0.0.3").Float()]; ok {
+		record.Type = tStr
 	}
-
-	record.Ticker = tickerStr
-	record.Exchange = exchangeStr
-	record.Name = q.Get("2").String()
-	record.Type = typeStr
-	record.Price = q.Get("5.0").Float()
-	record.Change = q.Get("5.1").Float()
-	record.ChangePercent = q.Get("5.2").Float()
-	record.PreviousClose = q.Get("7").Float()
-	record.Currency = q.Get("4").String()
-	record.Timezone = q.Get("12").String()
 }
 
 // mapCompany extracts detailed organizational info from the HqGpWd response.
 func mapCompany(raw gjson.Result, record *Record) {
-	info := raw.Get("0.0")
-	if !info.Exists() {
-		return
-	}
-
-	record.Company = &CompanyInfo{
-		Description:      info.Get("2").String(),
-		CEO:              info.Get("5").String(),
-		Employees:        info.Get("6").String(),
-		MarketCap:        info.Get("7").String(),
-		Open:             info.Get("9").Float(),
-		High:             info.Get("10").Float(),
-		Low:              info.Get("11").Float(),
-		FiftyTwoWeekHigh: info.Get("12").Float(),
-		FiftyTwoWeekLow:  info.Get("13").Float(),
-		PERatio:          info.Get("16").Float(),
-		Volume:           info.Get("18").String(),
-		Sector:           info.Get("71").String(),
-	}
+	// Automatically map all company fields using tags
+	_ = gosm.Map(raw, record)
 }
 
 // mapChart extracts historical performance data from the AiCwsd response.
@@ -155,12 +123,10 @@ func mapChart(raw gjson.Result, record *Record) {
 			dateArr := pt.Get("0").Array()
 			priceArr := pt.Get("1").Array()
 			if len(dateArr) >= 3 && len(priceArr) >= 1 {
-				date := fmt.Sprintf("%04.0f-%02.0f-%02.0f", dateArr[0].Float(), dateArr[1].Float(), dateArr[2].Float())
-				points = append(points, ChartPoint{
-					Date:   date,
-					Price:  priceArr[0].Float(),
-					Volume: pt.Get("2").Float(),
-				})
+				var ptRec ChartPoint
+				_ = gosm.Map(pt, &ptRec)
+				ptRec.Date = fmt.Sprintf("%04.0f-%02.0f-%02.0f", dateArr[0].Float(), dateArr[1].Float(), dateArr[2].Float())
+				points = append(points, ptRec)
 			}
 			return true
 		})
@@ -182,12 +148,9 @@ func mapNews(raw gjson.Result, record *Record) {
 
 	news.ForEach(func(_, item gjson.Result) bool {
 		if item.IsArray() && item.Get("1").Exists() {
-			record.News = append(record.News, NewsItem{
-				Title:     item.Get("1").String(),
-				Source:    item.Get("2").String(),
-				URL:       item.Get("0").String(),
-				Timestamp: item.Get("4").Int(),
-			})
+			var ni NewsItem
+			_ = gosm.Map(item, &ni)
+			record.News = append(record.News, ni)
 		}
 		return true
 	})
