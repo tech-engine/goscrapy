@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/tech-engine/goscrapy/pkg/builtin/gosm"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tidwall/gjson"
 )
@@ -54,13 +55,18 @@ func unicodeDecode(unicodeStr string) string {
 	return decodedStr
 }
 
-func extractMapResults(data []byte) []Record {
+func ExtractMapResults(data []byte) []Record {
 	body := bytes.TrimPrefix(data, []byte(")]}'"))
 
-	records := gjson.GetBytes(body, "0.1.#.14")
+	// try both paths for records
+	records := gjson.GetBytes(body, "64.#.1")
+	if !records.Exists() || len(records.Array()) == 0 {
+		records = gjson.GetBytes(body, "0.1.#.14")
+	}
+
 	query := gjson.GetBytes(body, "0.0")
 
-	if !(records.Exists() && query.Exists()) {
+	if !records.Exists() {
 		return nil
 	}
 
@@ -93,59 +99,58 @@ func extractMapResults(data []byte) []Record {
 }
 
 func parseRecord(res gjson.Result, query string) *Record {
-	stateCode := strings.Split(res.Get("2.1").Str, " ")
-	openingHours := parseOpeningHours(res.Get("203.0"))
+	record := &Record{Query: query}
 
-	return &Record{
-		Query:              query,
-		Street:             res.Get("2.0").Str,
-		City:               res.Get("183.1.3").Str,
-		ZipCode:            res.Get("183.1.4").Str,
-		State:              res.Get("183.1.5").Str,
-		StateCode:          stateCode[0],
-		Country:            res.Get("2.2").Str,
-		CountryCode:        res.Get("183.1.6").Str,
-		Review:             res.Get("4.7").Float(),
-		ReviewsUrl:         unicodeDecode(res.Get("4.3.0").Str),
-		ReviewsCount:       res.Get("4.8").Uint(),
-		Website:            unicodeDecode(res.Get("7.1").Str),
-		Title:              unicodeDecode(res.Get("11").Str),
-		Categories:         parseStringList(res.Get("13")),
-		TimeZone:           res.Get("30").Str,
-		Description:        unicodeDecode(res.Get("32.1.1").Str),
-		ShortDescription:   unicodeDecode(res.Get("32.0.1").Str),
-		ReviewDistribution: parseReviewDistribution(res.Get("52.3")),
-		WebResultsUrl:      unicodeDecode(res.Get("174.0").Str),
-		Phone:              res.Get("178.0.3").Str,
-		OpenHours:          openingHours,
-		OpenHoursStr:       openingHours.String(),
-		Status:             res.Get("203.1.8.0").Str,
-		ReservationUrls:    parseStringList(res.Get("46.#.0")),
-		OrderUrls:          parseStringList(res.Get("75.0.1.2.#.1.2.0")),
-		OrderPlatforms:     parseStringList(res.Get("75.0.1.2.#.0.0")),
-		GoogleReserveUrl:   unicodeDecode(res.Get("75.0.0.5.1.2.0").Str),
-		Details:            parseDetails(res.Get("100.1")),
+	// use gosm to map
+	_ = gosm.Map(res, record)
+
+
+	// post-process: unicode decoding
+	record.Title = unicodeDecode(record.Title)
+	record.Description = unicodeDecode(record.Description)
+	record.ShortDescription = unicodeDecode(record.ShortDescription)
+	record.Website = unicodeDecode(record.Website)
+	record.ReviewsUrl = unicodeDecode(record.ReviewsUrl)
+	record.WebResultsUrl = unicodeDecode(record.WebResultsUrl)
+	record.GoogleReserveUrl = unicodeDecode(record.GoogleReserveUrl)
+
+	// decode slices
+	for i, v := range record.Categories {
+		record.Categories[i] = unicodeDecode(v)
 	}
-}
-
-func parseOpeningHours(raw gjson.Result) OpeningHours {
-	oh := make(OpeningHours)
-	for _, opening := range raw.Array() {
-		oh[opening.Get("0").Str] = opening.Get("3.0.0").Str
+	for i, v := range record.ReservationUrls {
+		record.ReservationUrls[i] = unicodeDecode(v)
 	}
-	return oh
-}
 
-func parseDetails(raw gjson.Result) Details {
-	details := make(Details)
-	for _, section := range raw.Array() {
-		sectionName := section.Get("0").Str
-		details[sectionName] = map[string]string{}
-		for _, item := range section.Get("2").Array() {
-			details[sectionName][item.Get("1").Str] = item.Get("2.2.3").Str
+	// decode nested fields
+	for i := range record.Orders {
+		record.Orders[i].Url = unicodeDecode(record.Orders[i].Url)
+		record.Orders[i].Platform = unicodeDecode(record.Orders[i].Platform)
+		record.OrderUrls = append(record.OrderUrls, record.Orders[i].Url)
+		record.OrderPlatforms = append(record.OrderPlatforms, record.Orders[i].Platform)
+	}
+
+	for i := range record.Details {
+		for j := range record.Details[i].Items {
+			record.Details[i].Items[j].Value = unicodeDecode(record.Details[i].Items[j].Value)
 		}
 	}
-	return details
+
+	// formatting
+	var ohLines []string
+	for _, oh := range record.OpenHours {
+		ohLines = append(ohLines, fmt.Sprintf("%s:%s", oh.Day, oh.Timing))
+	}
+	record.OpenHoursStr = strings.Join(ohLines, " | ")
+
+	record.ReviewDistribution = parseReviewDistribution(res.Get("52.3"))
+
+	// special split
+	if parts := strings.Split(res.Get("2.1").Str, " "); len(parts) > 0 {
+		record.StateCode = parts[0]
+	}
+
+	return record
 }
 
 func parseReviewDistribution(raw gjson.Result) map[string]uint64 {
@@ -156,13 +161,6 @@ func parseReviewDistribution(raw gjson.Result) map[string]uint64 {
 	return dist
 }
 
-func parseStringList(raw gjson.Result) []string {
-	var list []string
-	for _, item := range raw.Array() {
-		list = append(list, unicodeDecode(item.Str))
-	}
-	return list
-}
 
 
 // below are utilities
@@ -179,22 +177,29 @@ func generateGeocodingUrl(baseUrl string, job Job) string {
 func extractGeocoding(data []byte) (lat, lng float64, query string, ok bool) {
 	body := bytes.TrimPrefix(data, []byte(")]}'"))
 
-	latlng := gjson.GetBytes(body, "0.1.0.22.11")
-	lat = latlng.Get("2").Float()
-	lng = latlng.Get("3").Float()
-
-	if lat == 0 && lng == 0 {
-		latlng = gjson.GetBytes(body, "0.1.1.22.11")
-		lat = latlng.Get("2").Float()
-		lng = latlng.Get("3").Float()
+	type geoData struct {
+		Lat float64 `gos:"2"`
+		Lng float64 `gos:"3"`
 	}
 
-	qResult := gjson.GetBytes(body, "0.0")
-	if !(latlng.Exists() && qResult.Exists()) {
-		return 0, 0, "", false
+	type geoResponse struct {
+		Query string   `gos:"0.0"`
+		Geo0  *geoData `gos:"0.1.0.22.11"`
+		Geo1  *geoData `gos:"0.1.1.22.11"`
 	}
 
-	return lat, lng, qResult.Str, true
+	var res geoResponse
+	_ = gosm.Map(body, &res)
+
+	if res.Geo0 != nil && (res.Geo0.Lat != 0 || res.Geo0.Lng != 0) {
+		return res.Geo0.Lat, res.Geo0.Lng, res.Query, true
+	}
+
+	if res.Geo1 != nil && (res.Geo1.Lat != 0 || res.Geo1.Lng != 0) {
+		return res.Geo1.Lat, res.Geo1.Lng, res.Query, true
+	}
+
+	return 0, 0, "", false
 }
 
 func prepareRequest(req *core.Request, url string, job Job) *core.Request {

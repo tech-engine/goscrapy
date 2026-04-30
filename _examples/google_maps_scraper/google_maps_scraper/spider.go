@@ -58,7 +58,7 @@ func (s *Spider) parseMapListing(ctx context.Context, resp core.IResponseReader)
 		return
 	}
 
-	records := extractMapResults(resp.Bytes())
+	records := ExtractMapResults(resp.Bytes())
 	s.Logger().Infof("Found %d records for [%s] (At cursor %d)", len(records), job.query, job.cursor)
 	if len(records) <= 0 {
 		return
