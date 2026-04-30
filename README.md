@@ -126,7 +126,7 @@ Signals are now strongly-typed and can be subscribed to using a fluent builder p
 
 ```go
 app, _ := gos.New[*MyRecord]()
-
+ 
 app.OnEngineStarted(func(ctx context.Context) {
     log.Println("engine started")
 }).
@@ -137,7 +137,45 @@ OnSpiderError(func(ctx context.Context, err error) {
     log.Printf("spider error: %v", err)
 })
 ```
-
+ 
+## Declarative Mapping (Gosm)
+ 
+Stop writing boilerplate extraction code. **Gosm** is GoScrapy's declarative mapping engine that lets you define your data model using struct tags. It automatically traverses nested JSON, CSS, and XPath selectors to populate your records.
+ 
+### The Power of Gosm
+ 
+Whether you're dealing with deeply nested JSON arrays or complex HTML structures, Gosm handles the heavy lifting recursively.
+ 
+```go
+type Record struct {
+    // Extract from JSON path 
+    Title    string   `gos:"0.1.title"` 
+    
+    // Extract from HTML using CSS or XPath
+    Price    float64  `gos_css:".price_color"`
+    InStock  bool     `gos_xpath:"//p[@class='instock availability']"`
+    
+    // Extract attributes using @attr syntax
+    ImageURL string   `gos_css:"img.thumbnail@src"`
+    Link     string   `gos_xpath:"//a[@class='title']@href"`
+    
+    // Recursive mapping for nested structures
+    Authors  []Author `gos:"authors"` 
+}
+ 
+type Author struct {
+    Name string `gos:"name"`
+}
+ 
+func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
+    var book Record
+    // One line to map EVERYTHING
+    _ = gosm.Map(resp, &book) 
+    
+    s.Yield(&book)
+}
+```
+ 
 ## Getting Started
 
 > [!IMPORTANT]
