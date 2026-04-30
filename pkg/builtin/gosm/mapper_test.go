@@ -330,6 +330,32 @@ func TestMap_JSON_RecursiveArrayMapping(t *testing.T) {
 	assert.Equal(t, 2, r.Hours[1].Val)
 }
 
+func TestMap_BoolExistence(t *testing.T) {
+	// valid boolean strings
+	src1 := gjson.Parse(`{"a":"true", "b":"0", "c":""}`)
+	type Record1 struct {
+		A bool `gos:"a"`
+		B bool `gos:"b"`
+		C bool `gos:"c"`
+	}
+	var r1 Record1
+	_ = Map(src1, &r1)
+	assert.True(t, r1.A)
+	assert.False(t, r1.B)
+	assert.False(t, r1.C)
+
+	// existence check (non boolean strings)
+	src2 := gjson.Parse(`{"present":"In stock", "missing":""}`)
+	type Record2 struct {
+		Present bool `gos:"present"`
+		Missing bool `gos:"missing"`
+	}
+	var r2 Record2
+	_ = Map(src2, &r2)
+	assert.True(t, r2.Present)
+	assert.False(t, r2.Missing)
+}
+
 func TestMap_NonPointerTarget_ReturnsError(t *testing.T) {
 	type Record struct {
 		X int `gos:"x"`
