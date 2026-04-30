@@ -4,24 +4,27 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tidwall/gjson"
 )
 
-// map[reflect.Type]*structPlan
+// plan cache to avoid reflection overhead on every call
 var planCache sync.Map
 
 type fieldPlan struct {
-	index    int
-	tagJSON  string
-	tagCSS   string
-	tagXPath string
-	isStruct bool
-	isPtr    bool
+	index     int
+	jsonTag   string
+	cssTag    string // raw selector
+	cssAttr   string // attr name if @ is used
+	xPathTag  string // raw xpath
+	xPathAttr string // attr name if @ is used
+	isStruct  bool
+	isPtr     bool
 
-	// pre-bound setter to avoid switch in hot loop
+	// pre-bound setter for speed
 	setter func(v reflect.Value, res any)
 }
 
@@ -29,8 +32,7 @@ type structPlan struct {
 	fields []fieldPlan
 }
 
-// Map populates a struct with data from a response or gjson result using tags.
-// Supported tags: gos (gjson path), gos_css (CSS selector), gos_xpath (XPath).
+// Map populates target from source using tags (gos, gos_css, gos_xpath)
 func Map(source any, target any) error {
 	v := reflect.ValueOf(target)
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
@@ -45,7 +47,24 @@ func Map(source any, target any) error {
 		plan, _ = planCache.LoadOrStore(t, buildPlan(t))
 	}
 
+	// normalize raw json once so we don't re-parse per field
+	source = normalizeSource(source)
+
 	return executePlan(source, elem, plan.(*structPlan))
+}
+
+func normalizeSource(source any) any {
+	switch s := source.(type) {
+	case []byte:
+		if len(s) > 0 && (s[0] == '{' || s[0] == '[') {
+			return gjson.ParseBytes(s)
+		}
+	case string:
+		if len(s) > 0 && (s[0] == '{' || s[0] == '[') {
+			return gjson.Parse(s)
+		}
+	}
+	return source
 }
 
 func buildPlan(t reflect.Type) *structPlan {
@@ -56,7 +75,7 @@ func buildPlan(t reflect.Type) *structPlan {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
-		// skip unexported fields to avoid reflect panics
+		// skip unexported
 		if !field.IsExported() {
 			continue
 		}
@@ -69,19 +88,34 @@ func buildPlan(t reflect.Type) *structPlan {
 			fp.isPtr = kind == reflect.Ptr
 		}
 
-		fp.tagJSON = field.Tag.Get("gos")
-		fp.tagCSS = field.Tag.Get("gos_css")
-		fp.tagXPath = field.Tag.Get("gos_xpath")
+		fp.jsonTag = field.Tag.Get("gos")
 
-		// bind setter for this field's type
+		if raw := field.Tag.Get("gos_css"); raw != "" {
+			fp.cssTag, fp.cssAttr = parseAttrCSS(raw)
+		}
+
+		if raw := field.Tag.Get("gos_xpath"); raw != "" {
+			fp.xPathTag, fp.xPathAttr = parseAttrXPath(raw)
+		}
+
 		fp.setter = bindSetter(field.Type)
 
-		if fp.isStruct || fp.tagJSON != "" || fp.tagCSS != "" || fp.tagXPath != "" {
+		if fp.isStruct || fp.jsonTag != "" || fp.cssTag != "" || fp.xPathTag != "" {
 			plan.fields = append(plan.fields, fp)
 		}
 	}
 
 	return plan
+}
+
+func unwrap(val any) any {
+	if slice, ok := val.([]string); ok {
+		if len(slice) > 0 {
+			return slice[0]
+		}
+		return ""
+	}
+	return val
 }
 
 func bindSetter(t reflect.Type) func(reflect.Value, any) {
@@ -100,12 +134,19 @@ func bindSetter(t reflect.Type) func(reflect.Value, any) {
 
 	case reflect.Slice:
 		elemType := t.Elem()
-		itemSetter := bindSetter(elemType) // pre-compute once, not per-call
+		itemSetter := bindSetter(elemType)
 		return func(v reflect.Value, val any) {
 			if slice, ok := val.([]string); ok {
 				if elemType.Kind() == reflect.String {
 					v.Set(reflect.ValueOf(slice))
+					return
 				}
+				// non-string slice: convert elements
+				newSlice := reflect.MakeSlice(t, len(slice), len(slice))
+				for i, s := range slice {
+					itemSetter(newSlice.Index(i), s)
+				}
+				v.Set(newSlice)
 				return
 			}
 			if res, ok := val.(gjson.Result); ok && res.IsArray() {
@@ -117,17 +158,6 @@ func bindSetter(t reflect.Type) func(reflect.Value, any) {
 				v.Set(newSlice)
 			}
 		}
-	}
-
-	// unwrap extracts a single value from a []string (CSS/XPath results)
-	unwrap := func(val any) any {
-		if slice, ok := val.([]string); ok {
-			if len(slice) > 0 {
-				return slice[0]
-			}
-			return ""
-		}
-		return val
 	}
 
 	// scalar types
@@ -183,7 +213,6 @@ func bindSetter(t reflect.Type) func(reflect.Value, any) {
 		}
 	}
 
-	// unsupported types get a no-op setter
 	return func(v reflect.Value, val any) {}
 }
 
@@ -203,30 +232,32 @@ func executePlan(source any, elem reflect.Value, plan *structPlan) error {
 			}
 
 			subSource := source
-			if fp.tagJSON != "" {
-				if res, ok := getGJSON(source, fp.tagJSON); ok && res.Exists() {
+			if fp.jsonTag != "" {
+				if res, ok := getGJSON(source, fp.jsonTag); ok && res.Exists() {
 					subSource = res
 				}
 			}
-			_ = Map(subSource, targetField.Interface())
+			if err := Map(subSource, targetField.Interface()); err != nil {
+				return err
+			}
 			continue
 		}
 
-		// try tags in priority order
-		if fp.tagJSON != "" {
-			if res, ok := getGJSON(source, fp.tagJSON); ok && res.Exists() {
+		// check tags in priority order
+		if fp.jsonTag != "" {
+			if res, ok := getGJSON(source, fp.jsonTag); ok && res.Exists() {
 				fp.setter(fieldVal, res)
 				continue
 			}
 		}
-		if fp.tagCSS != "" {
-			if res, ok := getCSS(source, fp.tagCSS); ok {
+		if fp.cssTag != "" {
+			if res, ok := getCSS(source, fp.cssTag, fp.cssAttr); ok {
 				fp.setter(fieldVal, res)
 				continue
 			}
 		}
-		if fp.tagXPath != "" {
-			if res, ok := getXPath(source, fp.tagXPath); ok {
+		if fp.xPathTag != "" {
+			if res, ok := getXPath(source, fp.xPathTag, fp.xPathAttr); ok {
 				fp.setter(fieldVal, res)
 				continue
 			}
@@ -239,10 +270,6 @@ func getGJSON(source any, path string) (gjson.Result, bool) {
 	switch s := source.(type) {
 	case gjson.Result:
 		return s.Get(path), true
-	case []byte:
-		return gjson.ParseBytes(s).Get(path), true
-	case string:
-		return gjson.Parse(s).Get(path), true
 	case core.IResponseReader:
 		body := s.Bytes()
 		if len(body) > 0 && (body[0] == '{' || body[0] == '[') {
@@ -252,18 +279,49 @@ func getGJSON(source any, path string) (gjson.Result, bool) {
 	return gjson.Result{}, false
 }
 
-func getCSS(source any, selector string) ([]string, bool) {
-	if resp, ok := source.(core.IResponseReader); ok {
-		texts := resp.Css(selector).Text()
-		return texts, len(texts) > 0
+// split "selector@attr" into (selector, attr)
+func parseAttrCSS(tag string) (string, string) {
+	if i := strings.LastIndex(tag, "@"); i > 0 {
+		return tag[:i], tag[i+1:]
 	}
-	return nil, false
+	return tag, ""
 }
 
-func getXPath(source any, path string) ([]string, bool) {
-	if resp, ok := source.(core.IResponseReader); ok {
-		texts := resp.Xpath(path).Text()
-		return texts, len(texts) > 0
+// split "xpath@attr" safely (avoids @ in predicates)
+func parseAttrXPath(tag string) (string, string) {
+	lastBracket := strings.LastIndex(tag, "]")
+	searchFrom := lastBracket + 1
+	if i := strings.Index(tag[searchFrom:], "@"); i >= 0 {
+		pos := searchFrom + i
+		return tag[:pos], tag[pos+1:]
 	}
-	return nil, false
+	return tag, ""
+}
+
+func getCSS(source any, selector string, attr string) ([]string, bool) {
+	resp, ok := source.(core.IResponseReader)
+	if !ok {
+		return nil, false
+	}
+	var vals []string
+	if attr != "" {
+		vals = resp.Css(selector).Attr(attr)
+	} else {
+		vals = resp.Css(selector).Text()
+	}
+	return vals, len(vals) > 0
+}
+
+func getXPath(source any, path string, attr string) ([]string, bool) {
+	resp, ok := source.(core.IResponseReader)
+	if !ok {
+		return nil, false
+	}
+	var vals []string
+	if attr != "" {
+		vals = resp.Xpath(path).Attr(attr)
+	} else {
+		vals = resp.Xpath(path).Text()
+	}
+	return vals, len(vals) > 0
 }

@@ -41,6 +41,8 @@ var testHTML = `
 		<span class="price">45.99</span>
 		<div class="category">Education</div>
 		<p class="author">Alan Donovan</p>
+		<a class="buy-link" href="https://example.com/buy">Buy Now</a>
+		<p class="star-rating Three"></p>
 		<ul class="tags">
 			<li class="tag">Programming</li>
 			<li class="tag">Go</li>
@@ -111,6 +113,56 @@ func TestMap_CSS_XPath_Mixed(t *testing.T) {
 	assert.Equal(t, "The Go Programming Language", r.Title)
 	assert.Equal(t, 45.99, r.Price)
 	assert.Equal(t, "Alan Donovan", r.Author)
+}
+
+func TestMap_CSS_Attribute(t *testing.T) {
+	type Record struct {
+		Link   string `gos_css:".buy-link@href"`
+		Rating string `gos_css:".star-rating@class"`
+		Title  string `gos_css:"h1"` // no @attr -> Text()
+	}
+
+	var r Record
+	err := Map(NewMockResponse(testHTML), &r)
+	assert.NoError(t, err)
+	assert.Equal(t, "https://example.com/buy", r.Link)
+	assert.Equal(t, "star-rating Three", r.Rating)
+	assert.Equal(t, "The Go Programming Language", r.Title)
+}
+
+func TestMap_XPath_Attribute(t *testing.T) {
+	type Record struct {
+		Link string `gos_xpath:"//a[@class='buy-link']@href"`
+	}
+
+	var r Record
+	err := Map(NewMockResponse(testHTML), &r)
+	assert.NoError(t, err)
+	assert.Equal(t, "https://example.com/buy", r.Link)
+}
+
+func TestMap_Attribute_Slices(t *testing.T) {
+	type Record struct {
+		AllTags []string `gos_css:".tag@class"`
+	}
+
+	var r Record
+	err := Map(NewMockResponse(testHTML), &r)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"tag", "tag", "tag"}, r.AllTags)
+}
+
+func TestMap_Attribute_Missing(t *testing.T) {
+	type Record struct {
+		MissingAttr string `gos_css:"h1@nonexistent"`
+		NoSelector  string `gos_css:"@href"`
+	}
+
+	var r Record
+	err := Map(NewMockResponse(testHTML), &r)
+	assert.NoError(t, err)
+	assert.Empty(t, r.MissingAttr)
+	assert.Empty(t, r.NoSelector)
 }
 
 func TestMap_JSON_ScalarTypes(t *testing.T) {
@@ -244,52 +296,4 @@ func TestMap_NonPointerTarget_ReturnsError(t *testing.T) {
 	var r Record
 	err := Map(`{"x":1}`, r)
 	assert.Error(t, err)
-}
-
-type BenchRecord struct {
-	Name   string  `gos:"name"`
-	Price  float64 `gos:"price"`
-	Change float64 `gos:"change"`
-	Nested struct {
-		ID int `gos:"id"`
-	} `gos:"nested"`
-}
-
-var jsonInput = `{"name":"Alphabet Inc.","price":350.5,"change":1.2,"nested":{"id":123}}`
-var jsonSource = gjson.Parse(jsonInput)
-
-// benchSink prevents the compiler from optimizing away benchmark work
-var benchSink BenchRecord
-
-func BenchmarkManual(b *testing.B) {
-	var r BenchRecord
-	for i := 0; i < b.N; i++ {
-		r.Name = jsonSource.Get("name").String()
-		r.Price = jsonSource.Get("price").Float()
-		r.Change = jsonSource.Get("change").Float()
-		r.Nested.ID = int(jsonSource.Get("nested.id").Int())
-	}
-	benchSink = r
-}
-
-func BenchmarkCached(b *testing.B) {
-	var r BenchRecord
-	_ = Map(jsonSource, &r)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = Map(jsonSource, &r)
-	}
-	benchSink = r
-}
-
-func BenchmarkUncached(b *testing.B) {
-	var r BenchRecord
-	for i := 0; i < b.N; i++ {
-		planCache.Range(func(key, value interface{}) bool {
-			planCache.Delete(key)
-			return true
-		})
-		_ = Map(jsonSource, &r)
-	}
-	benchSink = r
 }
