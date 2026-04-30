@@ -149,18 +149,18 @@ Whether you're dealing with deeply nested JSON arrays or complex HTML structures
 ```go
 type Record struct {
     // Extract from JSON path 
-    Title    string   `gos:"0.1.title"` 
+    Title    string   `gos:"0.1.title" json:"title" csv:"title"` 
     
     // Extract from HTML using CSS or XPath
-    Price    float64  `gos_css:".price_color"`
-    InStock  bool     `gos_xpath:"//p[@class='instock availability']"`
+    Price    float64  `gos_css:".price_color" json:"price" csv:"price"`
+    InStock  bool     `gos_xpath:"//p[@class='instock availability']" json:"in_stock" csv:"in_stock"`
     
     // Extract attributes using @attr syntax
-    ImageURL string   `gos_css:"img.thumbnail@src"`
-    Link     string   `gos_xpath:"//a[@class='title']@href"`
+    ImageURL string   `gos_css:"img.thumbnail@src" json:"image_url" csv:"image_url"`
+    Link     string   `gos_xpath:"//a[@class='title']@href" json:"link" csv:"link"`
     
     // Recursive mapping for nested structures
-    Authors  []Author `gos:"authors"` 
+    Authors  []Author `gos:"authors" json:"authors" csv:"authors"` 
 }
  
 type Author struct {
