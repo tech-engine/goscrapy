@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-BSL-blue.svg" alt="License: BSL"></a>
-  <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-%3E%3D1.22-00ADD8.svg?logo=go" alt="Go Version"></a>
+  <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-%3E%3D1.23-00ADD8.svg?logo=go" alt="Go Version"></a>
   <a href="https://discord.gg/FPvxETjYPH"><img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
   <a href="https://goreportcard.com/badge/github.com/tech-engine/goscrapy"><img src="https://goreportcard.com/badge/github.com/tech-engine/goscrapy" alt="Go Report Card"></a>
 </p>
@@ -179,7 +179,7 @@ func (s *Spider) parse(ctx context.Context, resp core.IResponseReader) {
 ## Getting Started
 
 > [!IMPORTANT]
-> GoScrapy requires **Go 1.22** or higher.
+> GoScrapy requires **Go 1.23** or higher.
 
 ### 1. Install GoScrapy CLI
 
