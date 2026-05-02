@@ -153,12 +153,7 @@ func (a *autoscaler) tick(window time.Duration, prevTaskArrivalCnt *uint64, ctx 
 }
 
 func (a *autoscaler) adjust(ctx context.Context, target uint16) {
-	if target < a.minWorkers {
-		target = a.minWorkers
-	}
-	if target > a.maxWorkers {
-		target = a.maxWorkers
-	}
+	target = max(a.minWorkers, min(target, a.maxWorkers))
 
 	// use desired count (not live activeWorkers) to prevent overshoot
 	// when previous despawn signals haven't been processed yet

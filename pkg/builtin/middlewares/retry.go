@@ -120,10 +120,10 @@ func Retry(opts ...RetryOpts) func(http.RoundTripper) http.RoundTripper {
 				if err != nil {
 					select {
 					case <-timer.C:
-						// calculate next delay
-						timer.Reset(time.Duration(int64(1)<<i) * retryOpts.BaseDelay)
-						continue
-					}
+					// calculate next delay
+					timer.Reset(time.Duration(int64(1)<<i) * retryOpts.BaseDelay)
+					continue
+				}
 				}
 
 				if !slices.Contains(retryOpts.Codes, uint16(resp.StatusCode)) {
@@ -132,9 +132,9 @@ func Retry(opts ...RetryOpts) func(http.RoundTripper) http.RoundTripper {
 
 				select {
 				case <-timer.C:
-					// calculate next delay
-					timer.Reset(time.Duration(int64(1)<<i) * retryOpts.BaseDelay)
-				}
+				// calculate next delay
+				timer.Reset(time.Duration(int64(1)<<i) * retryOpts.BaseDelay)
+			}
 			}
 
 			if !timer.Stop() {

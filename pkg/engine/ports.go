@@ -24,7 +24,7 @@ type IPipelineItem interface {
 	Get(key string) (any, bool)
 	Del(key string)
 	Clear()
-	Keys() []any
+	Keys() []string
 }
 
 type Resetter interface {

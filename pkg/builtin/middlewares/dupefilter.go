@@ -6,7 +6,7 @@ import (
 	"hash"
 	"io"
 	"net/http"
-	"sort"
+	"slices"
 	"sync"
 
 	"github.com/tech-engine/goscrapy/pkg/middlewaremanager"
@@ -67,7 +67,7 @@ func generateRequestFingerprint(r *http.Request) ([32]byte, error) {
 		headerKeys = append(headerKeys, key)
 	}
 
-	sort.Strings(headerKeys)
+	slices.Sort(headerKeys)
 
 	for _, key := range headerKeys {
 		h.Write([]byte(key))

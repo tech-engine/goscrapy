@@ -96,10 +96,7 @@ func New[OUT any](config *Config[OUT]) (*Engine[OUT], error) {
 	}
 
 	if engine.resultHandlers == 0 {
-		engine.resultHandlers = uint(runtime.NumCPU())
-		if engine.resultHandlers < 4 {
-			engine.resultHandlers = 4
-		}
+		engine.resultHandlers = uint(max(runtime.NumCPU(), 4))
 	}
 
 	engine.logger.Debugf("Engine created at %p", engine)

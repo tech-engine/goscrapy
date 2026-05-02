@@ -9,26 +9,24 @@ import (
 	"embed"
 	"fmt"
 	"go/format"
+	"go/version"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"text/template"
 
 	"github.com/spf13/cobra"
 )
 
-const minGoVersion = "1.22"
+const minGoVersion = "1.23"
 
 var stdinReader = bufio.NewReader(os.Stdin)
 
 //go:embed templates/*
 var templatesFS embed.FS
-
-var templateDir = filepath.Join(filepath.Dir("."), "/templates")
 
 // startprojectCmd represents the startproject command
 var startprojectCmd = &cobra.Command{
@@ -104,7 +102,7 @@ var startprojectCmd = &cobra.Command{
 
 func generateFiles(projectName string, templateFiles []string) {
 	// create [projectName] dir where we will put spider code & pipelines
-	err := createDirIfNotExist(projectName)
+	err := os.MkdirAll(projectName, 0755)
 
 	if err != nil {
 		fmt.Printf("❌ Error creating dir '%s', %v\n", projectName, err)
@@ -112,7 +110,7 @@ func generateFiles(projectName string, templateFiles []string) {
 	}
 
 	// create [projectName]/pipelines dir
-	err = createDirIfNotExist(path.Join(projectName, "pipelines"))
+	err = os.MkdirAll(path.Join(projectName, "pipelines"), 0755)
 
 	if err != nil {
 		fmt.Printf("❌ Error creating dir %s/pipelines, %v\n", projectName, err)
@@ -167,7 +165,7 @@ func generateFiles(projectName string, templateFiles []string) {
 			sourceFilename = filepath.Join(projectName, filename)
 		}
 
-		err = writeToFile(sourceFilename, formattedCode)
+		err = os.WriteFile(sourceFilename, formattedCode, 0644)
 
 		if err != nil {
 			fmt.Printf("❌  Error creating %s.\n", sourceFilename)
@@ -182,20 +180,6 @@ func init() {
 	rootCmd.AddCommand(startprojectCmd)
 }
 
-func writeToFile(filename string, data []byte) error {
-
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	_, err = file.Write(data)
-	return err
-}
-
-func createDirIfNotExist(dir string) error {
-	return os.MkdirAll(dir, os.ModePerm)
-}
 func runGoCommand(args ...string) error {
 	cmd := exec.Command("go", args...)
 	cmd.Stdout = os.Stdout
@@ -257,13 +241,5 @@ func getGoVersionFromMod(content string) string {
 }
 
 func isSupportedGoVersion(current, min string) bool {
-	c, m := strings.Split(current, "."), strings.Split(min, ".")
-	for i := 0; i < len(c) && i < len(m); i++ {
-		cv, _ := strconv.Atoi(c[i])
-		mv, _ := strconv.Atoi(m[i])
-		if cv != mv {
-			return cv > mv
-		}
-	}
-	return len(c) >= len(m)
+	return version.Compare("v"+current, "v"+min) >= 0
 }

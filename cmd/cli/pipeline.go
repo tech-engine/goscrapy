@@ -76,13 +76,13 @@ var pipelineCmd = &cobra.Command{
 		sourceFilename := filepath.Join(targetDir, strings.TrimSuffix(tmpl.Name(), ".tmpl")+".go")
 
 		// ensure pipelines dir exists
-		if err := createDirIfNotExist(targetDir); err != nil {
+		if err := os.MkdirAll(targetDir, 0755); err != nil {
 			fmt.Printf("❌  Error creating pipelines directory: %v", err)
 			return
 		}
 
 		// write go file
-		err = writeToFile(sourceFilename, formattedCode)
+		err = os.WriteFile(sourceFilename, formattedCode, 0644)
 
 		if err != nil {
 			fmt.Printf("❌  Error creating %s.", sourceFilename)

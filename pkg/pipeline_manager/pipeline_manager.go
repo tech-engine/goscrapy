@@ -119,10 +119,7 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 	defer pm.stopPipelines()
 
 	// start workers
-	concurrency := pm.maxProcessItemConcurrency
-	if concurrency == 0 {
-		concurrency = 1
-	}
+	concurrency := max(pm.maxProcessItemConcurrency, 1)
 
 	var wg sync.WaitGroup
 	wg.Add(int(concurrency))

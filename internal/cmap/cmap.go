@@ -3,6 +3,8 @@ package cmap
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"sync"
 
 	"github.com/tech-engine/goscrapy/internal/types"
@@ -66,16 +68,11 @@ func (cm *CMap[K, V]) Clear() {
 	clear(cm.data)
 }
 
-func (cm *CMap[K, V]) Keys() []any {
-	keys := make([]any, cm.size)
+func (cm *CMap[K, V]) Keys() []K {
+	cm.lock.RLock()
+	defer cm.lock.RUnlock()
 
-	var i = 0
-	for key := range cm.data {
-		keys[i] = key
-		i++
-	}
-
-	return keys
+	return slices.Collect(maps.Keys(cm.data))
 }
 
 func (cm *CMap[K, V]) Len() int {

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/http/httptrace"
 	"os"
-	"sort"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"text/tabwriter"
@@ -226,11 +226,11 @@ func (s *StatsCollector) PrintTo(out io.Writer) {
 	fmt.Fprintln(w, "\nStatus Code Breakdown:")
 
 	// sort status codes for consistent output
-	var codes []int
+	codes := make([]int, 0, len(snap.StatusCodes))
 	for code := range snap.StatusCodes {
 		codes = append(codes, code)
 	}
-	sort.Ints(codes)
+	slices.Sort(codes)
 
 	for _, code := range codes {
 		fmt.Fprintf(w, "  %d:\t%d\n", code, snap.StatusCodes[code])
