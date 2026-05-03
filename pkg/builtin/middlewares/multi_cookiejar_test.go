@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
@@ -120,9 +121,7 @@ func RunWithCookieJar(t *testing.T, key string) {
 	}
 
 	respOne, err := requester("GET", testServer.URL+"/set-cookie", headerOne, key)
-
-	assert.Nil(t, err, "error making http request 1")
-
+	require.NoError(t, err, "error making http request 1")
 	defer respOne.Body.Close()
 
 	// we verify if we have received the same cookies that we have set in "X-Goscrapy-Server-Req-1" header
@@ -144,9 +143,7 @@ func RunWithCookieJar(t *testing.T, key string) {
 	// second stage 2:
 	headerTwo := http.Header{}
 	respTwo, err := requester("GET", testServer.URL+"/verify", headerTwo, key)
-
-	assert.Nil(t, err, "error making http request 2")
-
+	require.NoError(t, err, "error making http request 2")
 	defer respTwo.Body.Close()
 
 	respTwoHeader := filteredHeaders(respTwo.Header)
