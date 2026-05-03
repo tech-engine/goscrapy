@@ -5,7 +5,7 @@ go 1.25.0
 replace github.com/tech-engine/goscrapy => ../../
 
 require (
-	github.com/tech-engine/goscrapy v0.27.6
+	github.com/tech-engine/goscrapy v0.27.9
 	github.com/tidwall/gjson v1.18.0
 )
 
