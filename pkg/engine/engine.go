@@ -176,6 +176,17 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 
 	err := g.Wait()
 
+	// drain any pending leftover results
+	for {
+		select {
+		case res := <-m.workerPool.Results():
+			m.workerPool.ReleaseResult(res)
+		default:
+			goto drained
+		}
+	}
+drained:
+
 	// stop pipelines after workers and scheduler finish
 	m.pipelineManager.Stop()
 
