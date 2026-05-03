@@ -22,15 +22,57 @@ var hasherPool = sync.Pool{
 	},
 }
 
-type RequestMap struct {
-	seen map[[32]byte]struct{}
-	mu   sync.RWMutex
+// Represents the interface for deduplication backends.
+type IDupeStore interface {
+	// must returns true if already seen, otherwise false.
+	Add(key [32]byte) bool
 }
 
-func NewRequestMap() *RequestMap {
-	return &RequestMap{
-		seen: make(map[[32]byte]struct{}),
+type Config struct {
+	Store      IDupeStore
+	MaxEntries int
+}
+
+// default inmemory deduplication store
+type mapStore struct {
+	seen       map[[32]byte]struct{}
+	mu         sync.RWMutex
+	maxEntries int
+}
+
+func newMapStore(maxEntries int) *mapStore {
+	initialCap := 1024
+	if maxEntries > 0 && maxEntries < initialCap {
+		initialCap = maxEntries
 	}
+	return &mapStore{
+		seen:       make(map[[32]byte]struct{}, initialCap),
+		maxEntries: maxEntries,
+	}
+}
+
+func (s *mapStore) Add(key [32]byte) bool {
+	s.mu.RLock()
+	_, seen := s.seen[key]
+	s.mu.RUnlock()
+	if seen {
+		return true
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.seen[key]; ok {
+		return true
+	}
+
+	// stop tracking if limit reached, if maxEntries=0, it' unlimited, please note
+	if s.maxEntries > 0 && len(s.seen) >= s.maxEntries {
+		return false
+	}
+
+	s.seen[key] = struct{}{}
+	return false
 }
 
 func generateRequestFingerprint(r *http.Request) ([32]byte, error) {
@@ -82,31 +124,33 @@ func generateRequestFingerprint(r *http.Request) ([32]byte, error) {
 	return finalHash, nil
 }
 
-func DupeFilter(next http.RoundTripper) http.RoundTripper {
-	requestMap := NewRequestMap()
-	return middlewaremanager.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
-		signature, err := generateRequestFingerprint(req)
-		if err != nil {
-			return nil, fmt.Errorf("dupefilter.go:DupeFilter: error generating request signature %w", err)
-		}
+func DupeFilter(cfg ...*Config) middlewaremanager.Middleware {
+	var c *Config
+	if len(cfg) > 0 && cfg[0] != nil {
+		c = cfg[0]
+	} else {
+		c = &Config{}
+	}
 
-		requestMap.mu.RLock()
-		_, seen := requestMap.seen[signature]
-		requestMap.mu.RUnlock()
+	var store IDupeStore
+	if c.Store != nil {
+		store = c.Store
+	} else {
+		store = newMapStore(c.MaxEntries)
+	}
 
-		if seen {
-			return nil, fmt.Errorf("dupefilter.go:DupeFilter: %w", ERR_DUPEFILTER_BLOCKED)
-		}
+	return func(next http.RoundTripper) http.RoundTripper {
+		return middlewaremanager.MiddlewareFunc(func(req *http.Request) (*http.Response, error) {
+			signature, err := generateRequestFingerprint(req)
+			if err != nil {
+				return nil, fmt.Errorf("dupefilter.go:DupeFilter: error generating request signature %w", err)
+			}
 
-		requestMap.mu.Lock()
-		if _, ok := requestMap.seen[signature]; ok {
-			requestMap.mu.Unlock()
-			return nil, fmt.Errorf("dupefilter.go:DupeFilter: %w", ERR_DUPEFILTER_BLOCKED)
-		}
+			if store.Add(signature) {
+				return nil, fmt.Errorf("dupefilter.go:DupeFilter: %w", ERR_DUPEFILTER_BLOCKED)
+			}
 
-		requestMap.seen[signature] = struct{}{}
-		requestMap.mu.Unlock()
-
-		return next.RoundTrip(req)
-	})
+			return next.RoundTrip(req)
+		})
+	}
 }
