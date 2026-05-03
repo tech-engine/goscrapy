@@ -70,7 +70,7 @@ const GOS_LOG_LEVEL = "INFO"
 var MIDDLEWARES = []middlewaremanager.Middleware{
 	middlewares.Retry(),
 	middlewares.MultiCookieJar,
-	middlewares.DupeFilter,
+	middlewares.DupeFilter(),
 }
 
 var export2CSV = csv.New[*Record](csv.Options{

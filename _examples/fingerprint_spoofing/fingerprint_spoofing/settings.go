@@ -75,7 +75,7 @@ var MIDDLEWARES = []middlewaremanager.Middleware{
 	middlewares.Retry(),
 	// middlewares.MultiCookieJar, // disable when using azureTLS as azureTLS handles cookie management
 	middlewares.AzureTLS(azureTLSOpts),
-	middlewares.DupeFilter,
+	middlewares.DupeFilter(),
 }
 
 var export2CSV = csv.New[*Record](csv.Options{

@@ -70,7 +70,7 @@ const PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY = ""
 var MIDDLEWARES = []middlewaremanager.Middleware{
 	middlewares.Retry(),
 	middlewares.MultiCookieJar,
-	middlewares.DupeFilter,
+	middlewares.DupeFilter(),
 }
 
 var export2CSV = csv.New[*Record](csv.Options{

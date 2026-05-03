@@ -60,7 +60,7 @@ var MIDDLEWARES = []middlewaremanager.Middleware{
 	// middlewares.Stats(HttpStats),
 	middlewares.Retry(),
 	middlewares.MultiCookieJar,
-	// middlewares.DupeFilter,
+	// middlewares.DupeFilter(),
 }
 
 var export2CSV = csv.New[*Record](csv.Options{
