@@ -138,7 +138,7 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	m.Dec()
 
 	// result handler pool
-	for i := uint(0); i < m.resultHandlers; i++ {
+	for range m.resultHandlers {
 		g.Go(func() error {
 			for {
 				select {
@@ -157,19 +157,25 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	// pull work from scheduler and submit to worker pool
 	g.Go(func() error {
 		for {
-			req, cbName, handle, err := m.scheduler.NextRequest(gCtx)
-			if err != nil {
-				return nil // either context cancelled or scheduler closed
-			}
+			select {
+			case <-gCtx.Done(): // we immediately stop pulling new tasks
+				return nil
+			default:
+				req, cbName, handle, err := m.scheduler.NextRequest(gCtx)
 
-			if req == nil {
-				continue
-			}
+				if err != nil {
+					return nil // either context cancelled or scheduler closed
+				}
 
-			if err := m.workerPool.Submit(req, cbName, handle); err != nil {
-				m.logger.Errorf("failed to submit task: %v", err)
-				m.activeCount.Add(-1)
-				m.scheduler.Nack(handle)
+				if req == nil {
+					continue
+				}
+
+				if err := m.workerPool.Submit(req, cbName, handle); err != nil {
+					m.logger.Errorf("failed to submit task: %v", err)
+					m.activeCount.Add(-1)
+					m.scheduler.Nack(handle)
+				}
 			}
 		}
 	})

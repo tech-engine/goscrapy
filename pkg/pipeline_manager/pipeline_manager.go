@@ -124,7 +124,7 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 	var wg sync.WaitGroup
 	wg.Add(int(concurrency))
 
-	for i := 0; i < int(concurrency); i++ {
+	for range concurrency {
 		go func() {
 			defer wg.Done()
 			for {
