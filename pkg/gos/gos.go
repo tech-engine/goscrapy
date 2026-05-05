@@ -31,7 +31,7 @@ type Config struct {
 
 func DefaultConfig() *Config {
 	return &Config{
-		Client: DefaultClient(),
+		Client: DefaultHTTPClient(),
 	}
 }
 
@@ -69,7 +69,7 @@ func New[OUT any](configs ...*Config) (*App[OUT], error) {
 	l := config.Logger
 
 	if config.Client == nil {
-		config.Client = DefaultClient()
+		config.Client = DefaultHTTPClient()
 	}
 
 	// create our http adapter
