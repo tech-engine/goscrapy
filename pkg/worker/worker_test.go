@@ -19,35 +19,28 @@ func (e *dummyExecutor) Execute(req *core.Request, res core.IResponseWriter) err
 	return nil
 }
 
-func TestWorker_Lifecycle(t *testing.T) {
+func TestWorker_ExecuteAndResults(t *testing.T) {
 	executor := &dummyExecutor{}
-	taskChan := make(chan *workTask, 1)
+	workerTaskCh := make(chan *workTask, 1)
 	results := make(chan engine.IResult, 1)
 
 	respPool := &sync.Pool{New: func() any { return &response{} }}
-	workPool := &sync.Pool{New: func() any { return &workTask{} }}
-	resPool := &sync.Pool{New: func() any { return &result{} }}
+	taskPool := &sync.Pool{New: func() any { return &workTask{} }}
+	resultPool := &sync.Pool{New: func() any { return &result{} }}
 
 	pool := &workerPool{
 		logger: logger.NewLogger(),
 	}
 
-	w := NewWorker(
-		1,
-		executor,
-		taskChan,
-		results,
-		respPool,
-		workPool,
-		resPool,
-		pool,
-	)
+	w := NewWorker(1, executor, workerTaskCh, results, respPool, taskPool, resultPool, pool)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	done := make(chan struct{})
 	go func() {
 		_ = w.Start(ctx)
+		close(done)
 	}()
 
 	// submit a task
@@ -55,9 +48,9 @@ func TestWorker_Lifecycle(t *testing.T) {
 		req:          &core.Request{},
 		callbackName: "test_cb",
 	}
-	taskChan <- task
+	workerTaskCh <- task
 
-	// wait for result
+	// verify result in results channel
 	select {
 	case res := <-results:
 		assert.NotNil(t, res)
@@ -65,5 +58,46 @@ func TestWorker_Lifecycle(t *testing.T) {
 		assert.Equal(t, 200, res.Response().StatusCode())
 	case <-time.After(1 * time.Second):
 		t.Fatal("Timeout waiting for result")
+	}
+
+	// verify lifecycle - stop by closing channel
+	close(workerTaskCh)
+	select {
+	case <-done:
+		// success
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for worker to stop after channel close")
+	}
+}
+
+func TestWorker_PoisonSignal(t *testing.T) {
+	executor := &dummyExecutor{}
+	workerTaskCh := make(chan *workTask, 1)
+	results := make(chan engine.IResult, 1)
+
+	respPool := &sync.Pool{New: func() any { return &response{} }}
+	taskPool := &sync.Pool{New: func() any { return &workTask{} }}
+	resultPool := &sync.Pool{New: func() any { return &result{} }}
+
+	pool := &workerPool{
+		logger: logger.NewLogger(),
+	}
+
+	w := NewWorker(1, executor, workerTaskCh, results, respPool, taskPool, resultPool, pool)
+
+	done := make(chan struct{})
+	go func() {
+		_ = w.Start(context.Background())
+		close(done)
+	}()
+
+	// verify poison task is working
+	workerTaskCh <- nil
+
+	select {
+	case <-done:
+		// success
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for worker to stop after poison signal")
 	}
 }
