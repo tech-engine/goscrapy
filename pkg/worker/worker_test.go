@@ -12,15 +12,15 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/logger"
 )
 
-type dummyExecutor struct{}
+type workerTestExecutor struct{}
 
-func (e *dummyExecutor) Execute(req *core.Request, res core.IResponseWriter) error {
+func (e *workerTestExecutor) Execute(req *core.Request, res core.IResponseWriter) error {
 	res.WriteStatusCode(200)
 	return nil
 }
 
 func TestWorker_ExecuteAndResults(t *testing.T) {
-	executor := &dummyExecutor{}
+	executor := &workerTestExecutor{}
 	workerTaskCh := make(chan *workTask, 1)
 	results := make(chan engine.IResult, 1)
 
@@ -28,11 +28,11 @@ func TestWorker_ExecuteAndResults(t *testing.T) {
 	taskPool := &sync.Pool{New: func() any { return &workTask{} }}
 	resultPool := &sync.Pool{New: func() any { return &result{} }}
 
-	pool := &workerPool{
+	wp := &workerPool{
 		logger: logger.NewLogger(),
 	}
 
-	w := NewWorker(1, executor, workerTaskCh, results, respPool, taskPool, resultPool, pool)
+	w := NewWorker(1, executor, workerTaskCh, results, respPool, taskPool, resultPool, wp)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -71,7 +71,7 @@ func TestWorker_ExecuteAndResults(t *testing.T) {
 }
 
 func TestWorker_PoisonSignal(t *testing.T) {
-	executor := &dummyExecutor{}
+	executor := &workerTestExecutor{}
 	workerTaskCh := make(chan *workTask, 1)
 	results := make(chan engine.IResult, 1)
 
@@ -79,11 +79,11 @@ func TestWorker_PoisonSignal(t *testing.T) {
 	taskPool := &sync.Pool{New: func() any { return &workTask{} }}
 	resultPool := &sync.Pool{New: func() any { return &result{} }}
 
-	pool := &workerPool{
+	wp := &workerPool{
 		logger: logger.NewLogger(),
 	}
 
-	w := NewWorker(1, executor, workerTaskCh, results, respPool, taskPool, resultPool, pool)
+	w := NewWorker(1, executor, workerTaskCh, results, respPool, taskPool, resultPool, wp)
 
 	done := make(chan struct{})
 	go func() {
