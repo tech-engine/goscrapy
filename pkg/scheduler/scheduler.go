@@ -25,7 +25,7 @@ type QueuedTask struct {
 type scheduler struct {
 	taskQueue ITaskQueue
 	logger    core.ILogger
-	stopping  atomic.Bool
+	stopped   atomic.Bool
 }
 
 func New(config *Config) (engine.IScheduler, error) {
@@ -64,15 +64,18 @@ func (s *scheduler) Start(ctx context.Context) error {
 	s.logger.Info("Starting scheduler")
 
 	<-ctx.Done()
-	s.stopping.Store(true)
-
-	s.logger.Info("Stopped scheduler")
+	s.Stop()
 	return nil
 }
 
+func (s *scheduler) Stop() {
+	s.stopped.Store(true)
+	s.logger.Info("stopped")
+}
+
 func (s *scheduler) Schedule(req *core.Request, cbName string) error {
-	if s.stopping.Load() {
-		return ErrSchedulerStopping
+	if s.stopped.Load() {
+		return ErrSchedulerStopped
 	}
 
 	task := QueuedTask{
@@ -84,13 +87,16 @@ func (s *scheduler) Schedule(req *core.Request, cbName string) error {
 }
 
 func (s *scheduler) NextRequest(ctx context.Context) (*core.Request, string, engine.TaskHandle, error) {
+	if s.stopped.Load() {
+		return nil, "", nil, ErrSchedulerStopped
+	}
+
 	qTask, handle, err := s.taskQueue.Pull(ctx)
 
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	// For pass-by-value, check if the task is essentially "empty"
 	if qTask.Request == nil {
 		return nil, "", nil, nil
 	}

@@ -3,7 +3,7 @@ package scheduler
 import "errors"
 
 var (
-	ErrSchedulerStopping    = errors.New("scheduler is stopping")
+	ErrSchedulerStopped     = errors.New("scheduler has stopped")
 	ErrSchedulerQueueFull   = errors.New("scheduler work queue full")
 	ErrSchedulerQueueClosed = errors.New("scheduler work queue closed")
 	ErrTaskQueueClosed      = errors.New("task queue closed")

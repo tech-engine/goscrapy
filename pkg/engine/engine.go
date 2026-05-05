@@ -164,10 +164,12 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 				req, cbName, handle, err := m.scheduler.NextRequest(gCtx)
 
 				if err != nil {
-					return nil // either context cancelled or scheduler closed
+					m.logger.Warnf("failed to pull task: %v", err)
+					continue
 				}
 
 				if req == nil {
+					m.logger.Warn("got nil request from scheduler, retrying...")
 					continue
 				}
 
