@@ -112,14 +112,15 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 	}
 
 	// defaults
-	results := config.Results
-	if results == nil {
-		results = make(chan engine.IResult, 1000)
-	}
 
 	queueSize := config.QueueSize
 	if queueSize <= 0 {
 		queueSize = 1000
+	}
+
+	results := config.Results
+	if results == nil {
+		results = make(chan engine.IResult, queueSize)
 	}
 
 	p := &workerPool{
@@ -236,12 +237,24 @@ func (p *workerPool) Start(ctx context.Context) error {
 
 	// wait for shutdown
 	<-ctx.Done()
+	return p.stop()
+}
 
-	// wait for all workers to finish
+func (p *workerPool) stop() error {
+	// closing the buffer will signal all the workers to exit (via the for ... range on channel)
+	close(p.workerTaskBuffer)
 	p.logger.Debug("Waiting for workers to finish...")
+	// there could still be inflight tasks in the executor, so we wait for all workers to finish
 	p.wg.Wait()
-	p.logger.Debug("Worker pool shut down.")
 
+	// next we close the results channel
+	// by the time execution reaches here, all workers must have already exited
+	// so it's safe to close this channel without the fear of panic
+	// in workers' Start method.
+	// Closing this channel will also signal the engine
+	close(p.results)
+
+	p.logger.Debug("Worker pool shut down.")
 	return nil
 }
 

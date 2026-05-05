@@ -23,29 +23,29 @@ func (wt *workTask) Reset() {
 }
 
 type Worker struct {
-	ID               uint16
-	executor         IExecutor
-	workerTaskBuffer <-chan *workTask
-	results          chan<- engine.IResult
-	workerTaskPool   *sync.Pool
-	responsePool     *sync.Pool
-	resultPool       *sync.Pool
-	tracker          core.IActivityTracker
-	logger           core.ILogger
-	pool             *workerPool
+	ID             uint16
+	executor       IExecutor
+	workerTaskCh   <-chan *workTask
+	results        chan<- engine.IResult
+	workerTaskPool *sync.Pool
+	responsePool   *sync.Pool
+	resultPool     *sync.Pool
+	tracker        core.IActivityTracker
+	logger         core.ILogger
+	pool           *workerPool
 }
 
-func NewWorker(id uint16, executor IExecutor, workerTaskBuffer <-chan *workTask, results chan<- engine.IResult, responsePool *sync.Pool, taskPool *sync.Pool, resultPool *sync.Pool, pool *workerPool) *Worker {
+func NewWorker(id uint16, executor IExecutor, workerTaskCh <-chan *workTask, results chan<- engine.IResult, responsePool *sync.Pool, taskPool *sync.Pool, resultPool *sync.Pool, pool *workerPool) *Worker {
 	return &Worker{
-		ID:               id,
-		executor:         executor,
-		workerTaskBuffer: workerTaskBuffer,
-		results:          results,
-		responsePool:     responsePool,
-		workerTaskPool:   taskPool,
-		resultPool:       resultPool,
-		pool:             pool,
-		logger:           pool.logger.WithName(fmt.Sprintf("Worker-%d", id)),
+		ID:             id,
+		executor:       executor,
+		workerTaskCh:   workerTaskCh,
+		results:        results,
+		responsePool:   responsePool,
+		workerTaskPool: taskPool,
+		resultPool:     resultPool,
+		pool:           pool,
+		logger:         pool.logger.WithName(fmt.Sprintf("Worker-%d", id)),
 	}
 }
 
@@ -53,35 +53,41 @@ func (w *Worker) Start(ctx context.Context) error {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case task, ok := <-w.workerTaskBuffer:
-			if !ok || task == nil || task.req == nil {
-				return nil
-			}
-
-			wg.Add(1)
-
-			res := w.execute(ctx, task)
-
-			// return task to pool
-			task.Reset()
-			w.workerTaskPool.Put(task)
-
-			if w.results != nil {
-				select {
-				case w.results <- res:
-				case <-ctx.Done():
-					wg.Done()
-					return ctx.Err()
-				}
-			}
-
-			wg.Done()
+	for task := range w.workerTaskCh {
+		if task == nil {
+			// poision signal
+			w.logger.Debugf("got poision signal, killing worker id: %d", w.ID)
+			return nil
 		}
+
+		if task.req == nil {
+			w.logger.Warn("got nil task")
+			continue
+		}
+
+		wg.Add(1)
+
+		res := w.execute(ctx, task)
+
+		// return task to pool
+		task.Reset()
+		w.workerTaskPool.Put(task)
+
+		if w.results != nil {
+			// this will block, this ensures that, we don't lose any results
+			w.results <- res
+			// select {
+			// case w.results <- res:
+			// case <-ctx.Done():
+			// 	wg.Done()
+			// 	return ctx.Err()
+			// }
+		}
+
+		wg.Done()
 	}
+	w.logger.Debugf("worker id: %d gracefully shutting down", w.ID)
+	return nil
 }
 
 func (w *Worker) execute(ctx context.Context, task *workTask) engine.IResult {

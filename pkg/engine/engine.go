@@ -140,17 +140,21 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	// result handler pool
 	for range m.resultHandlers {
 		g.Go(func() error {
-			for {
-				select {
-				case <-gCtx.Done():
-					return nil
-				case res, ok := <-m.workerPool.Results():
-					if !ok {
-						return nil
-					}
-					m.handleResult(gCtx, res)
-				}
+			for res := range m.workerPool.Results() {
+				m.handleResult(gCtx, res)
 			}
+			return nil
+			// for {
+			// 	select {
+			// 	case <-gCtx.Done():
+			// 		return nil
+			// 	case res, ok := <-m.workerPool.Results():
+			// 		if !ok {
+			// 			return nil
+			// 		}
+			// 		m.handleResult(gCtx, res)
+			// 	}
+			// }
 		})
 	}
 
@@ -185,15 +189,15 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	err := g.Wait()
 
 	// drain any pending leftover results
-	for {
-		select {
-		case res := <-m.workerPool.Results():
-			m.workerPool.ReleaseResult(res)
-		default:
-			goto drained
-		}
-	}
-drained:
+	// 	for {
+	// 		select {
+	// 		case res := <-m.workerPool.Results():
+	// 			m.workerPool.ReleaseResult(res)
+	// 		default:
+	// 			goto drained
+	// 		}
+	// 	}
+	// drained:
 
 	// stop pipelines after workers and scheduler finish
 	m.pipelineManager.Stop()
