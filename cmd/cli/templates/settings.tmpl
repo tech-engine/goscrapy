@@ -33,6 +33,10 @@ const MIDDLEWARE_HTTP_MAX_CONN_PER_HOST = ""
 // Default: 1000
 const MIDDLEWARE_HTTP_MAX_IDLE_CONN_PER_HOST = ""
 
+// Default: none
+// Example: http://user:pass@host:port,http://host:port
+// const PROXY_LIST = ""
+
 // Inbuilt Retry middleware settings
 
 // Default: 3
@@ -121,7 +125,7 @@ func init() {
 		"PIPELINEMANAGER_ITEM_SIZE":                    PIPELINEMANAGER_ITEM_SIZE,
 		"PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE":        PIPELINEMANAGER_OUTPUT_QUEUE_BUF_SIZE,
 		"PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY": PIPELINEMANAGER_MAX_PROCESS_ITEM_CONCURRENCY,
-
+		// "PROXY_LIST":                                   PROXY_LIST,
 	}
 
 	for key, value := range settings {
