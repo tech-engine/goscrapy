@@ -132,16 +132,13 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 		signals:          config.Signals,
 	}
 
-	// read from env vars for tuning
-	var maxWorkers uint32
-	var minWorkers uint32
-	var scalingFactor float32
-
-	if config.Autoscaler != nil {
-		maxWorkers = config.Autoscaler.MaxWorkers
-		minWorkers = config.Autoscaler.MinWorkers
-		scalingFactor = config.Autoscaler.ScalingFactor
+	if config.Autoscaler == nil {
+		config.Autoscaler = &AutoscalerConfig{}
 	}
+
+	maxWorkers := config.Autoscaler.MaxWorkers
+	minWorkers := config.Autoscaler.MinWorkers
+	scalingFactor := config.Autoscaler.ScalingFactor
 
 	if maxWorkers == 0 {
 		if m := os.Getenv("AUTOSCALER_MAX_WORKERS"); m != "" {
@@ -180,12 +177,12 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 	}
 
 	scalingWindow := 5 * time.Second
-	if config.Autoscaler != nil && config.Autoscaler.ScalingWindow > 0 {
+	if config.Autoscaler.ScalingWindow > 0 {
 		scalingWindow = config.Autoscaler.ScalingWindow
 	}
 
 	emaAlpha := float32(0.3)
-	if config.Autoscaler != nil && config.Autoscaler.EMAAlpha > 0 {
+	if config.Autoscaler.EMAAlpha > 0 {
 		emaAlpha = config.Autoscaler.EMAAlpha
 	}
 
