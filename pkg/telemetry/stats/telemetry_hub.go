@@ -55,6 +55,9 @@ func (th *TelemetryHub) Start(ctx context.Context) error {
 	ticker := time.NewTicker(th.config.Interval)
 	defer ticker.Stop()
 
+	// broadcast immediately
+	th.broadcast()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -90,16 +93,20 @@ func (th *TelemetryHub) snapshotLocked() GlobalSnapshot {
 
 func (th *TelemetryHub) broadcast() {
 	th.mu.RLock()
-	defer th.mu.RUnlock()
 
 	// If no observers, there is no point in broadcasting
 	if len(th.observers) == 0 {
+		th.mu.RUnlock()
 		return
 	}
 
 	snap := th.snapshotLocked()
 
-	for _, o := range th.observers {
+	observers := make([]IStatsObserver, len(th.observers))
+	copy(observers, th.observers)
+	th.mu.RUnlock()
+
+	for _, o := range observers {
 		o.OnSnapshot(snap)
 	}
 }
