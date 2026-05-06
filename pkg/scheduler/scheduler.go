@@ -72,7 +72,7 @@ func (s *scheduler) Start(ctx context.Context) error {
 
 func (s *scheduler) Stop() {
 
-	if !s.isActive.CompareAndSwap(true, false) {
+	if !s.isActive.Swap(false) {
 		return
 	}
 
