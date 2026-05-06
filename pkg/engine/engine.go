@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"os"
 	"runtime"
 	"strconv"
@@ -168,6 +169,10 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 				req, cbName, handle, err := m.scheduler.NextRequest(gCtx)
 
 				if err != nil {
+					// suppress warning if we are shutting down
+					if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+						continue
+					}
 					m.logger.Warnf("failed to pull task: %v", err)
 					continue
 				}
