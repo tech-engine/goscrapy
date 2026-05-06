@@ -50,8 +50,8 @@ func NewWorker(id uint16, executor IExecutor, workerTaskCh <-chan *workTask, res
 }
 
 func (w *Worker) Start(ctx context.Context) error {
-	var wg sync.WaitGroup
-	defer wg.Wait()
+	// var wg sync.WaitGroup
+	// defer wg.Wait()
 
 	for task := range w.workerTaskCh {
 		if task == nil {
@@ -65,7 +65,7 @@ func (w *Worker) Start(ctx context.Context) error {
 			continue
 		}
 
-		wg.Add(1)
+		// wg.Add(1)
 
 		res := w.execute(ctx, task)
 
@@ -84,7 +84,7 @@ func (w *Worker) Start(ctx context.Context) error {
 			// }
 		}
 
-		wg.Done()
+		// wg.Done()
 	}
 	w.logger.Debugf("worker id: %d gracefully shutting down", w.ID)
 	return nil
