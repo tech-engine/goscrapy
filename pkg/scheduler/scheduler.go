@@ -25,7 +25,7 @@ type QueuedTask struct {
 type scheduler struct {
 	taskQueue ITaskQueue
 	logger    core.ILogger
-	stopped   atomic.Bool
+	isActive  atomic.Bool
 }
 
 func New(config *Config) (engine.IScheduler, error) {
@@ -57,6 +57,8 @@ func New(config *Config) (engine.IScheduler, error) {
 		logger:    config.Logger,
 	}
 
+	s.isActive.Store(true)
+
 	return s, nil
 }
 
@@ -69,12 +71,20 @@ func (s *scheduler) Start(ctx context.Context) error {
 }
 
 func (s *scheduler) Stop() {
-	s.stopped.Store(true)
+
+	if !s.isActive.CompareAndSwap(true, false) {
+		return
+	}
+
 	s.logger.Info("stopped")
 }
 
+func (s *scheduler) IsActive() bool {
+	return s.isActive.Load()
+}
+
 func (s *scheduler) Schedule(req *core.Request, cbName string) error {
-	if s.stopped.Load() {
+	if !s.IsActive() {
 		return ErrSchedulerStopped
 	}
 
@@ -87,7 +97,7 @@ func (s *scheduler) Schedule(req *core.Request, cbName string) error {
 }
 
 func (s *scheduler) NextRequest(ctx context.Context) (*core.Request, string, engine.TaskHandle, error) {
-	if s.stopped.Load() {
+	if !s.IsActive() {
 		return nil, "", nil, ErrSchedulerStopped
 	}
 
