@@ -207,3 +207,25 @@ func TestPipelineManager_Pooling(t *testing.T) {
 	cancel()
 	wg.Wait()
 }
+func TestPipelineManager_GracefulShutdown(t *testing.T) {
+	pm := New[*dummyRecord](nil)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	done := make(chan struct{})
+	go func() {
+		pm.Start(ctx)
+		close(done)
+	}()
+
+	// push an item
+	pm.Push(&dummyRecord{Id: 1, Age: 20})
+
+	// stop
+	cancel()
+	<-done
+
+	// pushing after stop should not panic
+	assert.NotPanics(t, func() {
+		pm.Push(&dummyRecord{Id: 2, Age: 21})
+	})
+}
