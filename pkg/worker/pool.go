@@ -219,6 +219,8 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 	p.resultPool.New = func() any {
 		return &result{}
 	}
+
+	p.isActive.Store(true)
 	return p, nil
 }
 
