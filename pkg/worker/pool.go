@@ -86,6 +86,8 @@ type workerPool struct {
 	wg               sync.WaitGroup
 	metrics          poolMetrics
 	signals          signal.RequestBus
+	isActive         atomic.Bool
+	mu               sync.RWMutex
 }
 
 func (p *workerPool) Name() string { return "WorkerPool" }
@@ -238,8 +240,15 @@ func (p *workerPool) Start(ctx context.Context) error {
 }
 
 func (p *workerPool) stop() error {
+	p.mu.Lock()
+	if !p.isActive.Swap(false) {
+		p.mu.Unlock()
+		return nil
+	}
 	// closing the buffer will signal all the workers to exit (via the for ... range on channel)
 	close(p.workerTaskBuffer)
+	p.mu.Unlock()
+
 	p.logger.Debug("Waiting for workers to finish...")
 	// there could still be inflight tasks in the executor, so we wait for all workers to finish
 	p.wg.Wait()
@@ -279,6 +288,13 @@ func (p *workerPool) despawnWorker() {
 }
 
 func (p *workerPool) Submit(ctx context.Context, req *core.Request, callbackName string, handle core.TaskHandle) error {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	if !p.isActive.Load() {
+		return ctx.Err()
+	}
+
 	p.autoscaler.OnTaskArrival()
 
 	task := p.workerTaskPool.Get().(*workTask)
