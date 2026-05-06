@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -10,57 +11,77 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
-type mockScheduler struct {
+type engineTestScheduler struct {
 	started bool
+	stopped atomic.Bool
 }
 
-func (m *mockScheduler) Start(ctx context.Context) error {
-	m.started = true
+func (s *engineTestScheduler) Start(ctx context.Context) error {
+	s.started = true
 	<-ctx.Done()
-	return ctx.Err()
+	s.stop(ctx)
+	return nil
 }
-func (m *mockScheduler) Schedule(req *core.Request, cbName string) error { return nil }
-func (m *mockScheduler) NextRequest(ctx context.Context) (*core.Request, string, core.TaskHandle, error) {
+func (s *engineTestScheduler) stop(ctx context.Context) error {
+	s.stopped.Store(true)
+	return nil
+}
+func (s *engineTestScheduler) Schedule(req *core.Request, cbName string) error { return nil }
+func (s *engineTestScheduler) NextRequest(ctx context.Context) (*core.Request, string, core.TaskHandle, error) {
 	<-ctx.Done()
 	return nil, "", nil, ctx.Err()
 }
-func (m *mockScheduler) Ack(handle core.TaskHandle) error  { return nil }
-func (m *mockScheduler) Nack(handle core.TaskHandle) error { return nil }
+func (s *engineTestScheduler) Ack(handle core.TaskHandle) error  { return nil }
+func (s *engineTestScheduler) Nack(handle core.TaskHandle) error { return nil }
 
-type mockWorkerPool struct {
+type engineTestWorkerPool struct {
 	started bool
+	results chan IResult
 }
 
-func (m *mockWorkerPool) Start(ctx context.Context) error {
-	m.started = true
-	<-ctx.Done()
-	return ctx.Err()
+// mock worker pool
+func newEngineTestWorkerPool() *engineTestWorkerPool {
+	return &engineTestWorkerPool{
+		results: make(chan IResult),
+	}
 }
-func (m *mockWorkerPool) ReleaseResult(res IResult) {}
-func (m *mockWorkerPool) Submit(req *core.Request, cbName string, handle core.TaskHandle) error {
+
+func (wp *engineTestWorkerPool) Start(ctx context.Context) error {
+	wp.started = true
+	<-ctx.Done()
+	wp.Stop()
 	return nil
 }
-func (m *mockWorkerPool) Results() <-chan IResult {
-	return make(chan IResult)
+
+func (wp *engineTestWorkerPool) Stop() {
+	close(wp.results)
 }
 
-type mockPipelineManager struct {
+func (wp *engineTestWorkerPool) ReleaseResult(res IResult) {}
+func (wp *engineTestWorkerPool) Submit(req *core.Request, cbName string, handle core.TaskHandle) error {
+	return nil
+}
+func (wp *engineTestWorkerPool) Results() <-chan IResult {
+	return wp.results
+}
+
+type engineTestPipelineManager struct {
 	started bool
 }
 
-func (m *mockPipelineManager) Start(ctx context.Context) error {
-	m.started = true
+func (pm *engineTestPipelineManager) Start(ctx context.Context) error {
+	pm.started = true
 	<-ctx.Done()
-	return ctx.Err()
+	return nil
 }
-func (m *mockPipelineManager) Push(out core.IOutput[any])      {}
-func (m *mockPipelineManager) Add(pipelines ...IPipeline[any]) {}
-func (m *mockPipelineManager) Stop()                           {}
+func (pm *engineTestPipelineManager) Push(out core.IOutput[any])      {}
+func (pm *engineTestPipelineManager) Add(pipelines ...IPipeline[any]) {}
+func (pm *engineTestPipelineManager) Stop()                           {}
 
 func TestEngine_Lifecycle(t *testing.T) {
-	s := &mockScheduler{}
-	wp := &mockWorkerPool{}
-	pm := &mockPipelineManager{}
+	s := &engineTestScheduler{}
+	wp := newEngineTestWorkerPool()
+	pm := &engineTestPipelineManager{}
 
 	eng, err := New(&Config[any]{
 		Scheduler:       s,
@@ -73,7 +94,7 @@ func TestEngine_Lifecycle(t *testing.T) {
 	defer cancel()
 
 	err = eng.Start(ctx)
-	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.NoError(t, err)
 
 	assert.True(t, s.started)
 	assert.True(t, wp.started)
@@ -88,9 +109,9 @@ type badSpider struct{}
 
 func TestEngine_RegisterSpider(t *testing.T) {
 	eng, err := New(&Config[any]{
-		Scheduler:       &mockScheduler{},
-		WorkerPool:      &mockWorkerPool{},
-		PipelineManager: &mockPipelineManager{},
+		Scheduler:       &engineTestScheduler{},
+		WorkerPool:      newEngineTestWorkerPool(),
+		PipelineManager: &engineTestPipelineManager{},
 	})
 	require.NoError(t, err)
 
@@ -101,3 +122,70 @@ func TestEngine_RegisterSpider(t *testing.T) {
 	err = eng.RegisterSpider(&badSpider{})
 	assert.Error(t, err)
 }
+func TestEngine_GracefulShutdownWithResults(t *testing.T) {
+	s := &engineTestScheduler{}
+	wp := newEngineTestWorkerPool()
+	pm := &engineTestPipelineManager{}
+	cbRegistry := NewCallbackRegistry()
+
+	var callbackCalled atomic.Bool
+	cbRegistry.Register("test_cb", func(ctx context.Context, r core.IResponseReader) {
+		callbackCalled.Store(true)
+	})
+
+	eng, err := New(&Config[any]{
+		Scheduler:        s,
+		WorkerPool:       wp,
+		PipelineManager:  pm,
+		CallbackRegistry: cbRegistry,
+	})
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// start engine
+	done := make(chan error, 1)
+	go func() {
+		done <- eng.Start(ctx)
+	}()
+
+	// give it a moment to start
+	time.Sleep(50 * time.Millisecond)
+
+	// inject a result into the pool's results channel
+	res := &engineTestResult{
+		callbackName: "test_cb",
+	}
+	
+	// we use a goroutine to send because the results channel in mock might be unbuffered
+	go func() {
+		wp.results <- res
+		// trigger shutdown after sending result
+		// cancel would cancel the context and this would then stop the engine
+		// and we would recieve on done channel below.
+		time.Sleep(10 * time.Millisecond)
+		cancel()
+	}()
+
+	// wait for engine to stop
+	select {
+	case err := <-done:
+		assert.NoError(t, err)
+	case <-time.After(1 * time.Second):
+		t.Fatal("Engine did not shut down gracefully")
+	}
+
+	// verify the callback was called (meaning the result was drained and handled)
+	assert.True(t, callbackCalled.Load(), "Callback should have been executed before engine stopped")
+}
+
+type engineTestResult struct {
+	callbackName string
+}
+
+func (r *engineTestResult) Request() *core.Request { return nil }
+func (r *engineTestResult) Response() core.IResponseReader { return nil }
+func (r *engineTestResult) CallbackName() string { return r.callbackName }
+func (r *engineTestResult) TaskHandle() core.TaskHandle { return nil }
+func (r *engineTestResult) Error() error { return nil }
+func (r *engineTestResult) Release() {}

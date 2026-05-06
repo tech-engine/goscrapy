@@ -27,9 +27,9 @@ func (s *signalSpider) Parse(ctx context.Context, r core.IResponseReader) {}
 
 func TestEngine_SignalAutoDiscovery(t *testing.T) {
 	eng, err := New(&Config[any]{
-		Scheduler:       &mockScheduler{},
-		WorkerPool:      &mockWorkerPool{},
-		PipelineManager: &mockPipelineManager{},
+		Scheduler:       &engineTestScheduler{},
+		WorkerPool:      newEngineTestWorkerPool(),
+		PipelineManager: &engineTestPipelineManager{},
 	})
 	require.NoError(t, err)
 
@@ -70,9 +70,9 @@ func TestEngine_LifecycleSignals(t *testing.T) {
 	})
 
 	eng, err := New(&Config[any]{
-		Scheduler:       &mockScheduler{},
-		WorkerPool:      &mockWorkerPool{},
-		PipelineManager: &mockPipelineManager{},
+		Scheduler:       &engineTestScheduler{},
+		WorkerPool:      newEngineTestWorkerPool(),
+		PipelineManager: &engineTestPipelineManager{},
 		Signals:         bus,
 	})
 	require.NoError(t, err)
@@ -96,9 +96,9 @@ func TestEngine_SpiderIdleSignal(t *testing.T) {
 	})
 
 	eng, err := New(&Config[any]{
-		Scheduler:       &mockScheduler{},
-		WorkerPool:      &mockWorkerPool{},
-		PipelineManager: &mockPipelineManager{},
+		Scheduler:       &engineTestScheduler{},
+		WorkerPool:      newEngineTestWorkerPool(),
+		PipelineManager: &engineTestPipelineManager{},
 		Signals:         bus,
 	})
 	require.NoError(t, err)
@@ -112,16 +112,10 @@ func TestEngine_SpiderIdleSignal(t *testing.T) {
 	assert.True(t, eng.started.Load())
 
 	// Simulate work completion
-	eng.handleResult(context.Background(), &mockResult{})
+	eng.handleResult(context.Background(), &engineTestResult{})
 	
 	assert.Equal(t, int64(0), eng.ActiveCount())
 	assert.True(t, idleCalled, "SpiderIdle signal should have been emitted when count hit 0")
 }
 
-type mockResult struct{}
-func (m *mockResult) Request() *core.Request { return nil }
-func (m *mockResult) Response() core.IResponseReader { return nil }
-func (m *mockResult) CallbackName() string { return "" }
-func (m *mockResult) TaskHandle() core.TaskHandle { return nil }
-func (m *mockResult) Error() error { return nil }
-func (m *mockResult) Release() {}
+
