@@ -64,7 +64,7 @@ func TestAdaptive_Scaling(t *testing.T) {
 			case <-stopBurst:
 				return
 			default:
-				wp.Submit(&core.Request{}, "cb", nil)
+				wp.Submit(context.Background(), &core.Request{}, "cb", nil)
 				time.Sleep(2 * time.Millisecond)
 			}
 		}

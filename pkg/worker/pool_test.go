@@ -87,7 +87,7 @@ func TestPool_ExecuteAndResults(t *testing.T) {
 	// submit tasks and receive results
 	const taskCount = 5
 	for range taskCount {
-		err := wp.Submit(&core.Request{}, "test_cb", nil)
+		err := wp.Submit(context.Background(), &core.Request{}, "test_cb", nil)
 		assert.NoError(t, err)
 	}
 
@@ -127,7 +127,7 @@ func TestPool_GracefulDrain(t *testing.T) {
 	}()
 
 	// submit a task that takes time
-	err = wp.Submit(&core.Request{}, "slow_task", nil)
+	err = wp.Submit(context.Background(), &core.Request{}, "slow_task", nil)
 	assert.NoError(t, err)
 
 	// wait for it to start
