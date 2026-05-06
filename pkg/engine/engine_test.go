@@ -12,8 +12,14 @@ import (
 )
 
 type engineTestScheduler struct {
-	started bool
-	stopped atomic.Bool
+	started  bool
+	isActive atomic.Bool
+}
+
+func newEngineTestScheduler() *engineTestScheduler {
+	s := &engineTestScheduler{}
+	s.isActive.Store(true)
+	return s
 }
 
 func (s *engineTestScheduler) Start(ctx context.Context) error {
@@ -22,8 +28,11 @@ func (s *engineTestScheduler) Start(ctx context.Context) error {
 	s.stop(ctx)
 	return nil
 }
+func (s *engineTestScheduler) IsActive() bool {
+	return s.isActive.Load()
+}
 func (s *engineTestScheduler) stop(ctx context.Context) error {
-	s.stopped.Store(true)
+	s.isActive.Store(false)
 	return nil
 }
 func (s *engineTestScheduler) Schedule(req *core.Request, cbName string) error { return nil }
@@ -79,7 +88,7 @@ func (pm *engineTestPipelineManager) Add(pipelines ...IPipeline[any]) {}
 func (pm *engineTestPipelineManager) Stop()                           {}
 
 func TestEngine_Lifecycle(t *testing.T) {
-	s := &engineTestScheduler{}
+	s := newEngineTestScheduler()
 	wp := newEngineTestWorkerPool()
 	pm := &engineTestPipelineManager{}
 
@@ -109,7 +118,7 @@ type badSpider struct{}
 
 func TestEngine_RegisterSpider(t *testing.T) {
 	eng, err := New(&Config[any]{
-		Scheduler:       &engineTestScheduler{},
+		Scheduler:       newEngineTestScheduler(),
 		WorkerPool:      newEngineTestWorkerPool(),
 		PipelineManager: &engineTestPipelineManager{},
 	})
@@ -123,7 +132,7 @@ func TestEngine_RegisterSpider(t *testing.T) {
 	assert.Error(t, err)
 }
 func TestEngine_GracefulShutdownWithResults(t *testing.T) {
-	s := &engineTestScheduler{}
+	s := newEngineTestScheduler()
 	wp := newEngineTestWorkerPool()
 	pm := &engineTestPipelineManager{}
 	cbRegistry := NewCallbackRegistry()
@@ -156,7 +165,7 @@ func TestEngine_GracefulShutdownWithResults(t *testing.T) {
 	res := &engineTestResult{
 		callbackName: "test_cb",
 	}
-	
+
 	// we use a goroutine to send because the results channel in mock might be unbuffered
 	go func() {
 		wp.results <- res
@@ -183,9 +192,9 @@ type engineTestResult struct {
 	callbackName string
 }
 
-func (r *engineTestResult) Request() *core.Request { return nil }
+func (r *engineTestResult) Request() *core.Request         { return nil }
 func (r *engineTestResult) Response() core.IResponseReader { return nil }
-func (r *engineTestResult) CallbackName() string { return r.callbackName }
-func (r *engineTestResult) TaskHandle() core.TaskHandle { return nil }
-func (r *engineTestResult) Error() error { return nil }
-func (r *engineTestResult) Release() {}
+func (r *engineTestResult) CallbackName() string           { return r.callbackName }
+func (r *engineTestResult) TaskHandle() core.TaskHandle    { return nil }
+func (r *engineTestResult) Error() error                   { return nil }
+func (r *engineTestResult) Release()                       {}

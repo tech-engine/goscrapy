@@ -27,7 +27,7 @@ func (s *signalSpider) Parse(ctx context.Context, r core.IResponseReader) {}
 
 func TestEngine_SignalAutoDiscovery(t *testing.T) {
 	eng, err := New(&Config[any]{
-		Scheduler:       &engineTestScheduler{},
+		Scheduler:       newEngineTestScheduler(),
 		WorkerPool:      newEngineTestWorkerPool(),
 		PipelineManager: &engineTestPipelineManager{},
 	})
@@ -70,7 +70,7 @@ func TestEngine_LifecycleSignals(t *testing.T) {
 	})
 
 	eng, err := New(&Config[any]{
-		Scheduler:       &engineTestScheduler{},
+		Scheduler:       newEngineTestScheduler(),
 		WorkerPool:      newEngineTestWorkerPool(),
 		PipelineManager: &engineTestPipelineManager{},
 		Signals:         bus,
@@ -96,7 +96,7 @@ func TestEngine_SpiderIdleSignal(t *testing.T) {
 	})
 
 	eng, err := New(&Config[any]{
-		Scheduler:       &engineTestScheduler{},
+		Scheduler:       newEngineTestScheduler(),
 		WorkerPool:      newEngineTestWorkerPool(),
 		PipelineManager: &engineTestPipelineManager{},
 		Signals:         bus,
