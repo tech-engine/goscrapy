@@ -54,7 +54,7 @@ type IScheduler interface {
 
 type IWorkerPool interface {
 	Start(context.Context) error
-	Submit(req *core.Request, cbName string, handle TaskHandle) error
+	Submit(ctx context.Context, req *core.Request, cbName string, handle TaskHandle) error
 	Results() <-chan IResult
 	ReleaseResult(IResult)
 }

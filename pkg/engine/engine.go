@@ -182,7 +182,8 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 					continue
 				}
 
-				if err := m.workerPool.Submit(req, cbName, handle); err != nil {
+				m.activeCount.Add(1)
+				if err := m.workerPool.Submit(gCtx, req, cbName, handle); err != nil {
 					m.logger.Errorf("failed to submit task: %v", err)
 					m.activeCount.Add(-1)
 					m.scheduler.Nack(handle)

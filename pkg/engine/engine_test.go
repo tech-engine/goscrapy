@@ -58,7 +58,7 @@ func (wp *engineTestWorkerPool) Stop() {
 }
 
 func (wp *engineTestWorkerPool) ReleaseResult(res IResult) {}
-func (wp *engineTestWorkerPool) Submit(req *core.Request, cbName string, handle core.TaskHandle) error {
+func (wp *engineTestWorkerPool) Submit(ctx context.Context, req *core.Request, cbName string, handle core.TaskHandle) error {
 	return nil
 }
 func (wp *engineTestWorkerPool) Results() <-chan IResult {

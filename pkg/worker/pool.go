@@ -278,7 +278,7 @@ func (p *workerPool) despawnWorker() {
 	}
 }
 
-func (p *workerPool) Submit(req *core.Request, callbackName string, handle core.TaskHandle) error {
+func (p *workerPool) Submit(ctx context.Context, req *core.Request, callbackName string, handle core.TaskHandle) error {
 	p.autoscaler.OnTaskArrival()
 
 	task := p.workerTaskPool.Get().(*workTask)
@@ -287,21 +287,17 @@ func (p *workerPool) Submit(req *core.Request, callbackName string, handle core.
 	task.taskHandle = handle
 
 	select {
-	case p.workerTaskBuffer <- task:
-		p.metrics.recordSubmit()
-		if p.signals != nil {
-			p.signals.EmitRequestScheduled(context.Background(), req)
-		}
-		return nil
-	default:
-		p.metrics.recordDrop()
-		if p.signals != nil {
-			p.signals.EmitRequestDropped(context.Background(), req, ErrWorkerPoolFull)
-		}
+	case <-ctx.Done():
 		task.req = nil
 		task.taskHandle = nil
 		p.workerTaskPool.Put(task)
-		return ErrWorkerPoolFull
+		return ctx.Err()
+	case p.workerTaskBuffer <- task:
+		p.metrics.recordSubmit()
+		if p.signals != nil {
+			p.signals.EmitRequestScheduled(ctx, req)
+		}
+		return nil
 	}
 }
 
