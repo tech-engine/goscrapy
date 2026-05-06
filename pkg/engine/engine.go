@@ -110,39 +110,39 @@ func New[OUT any](config *Config[OUT]) (*Engine[OUT], error) {
 	return engine, nil
 }
 
-func (m *Engine[OUT]) Start(ctx context.Context) error {
-	if m.started.Swap(true) {
+func (e *Engine[OUT]) Start(ctx context.Context) error {
+	if e.started.Swap(true) {
 		return ErrAlreadyStarted
 	}
 
-	m.logger.Infof("Engine starting...")
-	m.signals.EmitEngineStarted(ctx)
+	e.logger.Infof("Engine starting...")
+	e.signals.EmitEngineStarted(ctx)
 
 	// run all shutdown hooks before returning
 	defer func() {
-		m.logger.Infof("Shutting down engine...")
-		m.signals.EmitSpiderClosed(ctx)
-		m.signals.EmitEngineStopped(ctx)
-		m.logger.Infof("shutdown complete.")
-		m.started.Store(false)
+		e.logger.Infof("Shutting down engine...")
+		e.signals.EmitSpiderClosed(ctx)
+		e.signals.EmitEngineStopped(ctx)
+		e.logger.Infof("shutdown complete.")
+		e.started.Store(false)
 	}()
 
 	g, gCtx := errgroup.WithContext(ctx)
 
-	g.Go(func() error { return m.pipelineManager.Start(gCtx) })
-	g.Go(func() error { return m.scheduler.Start(gCtx) })
-	g.Go(func() error { return m.workerPool.Start(gCtx) })
+	g.Go(func() error { return e.pipelineManager.Start(gCtx) })
+	g.Go(func() error { return e.scheduler.Start(gCtx) })
+	g.Go(func() error { return e.workerPool.Start(gCtx) })
 
 	// track activity during open to prevent premature idle
-	m.activeCount.Add(1)
-	m.signals.EmitSpiderOpened(gCtx)
-	m.Dec()
+	e.activeCount.Add(1)
+	e.signals.EmitSpiderOpened(gCtx)
+	e.Dec()
 
 	// result handler pool
-	for range m.resultHandlers {
+	for range e.resultHandlers {
 		g.Go(func() error {
-			for res := range m.workerPool.Results() {
-				m.handleResult(gCtx, res)
+			for res := range e.workerPool.Results() {
+				e.handleResult(gCtx, res)
 			}
 			return nil
 			// for {
@@ -166,27 +166,29 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 			case <-gCtx.Done(): // we immediately stop pulling new tasks
 				return nil
 			default:
-				req, cbName, handle, err := m.scheduler.NextRequest(gCtx)
+				req, cbName, handle, err := e.scheduler.NextRequest(gCtx)
 
 				if err != nil {
 					// suppress warning if we are shutting down
 					if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 						continue
 					}
-					m.logger.Warnf("failed to pull task: %v", err)
+					e.logger.Warnf("failed to pull task: %v", err)
 					continue
 				}
 
 				if req == nil {
-					m.logger.Warn("got nil request from scheduler, retrying...")
+					e.logger.Warn("got nil request from scheduler, retrying...")
 					continue
 				}
 
-				m.activeCount.Add(1)
-				if err := m.workerPool.Submit(gCtx, req, cbName, handle); err != nil {
-					m.logger.Errorf("failed to submit task: %v", err)
-					m.activeCount.Add(-1)
-					m.scheduler.Nack(handle)
+				e.activeCount.Add(1)
+				if err := e.workerPool.Submit(gCtx, req, cbName, handle); err != nil {
+					if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+						e.logger.Errorf("failed to submit task: %v", err)
+					}
+					e.activeCount.Add(-1)
+					e.scheduler.Nack(handle)
 				}
 			}
 		}
@@ -212,30 +214,33 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	return err
 }
 
-func (m *Engine[OUT]) handleResult(ctx context.Context, res IResult) {
+func (e *Engine[OUT]) handleResult(ctx context.Context, res IResult) {
 	defer func() {
-		m.activeCount.Add(-1)
+		e.activeCount.Add(-1)
 
 		// notify idle if all tasks are done
-		m.checkIdle(ctx)
+		e.checkIdle(ctx)
 
 		// acknowledge the task
-		m.scheduler.Ack(res.TaskHandle())
+		e.scheduler.Ack(res.TaskHandle())
 		// release the result, cancels context and returns response to pool
-		m.workerPool.ReleaseResult(res)
+		e.workerPool.ReleaseResult(res)
 	}()
 
 	if res.Error() != nil {
-		m.logger.Errorf("request failed: %v", res.Error())
-		if m.signals != nil {
-			m.signals.EmitSpiderError(ctx, res.Error())
+		// suppress expected shutdown errors
+		if !errors.Is(res.Error(), context.Canceled) {
+			e.logger.Errorf("request failed: %v", res.Error())
+		}
+		if e.signals != nil {
+			e.signals.EmitSpiderError(ctx, res.Error())
 		}
 		return
 	}
 
-	cb, ok := m.callbackRegistry.Resolve(res.CallbackName())
+	cb, ok := e.callbackRegistry.Resolve(res.CallbackName())
 	if !ok {
-		m.logger.Errorf("callback not found: %s", res.CallbackName())
+		e.logger.Errorf("callback not found: %s", res.CallbackName())
 		return
 	}
 
@@ -243,31 +248,34 @@ func (m *Engine[OUT]) handleResult(ctx context.Context, res IResult) {
 	cb(ctx, res.Response())
 }
 
-func (m *Engine[OUT]) Schedule(req *core.Request, cb core.ResponseCallback) {
-	m.activeCount.Add(1)
+func (e *Engine[OUT]) Schedule(req *core.Request, cb core.ResponseCallback) {
+	if !e.scheduler.IsActive() {
+		return
+	}
+	e.activeCount.Add(1)
 
 	// we get or cache callback name
 	ptr := reflect.ValueOf(cb).Pointer()
-	name, ok := m.cbNameCache.Load(ptr)
+	name, ok := e.cbNameCache.Load(ptr)
 	if !ok {
 		resolved := runtime.FuncForPC(ptr).Name()
-		name, _ = m.cbNameCache.LoadOrStore(ptr, resolved)
-		m.callbackRegistry.Register(resolved, cb)
+		name, _ = e.cbNameCache.LoadOrStore(ptr, resolved)
+		e.callbackRegistry.Register(resolved, cb)
 	}
 
 	// schedule the request
-	if err := m.scheduler.Schedule(req, name.(string)); err != nil {
-		m.logger.Errorf("failed to schedule request: %v", err)
-		m.activeCount.Add(-1)
+	if err := e.scheduler.Schedule(req, name.(string)); err != nil {
+		e.logger.Warnf("schedule rejected (further errors suppressed): %v", err)
+		e.activeCount.Add(-1)
 	}
 }
 
 // scans the spider for callback methods and registers them
-func (m *Engine[OUT]) RegisterSpider(spider any) error {
+func (e *Engine[OUT]) RegisterSpider(spider any) error {
 	v := reflect.ValueOf(spider)
 	t := v.Type()
 
-	m.logger.Debugf("Discovering callbacks for spider: %T", spider)
+	e.logger.Debugf("Discovering callbacks for spider: %T", spider)
 
 	count := 0
 	cbType := reflect.TypeOf((*core.ResponseCallback)(nil)).Elem()
@@ -279,8 +287,8 @@ func (m *Engine[OUT]) RegisterSpider(spider any) error {
 		if mType.ConvertibleTo(cbType) {
 			cb := method.Convert(cbType).Interface().(core.ResponseCallback)
 			name := t.Method(i).Name
-			m.callbackRegistry.Register(name, cb)
-			m.logger.Debugf("  -> registered callback: %s", name)
+			e.callbackRegistry.Register(name, cb)
+			e.logger.Debugf("  -> registered callback: %s", name)
 			count++
 		}
 	}
@@ -288,26 +296,26 @@ func (m *Engine[OUT]) RegisterSpider(spider any) error {
 	// auto discover spider signals
 	if method, ok := t.MethodByName("Open"); ok {
 		if fn, ok := v.Method(method.Index).Interface().(func(context.Context)); ok {
-			m.signals.OnSpiderOpened(fn)
-			m.logger.Debugf("  -> auto-discovered signal: Open")
+			e.signals.OnSpiderOpened(fn)
+			e.logger.Debugf("  -> auto-discovered signal: Open")
 		}
 	}
 	if method, ok := t.MethodByName("Idle"); ok {
 		if fn, ok := v.Method(method.Index).Interface().(func(context.Context)); ok {
-			m.signals.OnSpiderIdle(fn)
-			m.logger.Debugf("  -> auto-discovered signal: Idle")
+			e.signals.OnSpiderIdle(fn)
+			e.logger.Debugf("  -> auto-discovered signal: Idle")
 		}
 	}
 	if method, ok := t.MethodByName("Close"); ok {
 		if fn, ok := v.Method(method.Index).Interface().(func(context.Context)); ok {
-			m.signals.OnSpiderClosed(fn)
-			m.logger.Debugf("  -> auto-discovered signal: Close")
+			e.signals.OnSpiderClosed(fn)
+			e.logger.Debugf("  -> auto-discovered signal: Close")
 		}
 	}
 	if method, ok := t.MethodByName("Error"); ok {
 		if fn, ok := v.Method(method.Index).Interface().(func(context.Context, error)); ok {
-			m.signals.OnSpiderError(fn)
-			m.logger.Debugf("  -> auto-discovered signal: Error")
+			e.signals.OnSpiderError(fn)
+			e.logger.Debugf("  -> auto-discovered signal: Error")
 		}
 	}
 
@@ -318,34 +326,34 @@ func (m *Engine[OUT]) RegisterSpider(spider any) error {
 	return nil
 }
 
-func (m *Engine[OUT]) Yield(v core.IOutput[OUT]) {
-	m.activeCount.Add(1)
-	m.pipelineManager.Push(v)
+func (e *Engine[OUT]) Yield(v core.IOutput[OUT]) {
+	e.activeCount.Add(1)
+	e.pipelineManager.Push(v)
 }
 
-func (m *Engine[OUT]) Inc() {
-	m.activeCount.Add(1)
+func (e *Engine[OUT]) Inc() {
+	e.activeCount.Add(1)
 }
 
-func (m *Engine[OUT]) Dec() {
-	m.activeCount.Add(-1)
-	m.checkIdle(context.Background())
+func (e *Engine[OUT]) Dec() {
+	e.activeCount.Add(-1)
+	e.checkIdle(context.Background())
 }
 
-func (m *Engine[OUT]) checkIdle(ctx context.Context) {
-	if m.activeCount.Load() == 0 && m.started.Load() {
-		m.signals.EmitSpiderIdle(ctx)
+func (e *Engine[OUT]) checkIdle(ctx context.Context) {
+	if e.activeCount.Load() == 0 && e.started.Load() {
+		e.signals.EmitSpiderIdle(ctx)
 	}
 }
 
 // ActiveCount returns current number of active tasks
-func (m *Engine[OUT]) ActiveCount() int64 { return m.activeCount.Load() }
+func (e *Engine[OUT]) ActiveCount() int64 { return e.activeCount.Load() }
 
 // IsStarted returns true if the engine has started
-func (m *Engine[OUT]) IsStarted() bool { return m.started.Load() }
+func (e *Engine[OUT]) IsStarted() bool { return e.started.Load() }
 
-func (m *Engine[OUT]) WithLogger(loggerIn core.ILogger) core.IEngine[OUT] {
+func (e *Engine[OUT]) WithLogger(loggerIn core.ILogger) core.IEngine[OUT] {
 	loggerIn = logger.EnsureLogger(loggerIn)
-	m.logger = loggerIn.WithName("Engine")
-	return m
+	e.logger = loggerIn.WithName("Engine")
+	return e
 }
