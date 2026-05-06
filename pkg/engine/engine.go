@@ -199,8 +199,9 @@ func (m *Engine[OUT]) Start(ctx context.Context) error {
 	// 	}
 	// drained:
 
+	// no need to be called from engine, pipeline manager calls its automatically now
 	// stop pipelines after workers and scheduler finish
-	m.pipelineManager.Stop()
+	// m.pipelineManager.Stop()
 
 	return err
 }
