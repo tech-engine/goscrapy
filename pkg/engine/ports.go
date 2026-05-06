@@ -40,13 +40,13 @@ type IResult interface {
 	Release()
 }
 
-
 type TaskHandle = core.TaskHandle
-
 
 type IScheduler interface {
 	Start(context.Context) error
 	Schedule(req *core.Request, cbName string) error
+	// for external checking if the scheduler is active (not stopped)
+	IsActive() bool
 	NextRequest(ctx context.Context) (*core.Request, string, TaskHandle, error)
 	Ack(handle TaskHandle) error
 	Nack(handle TaskHandle) error
@@ -58,7 +58,6 @@ type IWorkerPool interface {
 	Results() <-chan IResult
 	ReleaseResult(IResult)
 }
-
 
 type ICallbackRegistry interface {
 	Register(string, core.ResponseCallback)
