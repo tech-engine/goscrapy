@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"github.com/tech-engine/goscrapy/internal/cmap"
 	"github.com/tech-engine/goscrapy/pkg/core"
@@ -58,6 +59,8 @@ type PipelineManager[OUT any] struct {
 	logger                    core.ILogger
 	maxProcessItemConcurrency uint64
 	signals                   signal.ItemBus[OUT]
+	wg                        sync.WaitGroup
+	stopped                   atomic.Bool
 }
 
 func New[OUT any](config *Config[OUT]) *PipelineManager[OUT] {
@@ -115,56 +118,64 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 		return err
 	}
 
-	// ensure everything is closed on exit
-	defer pm.stopPipelines()
-
 	// start workers
 	concurrency := max(pm.maxProcessItemConcurrency, 1)
 
-	var wg sync.WaitGroup
-	wg.Add(int(concurrency))
+	pm.wg.Add(int(concurrency))
 
 	for range concurrency {
 		go func() {
-			defer wg.Done()
-			for {
-				select {
-				case out, ok := <-pm.outputQueue:
-					if !ok {
-						return
-					}
-					pm.processItem(out)
-				case <-ctx.Done():
-					return
-				}
+			defer pm.wg.Done()
+			for res := range pm.outputQueue {
+				pm.processItem(res)
 			}
+			// for {
+			// 	select {
+			// 	case out, ok := <-pm.outputQueue:
+			// 		if !ok {
+			// 			return
+			// 		}
+			// 		pm.processItem(out)
+			// 	case <-ctx.Done():
+			// 		return
+			// 	}
+			// }
 		}()
 	}
 
-	// wait for all goroutines to finish (after channel is closed)
-	wg.Wait()
+	<-ctx.Done()
 
-	pm.logger.Infof("stopped")
+	// signal stop
+	pm.Stop()
+
 	return nil
 }
 
 // Stop signals the pipeline manager to shut down by closing the input channel.
 // This implements engine.IPipelineManager.
 func (pm *PipelineManager[OUT]) Stop() {
-	pm.logger.Debug("Stopping pipeline manager...")
+	if pm.stopped.Swap(true) {
+		return
+	}
+	pm.logger.Debug("Stopping...")
 	close(pm.outputQueue)
+
+	// ensure everything is closed on exit
+	pm.stopPipelines()
+	// wait for all goroutines to finish (after channel is closed)
+	pm.wg.Wait()
+
+	pm.logger.Infof("stopped")
 }
 
 // stopPipelines calls the close function of every pipeline
 func (pm *PipelineManager[OUT]) stopPipelines() {
-	var wg sync.WaitGroup
 
-	wg.Add(len(pm.pipelines))
-	defer wg.Wait()
+	pm.wg.Add(len(pm.pipelines))
 
 	for _, p := range pm.pipelines {
 		go func() {
-			defer wg.Done()
+			defer pm.wg.Done()
 			p.Close()
 		}()
 
@@ -172,15 +183,13 @@ func (pm *PipelineManager[OUT]) stopPipelines() {
 }
 
 func (pm *PipelineManager[OUT]) Push(original core.IOutput[OUT]) {
-	if len(pm.pipelines) == 0 {
+	// pm.stopped needed to prevent panic when spider tries to push
+	// after pm.outputQueue is closed
+	if len(pm.pipelines) == 0 || pm.stopped.Load() {
 		return
 	}
 
-	select {
-	case pm.outputQueue <- original:
-	default:
-		pm.outputQueue <- original
-	}
+	pm.outputQueue <- original
 }
 
 // processItem passes each yield output through our pipelines
