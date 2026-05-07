@@ -1,11 +1,11 @@
 module fingerprint_spoofing
 
-go 1.25.1
+go 1.26.0
 
-require github.com/tech-engine/goscrapy v0.27.12
+require github.com/tech-engine/goscrapy v0.27.13
 
 require (
-	github.com/Noooste/azuretls-client v1.12.12 // indirect
+	github.com/Noooste/azuretls-client v1.13.2 // indirect
 	github.com/Noooste/fhttp v1.0.15 // indirect
 	github.com/Noooste/go-socks4 v0.0.2 // indirect
 	github.com/Noooste/uquic-go v1.0.5 // indirect
@@ -33,10 +33,10 @@ require (
 	github.com/gocarina/gocsv v0.0.0-20240520201108-78e41c74b4b1 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
-	github.com/klauspost/compress v1.18.5 // indirect
+	github.com/klauspost/compress v1.18.6 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.21 // indirect
+	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.23 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
