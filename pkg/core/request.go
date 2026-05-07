@@ -120,8 +120,8 @@ func (r *Request) Clone() *Request {
 	}
 
 	if r.URL != nil {
-		u := *r.URL
-		nr.URL = &u
+		nr.URL = new(url.URL)
+		*nr.URL = *r.URL
 	}
 
 	if r.Header_ != nil {

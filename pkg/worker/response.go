@@ -78,8 +78,8 @@ func (r *response) Detach() core.IResponseReader {
 	if r.cookies != nil {
 		dr.cookies = make([]*http.Cookie, len(r.cookies))
 		for i, c := range r.cookies {
-			cookieCopy := *c
-			dr.cookies[i] = &cookieCopy
+			dr.cookies[i] = new(http.Cookie)
+			*dr.cookies[i] = *c
 		}
 	}
 

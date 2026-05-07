@@ -125,7 +125,7 @@ func (l *logger) formatHeader(b []byte, level core.LogLevel, emoji string) []byt
 	return b
 }
 
-func (l *logger) log(level core.LogLevel, emoji, format string, v ...any) {
+func (l *logger) print(level core.LogLevel, emoji string, v ...any) {
 	bp := bytePool.Get().(*[]byte)
 	b := (*bp)[:0]
 	defer func() {
@@ -134,20 +134,23 @@ func (l *logger) log(level core.LogLevel, emoji, format string, v ...any) {
 	}()
 
 	b = l.formatHeader(b, level, emoji)
-	if format == "" {
-		b = fmt.Append(b, v...)
-	} else {
-		b = fmt.Appendf(b, format, v...)
-	}
+	b = fmt.Append(b, v...)
 	b = append(b, '\n')
 
 	l.w.Write(b)
 }
 
-func (l *logger) print(level core.LogLevel, emoji string, v ...any) {
-	l.log(level, emoji, "", v...)
-}
+func (l *logger) printf(level core.LogLevel, emoji, f string, v ...any) {
+	bp := bytePool.Get().(*[]byte)
+	b := (*bp)[:0]
+	defer func() {
+		*bp = b
+		bytePool.Put(bp)
+	}()
 
-func (l *logger) printf(level core.LogLevel, emoji, format string, v ...any) {
-	l.log(level, emoji, format, v...)
+	b = l.formatHeader(b, level, emoji)
+	b = fmt.Appendf(b, f, v...)
+	b = append(b, '\n')
+
+	l.w.Write(b)
 }

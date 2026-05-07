@@ -104,23 +104,22 @@ func (a *azureTLS) roundTrip(req *http.Request) (*http.Response, error) {
 	opts := a.globalOpts
 
 	if ctxOpts, ok := req.Context().Value(azureTLSCtxKey{}).(*AzureTLSOptions); ok {
-		mergedOpts := *opts
+		opts = new(AzureTLSOptions)
+		*opts = *a.globalOpts
 
 		if ctxOpts.Browser != "" {
-			mergedOpts.Browser = ctxOpts.Browser
+			opts.Browser = ctxOpts.Browser
 		}
 		if ctxOpts.Proxy != "" {
-			mergedOpts.Proxy = ctxOpts.Proxy
+			opts.Proxy = ctxOpts.Proxy
 		}
 		if ctxOpts.SessionKey != "" {
-			mergedOpts.SessionKey = ctxOpts.SessionKey
+			opts.SessionKey = ctxOpts.SessionKey
 		}
 
 		if ctxOpts.JA3 != "" {
-			mergedOpts.JA3 = ctxOpts.JA3
+			opts.JA3 = ctxOpts.JA3
 		}
-
-		opts = &mergedOpts
 	}
 
 	tlsSession, err := a.getSession(opts)
