@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const minGoVersion = "1.23"
+const minGoVersion = "1.26"
 
 var stdinReader = bufio.NewReader(os.Stdin)
 
