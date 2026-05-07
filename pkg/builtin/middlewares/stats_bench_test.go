@@ -26,7 +26,7 @@ func BenchmarkStatsCollector_Snapshot(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = s.Snapshot()
 	}
 }
@@ -51,7 +51,7 @@ func BenchmarkStatsMiddleware_Impact(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = instrumentedRT.RoundTrip(req)
 	}
 }

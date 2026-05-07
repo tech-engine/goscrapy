@@ -20,7 +20,7 @@ var levelMap = map[string]core.LogLevel{
 func BenchmarkLoggerInfo(b *testing.B) {
 	l := NewLogger(WithLevel(core.LevelInfo), WithWriter(io.Discard))
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		l.Info("benchmark message")
 	}
 }
@@ -48,19 +48,19 @@ func BenchmarkLoggerFormattedParallel(b *testing.B) {
 func BenchmarkLoggerDisabled(b *testing.B) {
 	l := NewLogger(WithLevel(core.LevelNone))
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		l.Info("benchmark message")
 	}
 }
 
 func BenchmarkNewLogger(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = NewLogger(WithLevel(core.LevelInfo), WithWriter(io.Discard))
 	}
 }
 
 func BenchmarkNewLoggerDisabled(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = NewLogger(WithLevel(core.LevelNone))
 	}
 }
@@ -77,13 +77,13 @@ func BenchmarkLogger_Current(b *testing.B) {
 
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
-		l.Info("user", i, "logged in")
+	for b.Loop() {
+		l.Info("user", 1, "logged in")
 	}
 }
 
 func BenchmarkParseLevelSwitch(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = ParseLevel("DEBUG")
 		_ = ParseLevel("INFO")
 		_ = ParseLevel("WARN")
@@ -93,7 +93,7 @@ func BenchmarkParseLevelSwitch(b *testing.B) {
 }
 
 func BenchmarkParseLevelMap(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = levelMap[strings.ToUpper("DEBUG")]
 		_ = levelMap[strings.ToUpper("INFO")]
 		_ = levelMap[strings.ToUpper("WARN")]
