@@ -65,9 +65,7 @@ func New[OUT any](config *Config[OUT]) (*Engine[OUT], error) {
 		config.CallbackRegistry = NewCallbackRegistry()
 	}
 
-	if config.shutdownTimeout == 0 {
-		config.shutdownTimeout = 10 * time.Second
-	}
+	config.shutdownTimeout = max(config.shutdownTimeout, 10*time.Second)
 
 	if config.Logger == nil {
 		config.Logger = logger.EnsureLogger(config.Logger).WithName("Engine")
@@ -280,7 +278,7 @@ func (e *Engine[OUT]) RegisterSpider(spider any) error {
 	count := 0
 	cbType := reflect.TypeOf((*core.ResponseCallback)(nil)).Elem()
 
-	for i := 0; i < t.NumMethod(); i++ {
+	for i := range t.NumMethod() {
 		method := v.Method(i)
 		mType := method.Type()
 

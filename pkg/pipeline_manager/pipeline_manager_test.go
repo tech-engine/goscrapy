@@ -56,7 +56,7 @@ func (o *dummyRecord) RecordKeys() []string {
 	numFields := dataType.NumField()
 	keys := make([]string, numFields)
 
-	for i := 0; i < numFields; i++ {
+	for i := range numFields {
 		field := dataType.Field(i)
 		csvTag := field.Tag.Get("csv")
 		keys[i] = csvTag
@@ -77,7 +77,7 @@ func (o *dummyRecord) RecordFlat() []any {
 
 	slice := make([]any, inputType.NumField())
 
-	for i := 0; i < inputType.NumField(); i++ {
+	for i := range inputType.NumField() {
 		slice[i] = inputValue.Field(i).Interface()
 	}
 	return slice
@@ -199,7 +199,7 @@ func TestPipelineManager_Pooling(t *testing.T) {
 	}()
 
 	// Push 10 items to verify pooling doesn't corrupt state
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		pm.Push(&dummyRecord{Id: i, Age: 20})
 	}
 

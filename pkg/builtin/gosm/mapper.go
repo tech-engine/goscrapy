@@ -72,7 +72,7 @@ func buildPlan(t reflect.Type) *structPlan {
 		fields: make([]fieldPlan, 0, t.NumField()),
 	}
 
-	for i := 0; i < t.NumField(); i++ {
+	for i := range t.NumField() {
 		field := t.Field(i)
 
 		// skip unexported
