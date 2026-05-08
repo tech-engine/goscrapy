@@ -307,6 +307,10 @@ func (p *workerPool) Submit(ctx context.Context, req *core.Request, callbackName
 		return ErrPoolClosed
 	}
 
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	p.autoscaler.OnTaskArrival()
 
 	task := p.workerTaskPool.Get().(*workTask)
