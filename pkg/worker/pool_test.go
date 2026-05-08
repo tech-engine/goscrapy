@@ -145,3 +145,53 @@ func TestPool_GracefulDrain(t *testing.T) {
 		t.Fatal("Pool did not wait for executing task to finish")
 	}
 }
+
+func TestPool_SubmitAfterStop(t *testing.T) {
+	wp, _ := NewPool(&Config{Executor: &poolTestExecutor{}})
+	wp.(*workerPool).isActive.Store(false)
+
+	err := wp.Submit(context.Background(), &core.Request{}, "cb", nil)
+	assert.Error(t, err)
+	assert.Equal(t, ErrPoolClosed, err)
+}
+
+func TestPool_SubmitCanceledCtx(t *testing.T) {
+	wp, _ := NewPool(&Config{Executor: &poolTestExecutor{}})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := wp.Submit(ctx, &core.Request{}, "cb", nil)
+	assert.Error(t, err)
+	assert.Equal(t, context.Canceled, err)
+}
+
+func TestPool_EnvConfigOverride(t *testing.T) {
+	t.Setenv("AUTOSCALER_MAX_WORKERS", "10")
+	t.Setenv("AUTOSCALER_MIN_WORKERS", "20")
+	t.Setenv("POOL_MAX_DRAIN_BYTES", "65536")
+
+	wp, _ := NewPool(&Config{Executor: &poolTestExecutor{}})
+	pool := wp.(*workerPool)
+
+	// maxWorkers should be clamped to minWorkers
+	assert.Equal(t, uint16(20), pool.autoscaler.minWorkers)
+	assert.Equal(t, uint16(20), pool.autoscaler.maxWorkers)
+	assert.Equal(t, int64(65536), pool.maxDrainBytes)
+}
+
+func TestPool_Metrics(t *testing.T) {
+	wp, _ := NewPool(&Config{Executor: &poolTestExecutor{}, EnableMetrics: true})
+	pool := wp.(*workerPool)
+
+	for range 5 {
+		pool.metrics.recordSubmit()
+	}
+	for range 2 {
+		pool.metrics.recordDrop()
+	}
+
+	snap := pool.Snapshot().(WorkerPoolSnapshot)
+	assert.Equal(t, uint64(5), snap.TasksSubmitted)
+	assert.Equal(t, uint64(2), snap.TasksDropped)
+}

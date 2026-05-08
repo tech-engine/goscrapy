@@ -88,6 +88,7 @@ type workerPool struct {
 	signals          signal.RequestBus
 	isActive         atomic.Bool
 	mu               sync.RWMutex
+	maxDrainBytes    int64
 }
 
 func (p *workerPool) Name() string { return "WorkerPool" }
@@ -132,6 +133,13 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 		logger:           logger.EnsureLogger(config.Logger).WithName("WorkerPool"),
 		metrics:          poolMetrics{enabled: config.EnableMetrics},
 		signals:          config.Signals,
+		maxDrainBytes:    32 * 1024, // default 32KB
+	}
+
+	if v := os.Getenv("POOL_MAX_DRAIN_BYTES"); v != "" {
+		if parsed, err := strconv.ParseInt(v, 10, 64); err == nil && parsed >= 0 {
+			p.maxDrainBytes = parsed
+		}
 	}
 
 	if config.Autoscaler == nil {
@@ -166,6 +174,8 @@ func NewPool(config *Config) (engine.IWorkerPool, error) {
 			minWorkers = maxWorkers / 2
 		}
 	}
+
+	maxWorkers = max(maxWorkers, minWorkers)
 
 	if scalingFactor <= 0 {
 		if v := os.Getenv("AUTOSCALER_SCALING_FACTOR"); v != "" {
@@ -294,7 +304,7 @@ func (p *workerPool) Submit(ctx context.Context, req *core.Request, callbackName
 	defer p.mu.RUnlock()
 
 	if !p.isActive.Load() {
-		return ctx.Err()
+		return ErrPoolClosed
 	}
 
 	p.autoscaler.OnTaskArrival()
@@ -332,7 +342,7 @@ func (p *workerPool) ReleaseResult(res engine.IResult) {
 	if resp, ok := res.Response().(*response); ok {
 		if resp.body != nil {
 			buf := discardBufPool.Get().(*[]byte)
-			io.CopyBuffer(io.Discard, resp.body, *buf)
+			io.CopyBuffer(io.Discard, io.LimitReader(resp.body, p.maxDrainBytes), *buf)
 			discardBufPool.Put(buf)
 			resp.body.Close()
 		}
