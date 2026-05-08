@@ -41,6 +41,11 @@ var startprojectCmd = &cobra.Command{
 			return
 		}
 
+		if filepath.Base(projectName) != projectName || projectName == "." || projectName == "/" || projectName == "\\" {
+			fmt.Printf("❌ Error: invalid project name. Path traversal and nested directories are not allowed.\n")
+			return
+		}
+
 		// Check if project directory already exists
 		if _, err := os.Stat(projectName); !os.IsNotExist(err) {
 			if !confirm(fmt.Sprintf("Directory '%s' already exists. Continue?", projectName), true) {
@@ -195,7 +200,10 @@ func confirm(prompt string, defaultValue bool) bool {
 
 	fmt.Printf("%s [%s]: ", prompt, choices)
 
-	input, _ := stdinReader.ReadString('\n')
+	input, err := stdinReader.ReadString('\n')
+	if err != nil {
+		return defaultValue
+	}
 	input = strings.TrimSpace(strings.ToLower(input))
 
 	if input == "" {
@@ -234,12 +242,16 @@ func getGoVersionFromMod(content string) string {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "go ") {
-			return strings.TrimPrefix(line, "go ")
+			v := strings.TrimPrefix(line, "go ")
+			if idx := strings.Index(v, "//"); idx != -1 {
+				v = strings.TrimSpace(v[:idx])
+			}
+			return v
 		}
 	}
 	return ""
 }
 
 func isSupportedGoVersion(current, min string) bool {
-	return version.Compare("v"+current, "v"+min) >= 0
+	return version.Compare("go"+current, "go"+min) >= 0
 }
