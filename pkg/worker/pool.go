@@ -87,7 +87,6 @@ type workerPool struct {
 	metrics          poolMetrics
 	signals          signal.RequestBus
 	isActive         atomic.Bool
-	mu               sync.RWMutex
 	maxDrainBytes    int64
 }
 
@@ -252,14 +251,11 @@ func (p *workerPool) Start(ctx context.Context) error {
 }
 
 func (p *workerPool) stop() error {
-	p.mu.Lock()
 	if !p.isActive.Swap(false) {
-		p.mu.Unlock()
 		return nil
 	}
 	// closing the buffer will signal all the workers to exit (via the for ... range on channel)
 	close(p.workerTaskBuffer)
-	p.mu.Unlock()
 
 	p.logger.Debug("Waiting for workers to finish...")
 	// there could still be inflight tasks in the executor, so we wait for all workers to finish
@@ -299,9 +295,22 @@ func (p *workerPool) despawnWorker() {
 	}
 }
 
-func (p *workerPool) Submit(ctx context.Context, req *core.Request, callbackName string, handle core.TaskHandle) error {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
+func (p *workerPool) Submit(ctx context.Context, req *core.Request, callbackName string, handle core.TaskHandle) (err error) {
+	var task *workTask
+	defer func() {
+		if r := recover(); r != nil {
+			if !core.IsClosedChanPanic(r) {
+				panic(r)
+			}
+
+			err = ErrPoolClosed
+			if task != nil {
+				task.req = nil
+				task.taskHandle = nil
+				p.workerTaskPool.Put(task)
+			}
+		}
+	}()
 
 	if !p.isActive.Load() {
 		return ErrPoolClosed
@@ -313,7 +322,7 @@ func (p *workerPool) Submit(ctx context.Context, req *core.Request, callbackName
 
 	p.autoscaler.OnTaskArrival()
 
-	task := p.workerTaskPool.Get().(*workTask)
+	task = p.workerTaskPool.Get().(*workTask)
 	task.req = req
 	task.callbackName = callbackName
 	task.taskHandle = handle

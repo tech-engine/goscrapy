@@ -61,7 +61,6 @@ type PipelineManager[OUT any] struct {
 	signals                   signal.ItemBus[OUT]
 	wg                        sync.WaitGroup
 	isActive                  atomic.Bool
-	mu                        sync.RWMutex
 }
 
 func New[OUT any](config *Config[OUT]) *PipelineManager[OUT] {
@@ -156,14 +155,11 @@ func (pm *PipelineManager[OUT]) Start(ctx context.Context) error {
 // Stop signals the pipeline manager to shut down by closing the input channel.
 // This implements engine.IPipelineManager.
 func (pm *PipelineManager[OUT]) Stop() {
-	pm.mu.Lock()
 	if !pm.isActive.Swap(false) {
-		pm.mu.Unlock()
 		return
 	}
 	pm.logger.Debug("Stopping...")
 	close(pm.outputQueue)
-	pm.mu.Unlock()
 
 	// ensure everything is closed on exit
 	pm.stopPipelines()
@@ -188,8 +184,13 @@ func (pm *PipelineManager[OUT]) stopPipelines() {
 }
 
 func (pm *PipelineManager[OUT]) Push(original core.IOutput[OUT]) {
-	pm.mu.RLock()
-	defer pm.mu.RUnlock()
+	defer func() {
+		if r := recover(); r != nil {
+			if !core.IsClosedChanPanic(r) {
+				panic(r)
+			}
+		}
+	}()
 
 	// pm.stopped needed to prevent panic when spider tries to push
 	// after pm.outputQueue is closed
