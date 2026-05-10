@@ -3,6 +3,7 @@ package signal
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
@@ -24,30 +25,30 @@ type ItemBus[OUT any] interface {
 
 // typed signal bus
 type Bus[OUT any] struct {
-	mu sync.RWMutex
+	mu sync.Mutex
 
 	// spider signals
-	spiderOpened []func(context.Context)
-	spiderClosed []func(context.Context)
-	spiderError  []func(context.Context, error)
-	spiderIdle   []func(context.Context)
+	spiderOpened atomic.Pointer[[]func(context.Context)]
+	spiderClosed atomic.Pointer[[]func(context.Context)]
+	spiderError  atomic.Pointer[[]func(context.Context, error)]
+	spiderIdle   atomic.Pointer[[]func(context.Context)]
 
 	// item signals
-	itemScraped []func(context.Context, OUT)
-	itemDropped []func(context.Context, OUT, error)
-	itemError   []func(context.Context, OUT, error)
+	itemScraped atomic.Pointer[[]func(context.Context, OUT)]
+	itemDropped atomic.Pointer[[]func(context.Context, OUT, error)]
+	itemError   atomic.Pointer[[]func(context.Context, OUT, error)]
 
 	// request signals
-	requestScheduled []func(context.Context, *core.Request)
-	requestDropped   []func(context.Context, *core.Request, error)
-	requestError     []func(context.Context, *core.Request, error)
+	requestScheduled atomic.Pointer[[]func(context.Context, *core.Request)]
+	requestDropped   atomic.Pointer[[]func(context.Context, *core.Request, error)]
+	requestError     atomic.Pointer[[]func(context.Context, *core.Request, error)]
 
 	// response signals
-	responseReceived []func(context.Context, core.IResponseReader)
+	responseReceived atomic.Pointer[[]func(context.Context, core.IResponseReader)]
 
 	// engine signals
-	engineStarted []func(context.Context)
-	engineStopped []func(context.Context)
+	engineStarted atomic.Pointer[[]func(context.Context)]
+	engineStopped atomic.Pointer[[]func(context.Context)]
 }
 
 // create new signal bus
@@ -58,194 +59,259 @@ func New[OUT any]() *Bus[OUT] {
 func (b *Bus[OUT]) OnSpiderOpened(h func(context.Context)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.spiderOpened = append(b.spiderOpened, h)
+	old := b.spiderOpened.Load()
+	var newHandlers []func(context.Context)
+	if old != nil {
+		newHandlers = append([]func(context.Context){}, *old...)
+	}
+	newHandlers = append(newHandlers, h)
+	b.spiderOpened.Store(&newHandlers)
 }
 
 func (b *Bus[OUT]) OnSpiderClosed(h func(context.Context)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.spiderClosed = append(b.spiderClosed, h)
+	old := b.spiderClosed.Load()
+	var newHandlers []func(context.Context)
+	if old != nil {
+		newHandlers = append([]func(context.Context){}, *old...)
+	}
+	newHandlers = append(newHandlers, h)
+	b.spiderClosed.Store(&newHandlers)
 }
 
 func (b *Bus[OUT]) OnSpiderError(h func(context.Context, error)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.spiderError = append(b.spiderError, h)
+	old := b.spiderError.Load()
+	var newHandlers []func(context.Context, error)
+	if old != nil {
+		newHandlers = append([]func(context.Context, error){}, *old...)
+	}
+	newHandlers = append(newHandlers, h)
+	b.spiderError.Store(&newHandlers)
 }
 
 func (b *Bus[OUT]) OnSpiderIdle(h func(context.Context)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.spiderIdle = append(b.spiderIdle, h)
+	old := b.spiderIdle.Load()
+	var newHandlers []func(context.Context)
+	if old != nil {
+		newHandlers = append([]func(context.Context){}, *old...)
+	}
+	newHandlers = append(newHandlers, h)
+	b.spiderIdle.Store(&newHandlers)
 }
 
 func (b *Bus[OUT]) OnItemScraped(h func(context.Context, OUT)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.itemScraped = append(b.itemScraped, h)
+	old := b.itemScraped.Load()
+	var newHandlers []func(context.Context, OUT)
+	if old != nil {
+		newHandlers = append([]func(context.Context, OUT){}, *old...)
+	}
+	newHandlers = append(newHandlers, h)
+	b.itemScraped.Store(&newHandlers)
 }
 
 func (b *Bus[OUT]) OnItemDropped(h func(context.Context, OUT, error)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.itemDropped = append(b.itemDropped, h)
+	old := b.itemDropped.Load()
+	var newHandlers []func(context.Context, OUT, error)
+	if old != nil {
+		newHandlers = append([]func(context.Context, OUT, error){}, *old...)
+	}
+	newHandlers = append(newHandlers, h)
+	b.itemDropped.Store(&newHandlers)
 }
 
 func (b *Bus[OUT]) OnItemError(h func(context.Context, OUT, error)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.itemError = append(b.itemError, h)
+	old := b.itemError.Load()
+	var newHandlers []func(context.Context, OUT, error)
+	if old != nil {
+		newHandlers = append([]func(context.Context, OUT, error){}, *old...)
+	}
+	newHandlers = append(newHandlers, h)
+	b.itemError.Store(&newHandlers)
 }
 
 func (b *Bus[OUT]) OnRequestScheduled(h func(context.Context, *core.Request)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.requestScheduled = append(b.requestScheduled, h)
+	old := b.requestScheduled.Load()
+	var newHandlers []func(context.Context, *core.Request)
+	if old != nil {
+		newHandlers = append([]func(context.Context, *core.Request){}, *old...)
+	}
+	newHandlers = append(newHandlers, h)
+	b.requestScheduled.Store(&newHandlers)
 }
 
 func (b *Bus[OUT]) OnRequestDropped(h func(context.Context, *core.Request, error)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.requestDropped = append(b.requestDropped, h)
+	old := b.requestDropped.Load()
+	var newHandlers []func(context.Context, *core.Request, error)
+	if old != nil {
+		newHandlers = append([]func(context.Context, *core.Request, error){}, *old...)
+	}
+	newHandlers = append(newHandlers, h)
+	b.requestDropped.Store(&newHandlers)
 }
 
 func (b *Bus[OUT]) OnRequestError(h func(context.Context, *core.Request, error)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.requestError = append(b.requestError, h)
+	old := b.requestError.Load()
+	var newHandlers []func(context.Context, *core.Request, error)
+	if old != nil {
+		newHandlers = append([]func(context.Context, *core.Request, error){}, *old...)
+	}
+	newHandlers = append(newHandlers, h)
+	b.requestError.Store(&newHandlers)
 }
 
 func (b *Bus[OUT]) OnResponseReceived(h func(context.Context, core.IResponseReader)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.responseReceived = append(b.responseReceived, h)
+	old := b.responseReceived.Load()
+	var newHandlers []func(context.Context, core.IResponseReader)
+	if old != nil {
+		newHandlers = append([]func(context.Context, core.IResponseReader){}, *old...)
+	}
+	newHandlers = append(newHandlers, h)
+	b.responseReceived.Store(&newHandlers)
 }
 
 func (b *Bus[OUT]) OnEngineStarted(h func(context.Context)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.engineStarted = append(b.engineStarted, h)
+	old := b.engineStarted.Load()
+	var newHandlers []func(context.Context)
+	if old != nil {
+		newHandlers = append([]func(context.Context){}, *old...)
+	}
+	newHandlers = append(newHandlers, h)
+	b.engineStarted.Store(&newHandlers)
 }
 
 func (b *Bus[OUT]) OnEngineStopped(h func(context.Context)) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.engineStopped = append(b.engineStopped, h)
+	old := b.engineStopped.Load()
+	var newHandlers []func(context.Context)
+	if old != nil {
+		newHandlers = append([]func(context.Context){}, *old...)
+	}
+	newHandlers = append(newHandlers, h)
+	b.engineStopped.Store(&newHandlers)
 }
 
 func (b *Bus[OUT]) EmitSpiderOpened(ctx context.Context) {
-	b.mu.RLock()
-	handlers := b.spiderOpened
-	b.mu.RUnlock()
-	for _, h := range handlers {
-		h(ctx)
+	if handlers := b.spiderOpened.Load(); handlers != nil {
+		for _, h := range *handlers {
+			h(ctx)
+		}
 	}
 }
 
 func (b *Bus[OUT]) EmitSpiderClosed(ctx context.Context) {
-	b.mu.RLock()
-	handlers := b.spiderClosed
-	b.mu.RUnlock()
-	for _, h := range handlers {
-		h(ctx)
+	if handlers := b.spiderClosed.Load(); handlers != nil {
+		for _, h := range *handlers {
+			h(ctx)
+		}
 	}
 }
 
 func (b *Bus[OUT]) EmitSpiderError(ctx context.Context, err error) {
-	b.mu.RLock()
-	handlers := b.spiderError
-	b.mu.RUnlock()
-	for _, h := range handlers {
-		h(ctx, err)
+	if handlers := b.spiderError.Load(); handlers != nil {
+		for _, h := range *handlers {
+			h(ctx, err)
+		}
 	}
 }
 
 func (b *Bus[OUT]) EmitSpiderIdle(ctx context.Context) {
-	b.mu.RLock()
-	handlers := b.spiderIdle
-	b.mu.RUnlock()
-	for _, h := range handlers {
-		h(ctx)
+	if handlers := b.spiderIdle.Load(); handlers != nil {
+		for _, h := range *handlers {
+			h(ctx)
+		}
 	}
 }
 
 func (b *Bus[OUT]) EmitItemScraped(ctx context.Context, item OUT) {
-	b.mu.RLock()
-	handlers := b.itemScraped
-	b.mu.RUnlock()
-	for _, h := range handlers {
-		h(ctx, item)
+	if handlers := b.itemScraped.Load(); handlers != nil {
+		for _, h := range *handlers {
+			h(ctx, item)
+		}
 	}
 }
 
 func (b *Bus[OUT]) EmitItemDropped(ctx context.Context, item OUT, err error) {
-	b.mu.RLock()
-	handlers := b.itemDropped
-	b.mu.RUnlock()
-	for _, h := range handlers {
-		h(ctx, item, err)
+	if handlers := b.itemDropped.Load(); handlers != nil {
+		for _, h := range *handlers {
+			h(ctx, item, err)
+		}
 	}
 }
 
 func (b *Bus[OUT]) EmitItemError(ctx context.Context, item OUT, err error) {
-	b.mu.RLock()
-	handlers := b.itemError
-	b.mu.RUnlock()
-	for _, h := range handlers {
-		h(ctx, item, err)
+	if handlers := b.itemError.Load(); handlers != nil {
+		for _, h := range *handlers {
+			h(ctx, item, err)
+		}
 	}
 }
 
 func (b *Bus[OUT]) EmitRequestScheduled(ctx context.Context, req *core.Request) {
-	b.mu.RLock()
-	handlers := b.requestScheduled
-	b.mu.RUnlock()
-	for _, h := range handlers {
-		h(ctx, req)
+	if handlers := b.requestScheduled.Load(); handlers != nil {
+		for _, h := range *handlers {
+			h(ctx, req)
+		}
 	}
 }
 
 func (b *Bus[OUT]) EmitRequestDropped(ctx context.Context, req *core.Request, err error) {
-	b.mu.RLock()
-	handlers := b.requestDropped
-	b.mu.RUnlock()
-	for _, h := range handlers {
-		h(ctx, req, err)
+	if handlers := b.requestDropped.Load(); handlers != nil {
+		for _, h := range *handlers {
+			h(ctx, req, err)
+		}
 	}
 }
 
 func (b *Bus[OUT]) EmitRequestError(ctx context.Context, req *core.Request, err error) {
-	b.mu.RLock()
-	handlers := b.requestError
-	b.mu.RUnlock()
-	for _, h := range handlers {
-		h(ctx, req, err)
+	if handlers := b.requestError.Load(); handlers != nil {
+		for _, h := range *handlers {
+			h(ctx, req, err)
+		}
 	}
 }
 
 func (b *Bus[OUT]) EmitResponseReceived(ctx context.Context, resp core.IResponseReader) {
-	b.mu.RLock()
-	handlers := b.responseReceived
-	b.mu.RUnlock()
-	for _, h := range handlers {
-		h(ctx, resp)
+	if handlers := b.responseReceived.Load(); handlers != nil {
+		for _, h := range *handlers {
+			h(ctx, resp)
+		}
 	}
 }
 
 func (b *Bus[OUT]) EmitEngineStarted(ctx context.Context) {
-	b.mu.RLock()
-	handlers := b.engineStarted
-	b.mu.RUnlock()
-	for _, h := range handlers {
-		h(ctx)
+	if handlers := b.engineStarted.Load(); handlers != nil {
+		for _, h := range *handlers {
+			h(ctx)
+		}
 	}
 }
 
 func (b *Bus[OUT]) EmitEngineStopped(ctx context.Context) {
-	b.mu.RLock()
-	handlers := b.engineStopped
-	b.mu.RUnlock()
-	for _, h := range handlers {
-		h(ctx)
+	if handlers := b.engineStopped.Load(); handlers != nil {
+		for _, h := range *handlers {
+			h(ctx)
+		}
 	}
 }
