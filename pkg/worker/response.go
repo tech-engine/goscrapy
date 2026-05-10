@@ -169,7 +169,7 @@ func (r *response) Css(selector string) core.ISelector {
 		if len(body) == 0 {
 			return Selectors([]*html.Node{})
 		}
-		if nodes, err := NewSelector(io.NopCloser(bytes.NewReader(body))); err == nil {
+		if nodes, err := NewSelectorFromBytes(body); err == nil {
 			r.nodes = nodes
 		}
 	}
@@ -181,7 +181,7 @@ func (r *response) Xpath(xpath string) core.ISelector {
 
 	if r.nodes == nil {
 		body := r.Bytes()
-		if nodes, err := NewSelector(io.NopCloser(bytes.NewReader(body))); err == nil {
+		if nodes, err := NewSelectorFromBytes(body); err == nil {
 			r.nodes = nodes
 		}
 	}

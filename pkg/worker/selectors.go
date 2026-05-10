@@ -4,12 +4,16 @@ import (
 	"bytes"
 	"io"
 	"strings"
+	"sync"
 
 	"github.com/andybalholm/cascadia"
 	"github.com/antchfx/htmlquery"
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"golang.org/x/net/html"
 )
+
+// cache for css selectors.
+var cssCache sync.Map
 
 type Selectors []*html.Node
 
@@ -18,6 +22,11 @@ func NewSelector(r io.Reader) (Selectors, error) {
 	if err != nil {
 		return nil, err
 	}
+	return NewSelectorFromBytes(data)
+}
+
+// NewSelectorFromBytes - creates a selector from byte slice.
+func NewSelectorFromBytes(data []byte) (Selectors, error) {
 	root, err := html.Parse(bytes.NewReader(data))
 	if err != nil {
 		return nil, err
@@ -27,9 +36,16 @@ func NewSelector(r io.Reader) (Selectors, error) {
 
 // Css selector - select element by id, class, nodename etc.
 func (nodes Selectors) Css(selector string) core.ISelector {
-	sel, err := cascadia.ParseWithPseudoElement(selector)
-	if err != nil {
-		return Selectors([]*html.Node{})
+	var sel cascadia.Sel
+	if cached, ok := cssCache.Load(selector); ok {
+		sel = cached.(cascadia.Sel)
+	} else {
+		parsed, err := cascadia.ParseWithPseudoElement(selector)
+		if err != nil {
+			return Selectors([]*html.Node{})
+		}
+		sel = parsed
+		cssCache.Store(selector, sel)
 	}
 
 	selected := make(Selectors, 0, len(nodes))
@@ -53,11 +69,11 @@ func (nodes Selectors) Xpath(xpath string) core.ISelector {
 	return selected
 }
 
-// Extracts all the text of a node and it's descendents.
+// Extracts all the text of a node and its descendants.
 func (nodes Selectors) Text(def ...string) []string {
 	texts := make([]string, 0, len(nodes))
 	for _, node := range nodes {
-		text := strings.TrimSpace(htmlquery.InnerText(node))
+		text := strings.TrimSpace(innerText(node))
 		if text == "" && len(def) > 0 {
 			texts = append(texts, def[0])
 			continue
@@ -65,6 +81,23 @@ func (nodes Selectors) Text(def ...string) []string {
 		texts = append(texts, text)
 	}
 	return texts
+}
+
+// Extracts text from a node.
+func innerText(n *html.Node) string {
+	var b strings.Builder
+	collectText(n, &b)
+	return b.String()
+}
+
+func collectText(n *html.Node, b *strings.Builder) {
+	if n.Type == html.TextNode {
+		b.WriteString(n.Data)
+		return
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		collectText(c, b)
+	}
 }
 
 // Extracts attribute values
