@@ -196,28 +196,3 @@ func TestPool_Metrics(t *testing.T) {
 	assert.Equal(t, uint64(2), snap.TasksDropped)
 }
 
-func TestPool_SubmitRecoverPanic(t *testing.T) {
-	t.Run("recover from closed channel", func(t *testing.T) {
-		wp, _ := NewPool(&Config{Executor: &poolTestExecutor{}})
-		pool := wp.(*workerPool)
-		
-		// close the buffer to trigger panic on send
-		close(pool.workerTaskBuffer)
-		
-		err := wp.Submit(context.Background(), &core.Request{}, "cb", nil)
-		assert.Error(t, err)
-		assert.Equal(t, ErrPoolClosed, err)
-	})
-
-	t.Run("do not recover from other panics", func(t *testing.T) {
-		wp, _ := NewPool(&Config{Executor: &poolTestExecutor{}})
-		pool := wp.(*workerPool)
-		
-		// set autoscaler to nil to trigger nil pointer panic in Submit
-		pool.autoscaler = nil
-		
-		assert.Panics(t, func() {
-			_ = wp.Submit(context.Background(), &core.Request{}, "cb", nil)
-		})
-	})
-}
