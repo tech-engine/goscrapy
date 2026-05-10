@@ -37,20 +37,25 @@ type HttpMetrics struct {
 // implements ts.IStatsRecorder
 type StatsCollector struct {
 	totalCount    atomic.Uint64
+	_pad1         [7]uint64
 	totalDuration atomic.Int64 // nanoseconds
+	_pad2         [7]uint64
 	totalBytes    atomic.Uint64
+	_pad3         [7]uint64
 	statusCodes   sync.Map // map[int]*atomic.Uint64
 	startTime     time.Time
 
 	// running sums for O(1) averages
 	tlsSum  atomic.Int64 // nanoseconds
+	_pad4   [7]uint64
 	ttfbSum atomic.Int64 // nanoseconds
+	_pad5   [7]uint64
 
 	// counters for averages
 	tlsCount  atomic.Uint64
+	_pad6     [7]uint64
 	ttfbCount atomic.Uint64
-
-
+	_pad7     [7]uint64
 }
 
 type bodyCounter struct {

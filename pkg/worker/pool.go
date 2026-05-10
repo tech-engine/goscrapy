@@ -46,10 +46,12 @@ type WorkerPoolSnapshot struct {
 // poolMetrics groups telemetry only fields for the worker pool.
 type poolMetrics struct {
 	enabled        bool
+	_pad1          [7]uint64
 	tasksSubmitted atomic.Uint64
+	_pad2          [7]uint64
 	tasksDropped   atomic.Uint64
+	_pad3          [7]uint64
 }
-
 func (m *poolMetrics) recordSubmit() {
 	if m.enabled {
 		m.tasksSubmitted.Add(1)
