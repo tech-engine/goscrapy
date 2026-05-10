@@ -2,7 +2,7 @@ module scrapejsp
 
 go 1.26.0
 
-require github.com/tech-engine/goscrapy v0.27.13
+require github.com/tech-engine/goscrapy v0.27.16
 
 require (
 	github.com/Noooste/azuretls-client v1.13.2 // indirect

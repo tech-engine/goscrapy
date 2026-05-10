@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/duke-git/lancet/v2 v2.3.9
-	github.com/tech-engine/goscrapy v0.27.13
+	github.com/tech-engine/goscrapy v0.27.16
 	github.com/tidwall/gjson v1.18.0
 )
 
