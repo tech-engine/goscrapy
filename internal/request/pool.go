@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/tech-engine/goscrapy/internal/fsmap"
 	"github.com/tech-engine/goscrapy/pkg/core"
 )
 
@@ -32,9 +31,7 @@ func (p *Pool) Acquire(ctx context.Context) *core.Request {
 	if req.Header_ == nil {
 		req.Header_ = make(http.Header)
 	}
-	if req.Meta_ == nil {
-		req.Meta_ = fsmap.New[string, any](24)
-	}
+	// lazy init meta map
 	return req
 }
 
