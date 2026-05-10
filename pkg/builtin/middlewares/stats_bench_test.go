@@ -5,14 +5,13 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
 )
 
 func BenchmarkStatsCollector_Snapshot(b *testing.B) {
 	s := NewStatsCollector()
 
 	// Setup some mock data
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		s.totalCount.Add(1)
 		s.totalBytes.Add(1024)
 		s.AddSample(MetricTLS, 10*time.Millisecond)
@@ -20,8 +19,6 @@ func BenchmarkStatsCollector_Snapshot(b *testing.B) {
 		v, _ := s.statusCodes.LoadOrStore(200, new(atomic.Uint64))
 		v.(*atomic.Uint64).Add(1)
 	}
-
-
 
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -51,9 +48,11 @@ func BenchmarkStatsMiddleware_Impact(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for b.Loop() {
-		_, _ = instrumentedRT.RoundTrip(req)
-	}
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _ = instrumentedRT.RoundTrip(req)
+		}
+	})
 }
 
 type mockRT struct {
