@@ -20,8 +20,11 @@ type autoscaler struct {
 
 	// metrics
 	taskArrivalCnt      atomic.Uint64
+	_pad1               [7]uint64
 	cummulativeExecTime atomic.Uint64
+	_pad2               [7]uint64
 	doneTaskCnt         atomic.Uint64
+	_pad3               [7]uint64
 
 	// scaling state
 	desiredWorkerCnt atomic.Uint32
@@ -83,23 +86,19 @@ func newAutoscaler(cfg *AutoscalerConfig) *autoscaler {
 	return a
 }
 
-// incr taskArrivalCnt, use to keep track of number of requests arriving in the scheduler
 func (a *autoscaler) OnTaskArrival() {
 	a.taskArrivalCnt.Add(1)
 }
 
-// called by workers after completing a task, use to keep track of number of completed tasks and their execution time
 func (a *autoscaler) OnTaskDone(d time.Duration) {
 	a.cummulativeExecTime.Add(uint64(d))
 	a.doneTaskCnt.Add(1)
 }
 
-// initializes the desired worker count on startup
 func (a *autoscaler) SetDesired(n uint32) {
 	a.desiredWorkerCnt.Store(n)
 }
 
-// runs the adaptive scaling loop, blocks until ctx is cancelled
 func (a *autoscaler) Start(ctx context.Context) {
 	window := a.scalingWindow
 	if window <= 0 {
@@ -121,16 +120,13 @@ func (a *autoscaler) Start(ctx context.Context) {
 	}
 }
 
-// tick performs a single scaling evaluation
 func (a *autoscaler) tick(window time.Duration, prevTaskArrivalCnt *uint64, ctx context.Context) {
-	// we calculate the task arrival rate(req/s) i.e lambda
 	currTaskArrivalCnt := a.taskArrivalCnt.Load()
 	taskDeltaCnt := currTaskArrivalCnt - *prevTaskArrivalCnt
 	*prevTaskArrivalCnt = currTaskArrivalCnt
 	lambda := float64(taskDeltaCnt) / window.Seconds()
 	a.lambdaEMA.Add(lambda)
 
-	// we calculate the average service time of tasks i.e W
 	cummulativeExecTime := a.cummulativeExecTime.Swap(0)
 	doneTaskCnt := a.doneTaskCnt.Swap(0)
 
@@ -139,11 +135,9 @@ func (a *autoscaler) tick(window time.Duration, prevTaskArrivalCnt *uint64, ctx 
 		a.serviceTimeEMA.Add(avgW)
 	}
 
-	// Little's Law: L = lambda * W
 	smoothedLambda := a.lambdaEMA.Value()
 	smoothedW := a.serviceTimeEMA.Value()
 
-	// no service time data, we return
 	if smoothedW == 0 {
 		return
 	}
@@ -155,14 +149,11 @@ func (a *autoscaler) tick(window time.Duration, prevTaskArrivalCnt *uint64, ctx 
 func (a *autoscaler) adjust(ctx context.Context, target uint16) {
 	target = max(a.minWorkers, min(target, a.maxWorkers))
 
-	// use desired count (not live activeWorkers) to prevent overshoot
-	// when previous despawn signals haven't been processed yet
 	current := uint16(a.desiredWorkerCnt.Load())
 	if target == current {
 		return
 	}
 
-	// cooldown to prevent oscillation
 	cooldown := a.scalingWindow / 2
 	if cooldown < 200*time.Millisecond {
 		cooldown = 200 * time.Millisecond
