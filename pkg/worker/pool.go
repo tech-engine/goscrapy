@@ -254,8 +254,6 @@ func (p *workerPool) stop() error {
 	if !p.isActive.Swap(false) {
 		return nil
 	}
-	// closing the buffer will signal all the workers to exit (via the for ... range on channel)
-	close(p.workerTaskBuffer)
 
 	p.logger.Debug("Waiting for workers to finish...")
 	// there could still be inflight tasks in the executor, so we wait for all workers to finish
@@ -297,20 +295,7 @@ func (p *workerPool) despawnWorker() {
 
 func (p *workerPool) Submit(ctx context.Context, req *core.Request, callbackName string, handle core.TaskHandle) (err error) {
 	var task *workTask
-	defer func() {
-		if r := recover(); r != nil {
-			if !core.IsClosedChanPanic(r) {
-				panic(r)
-			}
 
-			err = ErrPoolClosed
-			if task != nil {
-				task.req = nil
-				task.taskHandle = nil
-				p.workerTaskPool.Put(task)
-			}
-		}
-	}()
 
 	if !p.isActive.Load() {
 		return ErrPoolClosed
@@ -354,11 +339,16 @@ func (p *workerPool) ReleaseResult(res engine.IResult) {
 	// drain and close body before cancel to ensure connection reuse
 	if resp, ok := res.Response().(*response); ok {
 		if resp.body != nil {
-			buf := discardBufPool.Get().(*[]byte)
-			io.CopyBuffer(io.Discard, io.LimitReader(resp.body, p.maxDrainBytes), *buf)
-			discardBufPool.Put(buf)
+			bufPtr := discardBufPool.Get().(*[]byte)
+			buf := *bufPtr
+			
+			// limit reader prevents hang on large body
+			io.CopyBuffer(io.Discard, io.LimitReader(resp.body, p.maxDrainBytes), buf)
+			
+			discardBufPool.Put(bufPtr)
 			resp.body.Close()
 		}
+
 		resp.Reset()
 		p.responsePool.Put(resp)
 	}

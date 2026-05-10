@@ -50,44 +50,48 @@ func NewWorker(id uint16, executor IExecutor, workerTaskCh <-chan *workTask, res
 }
 
 func (w *Worker) Start(ctx context.Context) error {
-	// var wg sync.WaitGroup
-	// defer wg.Wait()
+	// create per worker context
+	workerLocalCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	for task := range w.workerTaskCh {
-		if task == nil {
+	// we revert to select
+	for {
+		select {
+		case <-workerLocalCtx.Done():
+			w.logger.Debugf("worker id: %d context cancelled", w.ID)
+			return workerLocalCtx.Err()
+		case task, ok := <-w.workerTaskCh:
+			if !ok {
+				w.logger.Debugf("worker id: %d task channel closed", w.ID)
+				return nil
+			}
+			if task == nil {
 			// poision signal
-			w.logger.Debugf("got poision signal, killing worker id: %d", w.ID)
-			return nil
+				w.logger.Debugf("got poision signal, killing worker id: %d", w.ID)
+				return nil
+			}
+
+			if task.req == nil {
+				w.logger.Warn("got nil task")
+				continue
+			}
+
+			res := w.execute(workerLocalCtx, task)
+
+			// return task to pool
+			task.Reset()
+			w.workerTaskPool.Put(task)
+
+			if w.results != nil {
+				select {
+				case <-workerLocalCtx.Done():
+					res.Release()
+					return workerLocalCtx.Err()
+				case w.results <- res:
+				}
+			}
 		}
-
-		if task.req == nil {
-			w.logger.Warn("got nil task")
-			continue
-		}
-
-		// wg.Add(1)
-
-		res := w.execute(ctx, task)
-
-		// return task to pool
-		task.Reset()
-		w.workerTaskPool.Put(task)
-
-		if w.results != nil {
-			// this will block, this ensures that, we don't lose any results
-			w.results <- res
-			// select {
-			// case w.results <- res:
-			// case <-ctx.Done():
-			// 	wg.Done()
-			// 	return ctx.Err()
-			// }
-		}
-
-		// wg.Done()
 	}
-	w.logger.Debugf("worker id: %d gracefully shutting down", w.ID)
-	return nil
 }
 
 func (w *Worker) execute(ctx context.Context, task *workTask) engine.IResult {
