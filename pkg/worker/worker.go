@@ -8,6 +8,7 @@ import (
 
 	"github.com/tech-engine/goscrapy/pkg/core"
 	"github.com/tech-engine/goscrapy/pkg/engine"
+	"github.com/tech-engine/goscrapy/pkg/utils"
 )
 
 type workTask struct {
@@ -56,39 +57,37 @@ func (w *Worker) Start(ctx context.Context) error {
 
 	// we revert to select
 	for {
-		select {
-		case <-workerLocalCtx.Done():
-			w.logger.Debugf("worker id: %d context cancelled", w.ID)
-			return workerLocalCtx.Err()
-		case task, ok := <-w.workerTaskCh:
-			if !ok {
+		task, ok, closed := utils.CancelOrReceive(workerLocalCtx, w.workerTaskCh)
+		if !ok {
+			if closed {
 				w.logger.Debugf("worker id: %d task channel closed", w.ID)
 				return nil
 			}
-			if task == nil {
+			w.logger.Debugf("worker id: %d context cancelled", w.ID)
+			return workerLocalCtx.Err()
+		}
+		
+		if task == nil {
 			// poision signal
-				w.logger.Debugf("got poision signal, killing worker id: %d", w.ID)
-				return nil
-			}
+			w.logger.Debugf("got poision signal, killing worker id: %d", w.ID)
+			return nil
+		}
 
-			if task.req == nil {
-				w.logger.Warn("got nil task")
-				continue
-			}
+		if task.req == nil {
+			w.logger.Warn("got nil task")
+			continue
+		}
 
-			res := w.execute(workerLocalCtx, task)
+		res := w.execute(workerLocalCtx, task)
 
-			// return task to pool
-			task.Reset()
-			w.workerTaskPool.Put(task)
+		// return task to pool
+		task.Reset()
+		w.workerTaskPool.Put(task)
 
-			if w.results != nil {
-				select {
-				case <-workerLocalCtx.Done():
-					res.Release()
-					return workerLocalCtx.Err()
-				case w.results <- res:
-				}
+		if w.results != nil {
+			if !utils.CancelOrSend(workerLocalCtx, w.results, res) {
+				res.Release()
+				return workerLocalCtx.Err()
 			}
 		}
 	}

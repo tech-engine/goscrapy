@@ -15,6 +15,7 @@ import (
 	"github.com/tech-engine/goscrapy/pkg/logger"
 	"github.com/tech-engine/goscrapy/pkg/signal"
 	ts "github.com/tech-engine/goscrapy/pkg/telemetry/stats"
+	"github.com/tech-engine/goscrapy/pkg/utils"
 )
 
 var discardBufPool = sync.Pool{
@@ -314,19 +315,18 @@ func (p *workerPool) Submit(ctx context.Context, req *core.Request, callbackName
 	task.callbackName = callbackName
 	task.taskHandle = handle
 
-	select {
-	case <-ctx.Done():
+	if !utils.CancelOrSend(ctx, p.workerTaskBuffer, task) {
 		task.req = nil
 		task.taskHandle = nil
 		p.workerTaskPool.Put(task)
 		return ctx.Err()
-	case p.workerTaskBuffer <- task:
-		p.metrics.recordSubmit()
-		if p.signals != nil {
-			p.signals.EmitRequestScheduled(ctx, req)
-		}
-		return nil
 	}
+
+	p.metrics.recordSubmit()
+	if p.signals != nil {
+		p.signals.EmitRequestScheduled(ctx, req)
+	}
+	return nil
 }
 
 func (p *workerPool) Results() <-chan engine.IResult {
