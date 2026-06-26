@@ -23,6 +23,24 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
   <img width="800" src="./docs/assets/tui.gif">
 </p>
 
+## 💎 Platinum Sponsors
+
+<table>
+  <tr>
+    <td width="200" valign="middle" align="center">
+      <a href="https://go.nodemaven.com/techenginereadme" target="_blank" title="NodeMaven - Proxies with the Highest IP Scores">
+        <img src="./docs/assets/nodemaven.svg" width="200">
+      </a>
+    </td>
+    <td valign="middle">
+      <a href="https://go.nodemaven.com/techenginereadme" target="_blank"><b>NodeMaven</b></a> offers high quality <b>Residential</b>, <b>Mobile</b>, and <b>ISP</b> proxies with clean IPs, having a strong focus on stability, and high success rates. Get a Quality Guarantee and up to 10% cashback. Use <code>GOSCRAPY35</code> for 35% off Residential/Mobile proxies and <code>GOSCRAPY40</code> for 40% off ISP proxies.
+    </td>
+  </tr>
+</table>
+
+> **Want to be featured here?** Reach out via [GitHub Sponsors](https://github.com/sponsors/tech-engine) or our [Discord](https://discord.gg/FPvxETjYPH) to discuss Platinum, Gold, and Silver tiers.
+
+---
 
 ## Features
 
