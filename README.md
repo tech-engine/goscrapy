@@ -38,6 +38,21 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
   </tr>
 </table>
 
+## 💎 Gold Sponsors
+
+<table>
+  <tr>
+    <td width="200" valign="middle" align="center">
+      <a href="https://www.rapidproxy.io/?ref=goscrapy" target="_blank" title="Rapidproxy">
+        <img src="./docs/assets/rapidproxy.svg" width="200">
+      </a>
+    </td>
+    <td valign="middle">
+        <a href="https://www.rapidproxy.io/?ref=goscrapy" target="_blank"><b>RapidProxy</b></a> provides reliable residential proxies with 90M+ real IPs across 200+ countries. Built for scraping and automation, it offers smart rotation, geo-targeting, and high concurrency. Start your free trial and get 10% off with code <code>RAPID10</code>.
+    </td>
+  </tr>
+</table>
+
 > **Want to be featured here?** Reach out via [GitHub Sponsors](https://github.com/sponsors/tech-engine) or our [Discord](https://discord.gg/FPvxETjYPH) to discuss Platinum, Gold, and Silver tiers.
 
 ---
