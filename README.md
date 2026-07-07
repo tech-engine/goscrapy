@@ -23,7 +23,7 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
   <img width="800" src="./docs/assets/tui.gif">
 </p>
 
-## 💎 Platinum Sponsors
+## 🥇 Platinum Sponsors
 
 <table>
   <tr>
@@ -34,6 +34,21 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
     </td>
     <td valign="middle">
       <a href="https://go.nodemaven.com/techenginereadme" target="_blank"><b>NodeMaven</b></a> offers high quality <b>Residential</b>, <b>Mobile</b>, and <b>ISP</b> proxies with clean IPs, having a strong focus on stability, and high success rates. Get a Quality Guarantee and up to 10% cashback. Use <code>GOSCRAPY35</code> for 35% off Residential/Mobile proxies and <code>GOSCRAPY40</code> for 40% off ISP proxies.
+    </td>
+  </tr>
+</table>
+
+## 🥈 Gold Sponsors
+
+<table>
+  <tr>
+    <td width="200" valign="middle" align="center">
+      <a href="https://www.rapidproxy.io/?ref=goscrapy" target="_blank" title="Rapidproxy">
+        <img src="./docs/assets/rapidproxy.svg" width="200">
+      </a>
+    </td>
+    <td valign="middle">
+        <a href="https://www.rapidproxy.io/?ref=goscrapy" target="_blank"><b>RapidProxy</b></a> provides reliable residential proxies with 90M+ real IPs across 200+ countries. Built for scraping and automation, it offers smart rotation, geo-targeting, and high concurrency. Start your free trial and get 10% off with code <code>RAPID10</code>.
     </td>
   </tr>
 </table>
