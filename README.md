@@ -23,7 +23,7 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
   <img width="800" src="./docs/assets/tui.gif">
 </p>
 
-## 💎 Platinum Sponsors
+## 🥇 Platinum Sponsors
 
 <table>
   <tr>
@@ -38,7 +38,7 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
   </tr>
 </table>
 
-## 💎 Gold Sponsors
+## 🥈 Gold Sponsors
 
 <table>
   <tr>
