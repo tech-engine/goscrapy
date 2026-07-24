@@ -28,7 +28,7 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
 <table>
   <tr>
     <td width="200" valign="middle" align="center">
-      <a href="https://go.nodemaven.com/techenginereadme" target="_blank" title="NodeMaven - Proxies with the Highest IP Scores">
+      <a href="https://go.nodemaven.com/techengineRM" target="_blank" title="NodeMaven - Proxies with the Highest IP Scores">
         <img src="./docs/assets/nodemaven.svg" width="200">
       </a>
     </td>
