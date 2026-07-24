@@ -32,9 +32,9 @@ flowchart TD
     PM -.->|"Snapshot()"| Hub
     Hub -->|"GlobalSnapshot"| Obs
 
-    style Collection fill:#FFDFD3,stroke:#E27D60,stroke-width:2px
-    style Aggregation fill:#B5D4F4,stroke:#185FA5,stroke-width:2px
-    style Exhibition fill:#C0DD97,stroke:#3B6D11,stroke-width:2px
+    style Collection fill:#FFDFD3,stroke:#E27D60,stroke-width:2px,color:#000
+    style Aggregation fill:#B5D4F4,stroke:#185FA5,stroke-width:2px,color:#000
+    style Exhibition fill:#C0DD97,stroke:#3B6D11,stroke-width:2px,color:#000
 ```
 
 ## Telemetry Flow Sequence

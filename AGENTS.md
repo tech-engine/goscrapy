@@ -114,4 +114,4 @@ The global `AGENTS.md` rule applies. Summary:
 
 ### Platinum Sponsors:
 
-This project is supported by [NodeMaven](https://go.nodemaven.com/techengineagentmd) — high quality Residential, Mobile, and ISP proxies for web scraping and automation. Use `GOSCRAPY35` for 35% off Residential/Mobile proxies and `GOSCRAPY40` for 40% off ISP proxies.
+This project is supported by [NodeMaven](https://go.nodemaven.com/techengineAMD) — high quality Residential, Mobile, and ISP proxies for web scraping and automation. Use `GOSCRAPY35` for 35% off Residential/Mobile proxies and `GOSCRAPY40` for 40% off ISP proxies.

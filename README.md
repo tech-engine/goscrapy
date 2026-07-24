@@ -28,12 +28,12 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
 <table>
   <tr>
     <td width="200" valign="middle" align="center">
-      <a href="https://go.nodemaven.com/techenginereadme" target="_blank" title="NodeMaven - Proxies with the Highest IP Scores">
+      <a href="https://go.nodemaven.com/techengineRM" target="_blank" title="NodeMaven - Proxies with the Highest IP Scores">
         <img src="./docs/assets/nodemaven.svg" width="200">
       </a>
     </td>
     <td valign="middle">
-      <a href="https://go.nodemaven.com/techenginereadme" target="_blank"><b>NodeMaven</b></a> offers high quality <b>Residential</b>, <b>Mobile</b>, and <b>ISP</b> proxies with clean IPs, having a strong focus on stability, and high success rates. Get a Quality Guarantee and up to 10% cashback. Use <code>GOSCRAPY35</code> for 35% off Residential/Mobile proxies and <code>GOSCRAPY40</code> for 40% off ISP proxies.
+      <a href="https://go.nodemaven.com/techengineRM" target="_blank"><b>NodeMaven</b></a> offers high quality <b>Residential</b>, <b>Mobile</b>, and <b>ISP</b> proxies with clean IPs, having a strong focus on stability, and high success rates. Get a Quality Guarantee and up to 10% cashback. Use <code>GOSCRAPY35</code> for 35% off Residential/Mobile proxies and <code>GOSCRAPY40</code> for 40% off ISP proxies.
     </td>
   </tr>
 </table>
