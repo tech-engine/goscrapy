@@ -43,12 +43,12 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
 <table>
   <tr>
     <td width="200" valign="middle" align="center">
-      <a href="https://www.rapidproxy.io/?ref=goscrapy" target="_blank" title="Rapidproxy">
-        <img src="./docs/assets/rapidproxy.svg" width="200">
+      <a href="https://www.coreclaw.com/?utm_source=github&utm_medium=referral&utm_campaign=goscraper&utm_term=&utm_id=goscraper" target="_blank" title="CoreClaw">
+        <img src="./docs/assets/coreclaw.png" width="200">
       </a>
     </td>
     <td valign="middle">
-        <a href="https://www.rapidproxy.io/?ref=goscrapy" target="_blank"><b>RapidProxy</b></a> provides reliable residential proxies with 90M+ real IPs across 200+ countries. Built for scraping and automation, it offers smart rotation, geo-targeting, and high concurrency. Start your free trial and get 10% off with code <code>RAPID10</code>.
+        <a href="https://www.coreclaw.com/?utm_source=github&utm_medium=referral&utm_campaign=goscraper&utm_term=&utm_id=goscraper" target="_blank"><b>CoreClaw</b></a> Ready-to-use data scraping tool for Amazon, TikTok, Google Maps, Instagram, Facebook & 100+ platforms. No coding required. Export to JSON, CSV, Excel & more. Pay only for successful results. Start your free trial today!
     </td>
   </tr>
 </table>
