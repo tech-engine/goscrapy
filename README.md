@@ -48,7 +48,7 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
       </a>
     </td>
     <td valign="middle">
-        <a href="https://www.coreclaw.com/?utm_source=github&utm_medium=referral&utm_campaign=goscraper&utm_term=&utm_id=goscraper" target="_blank"><b>CoreClaw</b></a> Ready-to-use data scraping tool for Amazon, TikTok, Google Maps, Instagram, Facebook & 100+ platforms. No coding required. Export to JSON, CSV, Excel & more. Pay only for successful results. Start your free trial today!
+        <a href="https://www.coreclaw.com/?utm_source=github&utm_medium=referral&utm_campaign=goscraper&utm_term=&utm_id=goscraper" target="_blank"><b>CoreClaw</b></a> Ready-to-use data scraping tool for Amazon, TikTok, Google Maps, Instagram, Facebook & 100+ platforms. No coding required. Export to JSON, CSV, Excel & more. Pay only for successful results. <a href="https://www.coreclaw.com/?utm_source=github&utm_medium=referral&utm_campaign=goscraper&utm_term=&utm_id=goscraper" target="_blank">Start your free trial today!</a>
     </td>
   </tr>
 </table>
