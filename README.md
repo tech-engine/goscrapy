@@ -29,7 +29,7 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
   <tr>
     <td width="200" valign="middle" align="center">
       <a href="https://go.nodemaven.com/techenginermaugust" target="_blank" title="NodeMaven - Proxies with the Highest IP Scores">
-        <img src="./docs/assets/nodemaven.png" width="200">
+        <img src="./docs/assets/nodemaven_banner.png" width="200">
       </a>
     </td>
     <td valign="middle">
