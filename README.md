@@ -28,12 +28,12 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
 <table>
   <tr>
     <td width="200" valign="middle" align="center">
-      <a href="https://go.nodemaven.com/techenginermaugust" target="_blank" title="NodeMaven - Proxies with the Highest IP Scores">
-        <img src="./docs/assets/nodemaven_banner.png" width="200">
+      <a href="https://go.nodemaven.com/techengineseptreadme" target="_blank" title="NodeMaven - Proxies with the Highest IP Scores">
+        <img src="./docs/assets/nodemaven.png" width="200">
       </a>
     </td>
     <td valign="middle">
-      <a href="https://go.nodemaven.com/techenginermaugust" target="_blank"><b>NodeMaven</b></a>: The most efficient proxy provider for Web Scraping and Automation with the Highest Quality IP on the market and unique free tools: Proxy Bandwidth Checker, Meta Tag Checker, IP Lookup and others! 
+      <a href="https://go.nodemaven.com/techengineseptreadme" target="_blank"><b>NodeMaven</b></a>: The most efficient proxy provider for Web Scraping and Automation with the Highest Quality IP on the market and unique free tools: Proxy Bandwidth Checker, Meta Tag Checker, IP Lookup and others! 
       Special codes for GoScrapy users:
       <b>GOSCRAPY35</b> - 35% off to Mobile and Residential Proxies
       <b>GOSCRAPY40</b> - 40% off to ISP (Static) Proxies
