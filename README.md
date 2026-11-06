@@ -37,6 +37,7 @@ Instead of manually orchestrating retries, cookie isolation, or database handoff
       Special codes for GoScrapy users:
       <b>GOSCRAPY35</b> - 35% off to Mobile and Residential Proxies
       <b>GOSCRAPY40</b> - 40% off to ISP (Static) Proxies
+      <b>GOSCRAPY2X</b> - 2X traffic for Black Friday
     </td>
   </tr>
 </table>
